@@ -43,6 +43,9 @@ export default function Conta() {
       queryClient.invalidateQueries({ queryKey: ["customerOrders"] });
       toast({ title: "Logout realizado com sucesso!" });
     },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
   });
 
   if (customerLoading) {
@@ -136,7 +139,7 @@ export default function Conta() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
                     <p>Você ainda não fez nenhum pedido.</p>
-                    <Button variant="link" className="text-primary mt-2" onClick={() => setLocation("/")}>
+                    <Button variant="link" className="text-primary mt-2" onClick={() => setLocation("/")} data-testid="link-start-shopping">
                       Começar a comprar
                     </Button>
                   </div>
@@ -157,10 +160,10 @@ export default function Conta() {
         <div className="max-w-md mx-auto">
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-card">
-              <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-black">
+              <TabsTrigger value="login" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-login">
                 Entrar
               </TabsTrigger>
-              <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-black">
+              <TabsTrigger value="register" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-register">
                 Cadastrar
               </TabsTrigger>
             </TabsList>
@@ -175,7 +178,7 @@ export default function Conta() {
           </Tabs>
 
           <div className="mt-6 text-center">
-            <Button variant="link" className="text-muted-foreground" onClick={() => setLocation("/")}>
+            <Button variant="link" className="text-muted-foreground" onClick={() => setLocation("/")} data-testid="link-back-store">
               <Home className="h-4 w-4 mr-2" /> Voltar para a loja
             </Button>
           </div>
