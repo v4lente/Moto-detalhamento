@@ -1,4 +1,4 @@
-import { Product, SiteSettings } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -61,7 +61,7 @@ export async function fetchSettings(): Promise<SiteSettings> {
   return response.json();
 }
 
-export async function updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
+export async function updateSettings(settings: UpdateSiteSettings): Promise<SiteSettings> {
   const response = await fetch(`${API_BASE}/settings`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

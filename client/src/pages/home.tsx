@@ -94,14 +94,15 @@ export default function Home() {
 
       <Footer settings={settings} />
 
-      <Link href="/admin">
+      <Link href="/admin" className="fixed bottom-4 right-4">
         <Button 
           size="icon" 
           variant="outline" 
-          className="fixed bottom-4 right-4 h-10 w-10 rounded-full border-primary/20 bg-card hover:bg-primary/10"
+          className="h-10 w-10 rounded-full border-primary/20 bg-card hover:bg-primary/10"
           data-testid="button-admin"
+          asChild
         >
-          <Settings className="h-4 w-4" />
+          <span><Settings className="h-4 w-4" /></span>
         </Button>
       </Link>
     </div>

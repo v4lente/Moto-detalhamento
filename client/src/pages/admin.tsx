@@ -13,7 +13,7 @@ import {
   fetchProducts, createProduct, updateProduct, deleteProduct,
   fetchSettings, updateSettings, getCurrentUser, logout 
 } from "@/lib/api";
-import { Product, SiteSettings } from "@shared/schema";
+import { Product, UpdateSiteSettings } from "@shared/schema";
 import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2 } from "lucide-react";
 
 export default function Admin() {
@@ -109,7 +109,7 @@ export default function Admin() {
   const handleSettingsSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const settingsData: Partial<SiteSettings> = {
+    const settingsData: UpdateSiteSettings = {
       whatsappNumber: formData.get("whatsappNumber") as string,
       siteName: formData.get("siteName") as string,
       siteTagline: formData.get("siteTagline") as string,
@@ -172,7 +172,7 @@ export default function Admin() {
                     <Plus className="h-4 w-4 mr-2" /> Novo Produto
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-primary/20 max-w-lg">
+                <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle className="font-display">
                       {editingProduct ? "Editar Produto" : "Novo Produto"}

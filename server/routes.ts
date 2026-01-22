@@ -158,7 +158,7 @@ export async function registerRoutes(
 
   app.patch("/api/products/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
@@ -179,7 +179,7 @@ export async function registerRoutes(
 
   app.delete("/api/products/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
