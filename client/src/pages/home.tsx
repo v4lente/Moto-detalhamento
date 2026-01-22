@@ -2,15 +2,24 @@ import { Navbar, Footer } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProducts } from "@/lib/api";
-import logo from "@assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg";
-import { Loader2 } from "lucide-react";
+import { fetchProducts, fetchSettings } from "@/lib/api";
+import { Loader2, Settings } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Home() {
-  const { data: products, isLoading, error } = useQuery({
+  const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts,
   });
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
+
+  const heroTitle = settings?.heroTitle || "Estética Premium";
+  const heroSubtitle = settings?.heroSubtitle || "Cuidado profissional para sua moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.";
+  const backgroundImage = settings?.backgroundImage || "/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -20,7 +29,7 @@ export default function Home() {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent z-10" />
           <img 
-            src={logo} 
+            src={backgroundImage} 
             alt="Moto Detailing Studio" 
             className="w-full h-full object-cover opacity-60"
           />
@@ -29,13 +38,18 @@ export default function Home() {
         <div className="container mx-auto px-4 relative z-20">
           <div className="max-w-2xl">
             <h1 className="text-5xl md:text-7xl font-display font-bold uppercase italic leading-none mb-6">
-              Estética <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-200">
-                Premium
-              </span>
+              {heroTitle.split(" ").map((word, i) => (
+                i === 0 ? (
+                  <span key={i}>{word} <br/></span>
+                ) : (
+                  <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-200">
+                    {word}
+                  </span>
+                )
+              ))}
             </h1>
             <p className="text-lg text-gray-300 mb-8 max-w-lg">
-              Cuidado profissional para sua moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.
+              {heroSubtitle}
             </p>
             <div className="flex gap-4">
               <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8" data-testid="button-ver-produtos">
@@ -57,13 +71,13 @@ export default function Home() {
           </div>
         </div>
 
-        {isLoading && (
+        {productsLoading && (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
-        {error && (
+        {productsError && (
           <div className="text-center text-red-500 py-12">
             Erro ao carregar produtos. Tente novamente mais tarde.
           </div>
@@ -78,7 +92,18 @@ export default function Home() {
         )}
       </section>
 
-      <Footer />
+      <Footer settings={settings} />
+
+      <Link href="/admin">
+        <Button 
+          size="icon" 
+          variant="outline" 
+          className="fixed bottom-4 right-4 h-10 w-10 rounded-full border-primary/20 bg-card hover:bg-primary/10"
+          data-testid="button-admin"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      </Link>
     </div>
   );
 }

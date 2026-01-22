@@ -1,39 +1,49 @@
 import { Link } from "wouter";
 import { ShoppingCart, Phone } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSettings } from "@/lib/api";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-  SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import logoImage from "@assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg";
 
 export function Navbar() {
-  const { cartCount, items, updateQuantity, removeFromCart, cartTotal } = useCart();
+  const { cartCount, items, updateQuantity, cartTotal } = useCart();
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: fetchSettings,
+  });
 
   const handleCheckout = () => {
-    const phoneNumber = "5511999999999"; // Replace with actual number
+    const phoneNumber = settings?.whatsappNumber || "5511999999999";
+    const siteName = settings?.siteName || "Daniel Valente";
     const message = items
       .map((item) => `${item.quantity}x ${item.name} (R$ ${item.price.toFixed(2)})`)
       .join("%0A");
     const total = `Total: R$ ${cartTotal.toFixed(2)}`;
-    const fullMessage = `Olá Daniel Valente! Gostaria de fazer o seguinte pedido:%0A%0A${message}%0A%0A${total}`;
+    const fullMessage = `Olá ${siteName}! Gostaria de fazer o seguinte pedido:%0A%0A${message}%0A%0A${total}`;
     
     window.open(`https://wa.me/${phoneNumber}?text=${fullMessage}`, "_blank");
   };
+
+  const siteName = settings?.siteName || "Daniel Valente";
+  const nameParts = siteName.split(" ");
+  const firstName = nameParts[0] || "Daniel";
+  const lastName = nameParts.slice(1).join(" ") || "Valente";
 
   return (
     <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <span className="font-display font-bold text-xl uppercase tracking-widest text-white">
-            <span className="text-primary">Daniel</span> Valente
+            <span className="text-primary">{firstName}</span> {lastName}
           </span>
         </Link>
 
@@ -119,18 +129,31 @@ export function Navbar() {
   );
 }
 
-export function Footer() {
+interface FooterProps {
+  settings?: {
+    siteName?: string;
+    footerText?: string;
+    copyrightText?: string;
+  } | null;
+}
+
+export function Footer({ settings }: FooterProps) {
+  const siteName = settings?.siteName || "Daniel Valente";
+  const nameParts = siteName.split(" ");
+  const firstName = nameParts[0] || "Daniel";
+  const lastName = nameParts.slice(1).join(" ") || "Valente";
+
   return (
     <footer className="bg-secondary py-12 mt-20 border-t border-primary/10">
       <div className="container mx-auto px-4 text-center">
         <h2 className="font-display font-bold text-2xl uppercase mb-4">
-          <span className="text-primary">Daniel</span> Valente
+          <span className="text-primary">{firstName}</span> {lastName}
         </h2>
         <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
-          Especialistas em detalhamento de motos. Cuidamos da sua máquina com os melhores produtos do mercado.
+          {settings?.footerText || "Especialistas em detalhamento de motos. Cuidamos da sua máquina com os melhores produtos do mercado."}
         </p>
         <div className="text-xs text-muted-foreground/50">
-          © 2024 Daniel Valente Moto Detalhamento. Todos os direitos reservados.
+          {settings?.copyrightText || "© 2024 Daniel Valente Moto Detalhamento. Todos os direitos reservados."}
         </div>
       </div>
     </footer>
