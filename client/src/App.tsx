@@ -7,6 +7,7 @@ import { CartProvider } from "@/lib/cart";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
+import Conta from "@/pages/conta";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
+      <Route path="/conta" component={Conta} />
       <Route component={NotFound} />
     </Switch>
   );
