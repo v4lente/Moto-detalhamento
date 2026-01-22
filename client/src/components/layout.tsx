@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ShoppingCart, Phone } from "lucide-react";
+import { ShoppingCart, Phone, Settings } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSettings } from "@/lib/api";
@@ -156,9 +156,12 @@ export function Footer({ settings }: FooterProps) {
         <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
           {settings?.footerText || "Especialistas em detalhamento de motos. Cuidamos da sua máquina com os melhores produtos do mercado."}
         </p>
-        <div className="text-xs text-muted-foreground/50">
+        <div className="text-xs text-muted-foreground/50 mb-4">
           {settings?.copyrightText || "© 2024 Daniel Valente Moto Detalhamento. Todos os direitos reservados."}
         </div>
+        <Link href="/admin" className="inline-flex items-center gap-1 text-xs text-muted-foreground/40 hover:text-primary transition-colors" data-testid="link-admin">
+          <Settings className="h-3 w-3" /> Área Administrativa
+        </Link>
       </div>
     </footer>
   );
