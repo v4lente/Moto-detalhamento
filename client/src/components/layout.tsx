@@ -31,20 +31,18 @@ export function Navbar() {
   return (
     <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/">
-          <a className="flex items-center gap-2">
-            <span className="font-display font-bold text-xl uppercase tracking-widest text-white">
-              <span className="text-primary">Daniel</span> Valente
-            </span>
-          </a>
+        <Link href="/" className="flex items-center gap-2">
+          <span className="font-display font-bold text-xl uppercase tracking-widest text-white">
+            <span className="text-primary">Daniel</span> Valente
+          </span>
         </Link>
 
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="relative border-primary/20 hover:bg-primary/10 hover:text-primary">
+            <Button variant="outline" size="icon" className="relative border-primary/20 hover:bg-primary/10 hover:text-primary" data-testid="button-cart">
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center" data-testid="text-cart-count">
                   {cartCount}
                 </span>
               )}
@@ -65,28 +63,30 @@ export function Navbar() {
                 <ScrollArea className="h-[60vh] my-4 pr-4">
                   <div className="space-y-4">
                     {items.map((item) => (
-                      <div key={item.id} className="flex gap-4 items-start">
+                      <div key={item.id} className="flex gap-4 items-start" data-testid={`cart-item-${item.id}`}>
                         <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" data-testid={`img-cart-${item.id}`} />
                         </div>
                         <div className="flex-1">
-                          <h4 className="text-sm font-medium line-clamp-1">{item.name}</h4>
-                          <p className="text-sm text-primary font-bold">R$ {item.price.toFixed(2)}</p>
+                          <h4 className="text-sm font-medium line-clamp-1" data-testid={`text-cart-name-${item.id}`}>{item.name}</h4>
+                          <p className="text-sm text-primary font-bold" data-testid={`text-cart-price-${item.id}`}>R$ {item.price.toFixed(2)}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <Button 
                               variant="outline" 
                               size="icon" 
                               className="h-6 w-6 text-[10px]"
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              data-testid={`button-decrease-${item.id}`}
                             >
                               -
                             </Button>
-                            <span className="text-xs w-4 text-center">{item.quantity}</span>
+                            <span className="text-xs w-4 text-center" data-testid={`text-quantity-${item.id}`}>{item.quantity}</span>
                             <Button 
                               variant="outline" 
                               size="icon" 
                               className="h-6 w-6 text-[10px]"
                               onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              data-testid={`button-increase-${item.id}`}
                             >
                               +
                             </Button>
@@ -100,11 +100,12 @@ export function Navbar() {
                   <Separator />
                   <div className="flex justify-between text-lg font-bold font-display">
                     <span>Total</span>
-                    <span className="text-primary">R$ {cartTotal.toFixed(2)}</span>
+                    <span className="text-primary" data-testid="text-cart-total">R$ {cartTotal.toFixed(2)}</span>
                   </div>
                   <Button 
                     className="w-full bg-green-600 hover:bg-green-700 text-white font-bold" 
                     onClick={handleCheckout}
+                    data-testid="button-checkout"
                   >
                     <Phone className="mr-2 h-4 w-4" /> Finalizar pelo WhatsApp
                   </Button>

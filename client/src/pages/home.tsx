@@ -1,15 +1,21 @@
 import { Navbar, Footer } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
-import { products } from "@/data/products";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProducts } from "@/lib/api";
 import logo from "@assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg";
+import { Loader2 } from "lucide-react";
 
 export default function Home() {
+  const { data: products, isLoading, error } = useQuery({
+    queryKey: ["products"],
+    queryFn: fetchProducts,
+  });
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       
-      {/* Hero Section */}
       <section className="relative h-[600px] flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent z-10" />
@@ -32,10 +38,10 @@ export default function Home() {
               Cuidado profissional para sua moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.
             </p>
             <div className="flex gap-4">
-              <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8">
+              <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8" data-testid="button-ver-produtos">
                 Ver Produtos
               </Button>
-              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8">
+              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8" data-testid="button-agendar">
                 Agendar Serviço
               </Button>
             </div>
@@ -43,7 +49,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Catalog Section */}
       <section className="py-20 container mx-auto px-4 flex-1">
         <div className="flex items-center justify-between mb-12">
           <div>
@@ -52,11 +57,25 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {isLoading && (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        {error && (
+          <div className="text-center text-red-500 py-12">
+            Erro ao carregar produtos. Tente novamente mais tarde.
+          </div>
+        )}
+
+        {products && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </section>
 
       <Footer />

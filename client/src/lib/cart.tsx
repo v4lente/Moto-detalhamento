@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Product } from "@/data/products";
+import { Product } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CartItem extends Product {
@@ -22,7 +22,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  // Load cart from local storage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem("cart");
     if (savedCart) {
@@ -34,7 +33,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save cart to local storage on change
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
