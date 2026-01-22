@@ -2,10 +2,13 @@ import {
   type User, type InsertUser, 
   type Product, type InsertProduct,
   type SiteSettings, type UpdateSiteSettings,
-  users, products, siteSettings 
+  type Customer, type InsertCustomer,
+  type Order, type InsertOrder,
+  type OrderItem, type InsertOrderItem,
+  users, products, siteSettings, customers, orders, orderItems 
 } from "@shared/schema";
 import { db } from "../db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -20,6 +23,21 @@ export interface IStorage {
 
   getSiteSettings(): Promise<SiteSettings | undefined>;
   updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings>;
+
+  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  getCustomerByPhone(phone: string): Promise<Customer | undefined>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+
+  createOrder(order: InsertOrder): Promise<Order>;
+  getOrder(id: number): Promise<Order | undefined>;
+  getOrdersByCustomer(customerId: string): Promise<Order[]>;
+  getAllOrders(): Promise<Order[]>;
+  updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+
+  createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
+  getOrderItems(orderId: number): Promise<OrderItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -75,6 +93,63 @@ export class DatabaseStorage implements IStorage {
     }
     const result = await db.update(siteSettings).set(settings).where(eq(siteSettings.id, 1)).returning();
     return result[0];
+  }
+
+  async getCustomer(id: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.id, id));
+    return result[0];
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.email, email));
+    return result[0];
+  }
+
+  async getCustomerByPhone(phone: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.phone, phone));
+    return result[0];
+  }
+
+  async createCustomer(customer: InsertCustomer): Promise<Customer> {
+    const result = await db.insert(customers).values(customer).returning();
+    return result[0];
+  }
+
+  async updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const result = await db.update(customers).set(customer).where(eq(customers.id, id)).returning();
+    return result[0];
+  }
+
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const result = await db.insert(orders).values(order).returning();
+    return result[0];
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const result = await db.select().from(orders).where(eq(orders.id, id));
+    return result[0];
+  }
+
+  async getOrdersByCustomer(customerId: string): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.customerId, customerId)).orderBy(desc(orders.createdAt));
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async updateOrderStatus(id: number, status: string): Promise<Order | undefined> {
+    const result = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    return result[0];
+  }
+
+  async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {
+    const result = await db.insert(orderItems).values(item).returning();
+    return result[0];
+  }
+
+  async getOrderItems(orderId: number): Promise<OrderItem[]> {
+    return await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
   }
 }
 
