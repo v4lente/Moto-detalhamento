@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -124,4 +124,125 @@ export async function getCurrentUser(): Promise<{ id: string; username: string }
   } catch {
     return null;
   }
+}
+
+// Customer Auth
+export interface CustomerData {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  nickname: string | null;
+  deliveryAddress: string | null;
+}
+
+export async function customerLogin(email: string, password: string): Promise<CustomerData> {
+  const response = await fetch(`${API_BASE}/customer/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to login");
+  }
+  return response.json();
+}
+
+export async function customerRegister(data: {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  nickname?: string;
+  deliveryAddress?: string;
+}): Promise<CustomerData> {
+  const response = await fetch(`${API_BASE}/customer/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to register");
+  }
+  return response.json();
+}
+
+export async function customerLogout(): Promise<void> {
+  await fetch(`${API_BASE}/customer/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
+export async function getCurrentCustomer(): Promise<CustomerData | null> {
+  try {
+    const response = await fetch(`${API_BASE}/customer/me`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function updateCustomerProfile(data: Partial<CustomerData>): Promise<CustomerData> {
+  const response = await fetch(`${API_BASE}/customer/me`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update profile");
+  }
+  return response.json();
+}
+
+// Checkout
+export interface CheckoutResult {
+  orderId: number;
+  whatsappMessage: string;
+  customerId: string;
+}
+
+export async function processCheckout(data: CheckoutData): Promise<CheckoutResult> {
+  const response = await fetch(`${API_BASE}/checkout`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to process checkout");
+  }
+  return response.json();
+}
+
+// Customer Orders
+export async function fetchCustomerOrders(): Promise<Order[]> {
+  const response = await fetch(`${API_BASE}/customer/orders`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch orders");
+  }
+  return response.json();
+}
+
+export async function fetchCustomerOrder(id: number): Promise<Order & { items: OrderItem[] }> {
+  const response = await fetch(`${API_BASE}/customer/orders/${id}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch order");
+  }
+  return response.json();
 }

@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { ShoppingCart, Phone, Settings } from "lucide-react";
+import { ShoppingCart, Phone, Settings, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useQuery } from "@tanstack/react-query";
-import { fetchSettings } from "@/lib/api";
+import { fetchSettings, getCurrentCustomer } from "@/lib/api";
 import {
   Sheet,
   SheetContent,
@@ -13,24 +14,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { CheckoutDialog } from "./checkout-dialog";
 
 export function Navbar() {
   const { cartCount, items, updateQuantity, cartTotal } = useCart();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  
   const { data: settings } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
   });
 
+  const { data: customer } = useQuery({
+    queryKey: ["customer"],
+    queryFn: getCurrentCustomer,
+  });
+
   const handleCheckout = () => {
-    const phoneNumber = settings?.whatsappNumber || "5511999999999";
-    const siteName = settings?.siteName || "Daniel Valente";
-    const message = items
-      .map((item) => `${item.quantity}x ${item.name} (R$ ${item.price.toFixed(2)})`)
-      .join("%0A");
-    const total = `Total: R$ ${cartTotal.toFixed(2)}`;
-    const fullMessage = `Olá ${siteName}! Gostaria de fazer o seguinte pedido:%0A%0A${message}%0A%0A${total}`;
-    
-    window.open(`https://wa.me/${phoneNumber}?text=${fullMessage}`, "_blank");
+    setCheckoutOpen(true);
   };
 
   const siteName = settings?.siteName || "Daniel Valente";
@@ -51,7 +52,14 @@ export function Navbar() {
           </span>
         </Link>
 
-        <Sheet>
+        <div className="flex items-center gap-2">
+          <Link href="/conta">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" data-testid="button-account">
+              <User className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          <Sheet>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="relative border-primary/20 hover:bg-primary/10 hover:text-primary" data-testid="button-cart">
               <ShoppingCart className="h-5 w-5" />
@@ -128,6 +136,9 @@ export function Navbar() {
             )}
           </SheetContent>
         </Sheet>
+        </div>
+
+        <CheckoutDialog open={checkoutOpen} onOpenChange={setCheckoutOpen} />
       </div>
     </nav>
   );
