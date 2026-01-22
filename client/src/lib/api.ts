@@ -79,6 +79,7 @@ export async function login(username: string, password: string): Promise<{ id: s
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -92,6 +93,7 @@ export async function register(username: string, password: string): Promise<{ id
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -103,6 +105,7 @@ export async function register(username: string, password: string): Promise<{ id
 export async function logout(): Promise<void> {
   const response = await fetch(`${API_BASE}/auth/logout`, {
     method: "POST",
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Failed to logout");
@@ -111,7 +114,9 @@ export async function logout(): Promise<void> {
 
 export async function getCurrentUser(): Promise<{ id: string; username: string } | null> {
   try {
-    const response = await fetch(`${API_BASE}/auth/me`);
+    const response = await fetch(`${API_BASE}/auth/me`, {
+      credentials: "include",
+    });
     if (!response.ok) {
       return null;
     }
