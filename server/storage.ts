@@ -1,4 +1,9 @@
-import { type User, type InsertUser, type Product, type InsertProduct, users, products } from "@shared/schema";
+import { 
+  type User, type InsertUser, 
+  type Product, type InsertProduct,
+  type SiteSettings, type UpdateSiteSettings,
+  users, products, siteSettings 
+} from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
@@ -12,6 +17,9 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined>;
   deleteProduct(id: number): Promise<boolean>;
+
+  getSiteSettings(): Promise<SiteSettings | undefined>;
+  updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -52,6 +60,21 @@ export class DatabaseStorage implements IStorage {
   async deleteProduct(id: number): Promise<boolean> {
     const result = await db.delete(products).where(eq(products.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getSiteSettings(): Promise<SiteSettings | undefined> {
+    const result = await db.select().from(siteSettings).where(eq(siteSettings.id, 1));
+    return result[0];
+  }
+
+  async updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings> {
+    const existing = await this.getSiteSettings();
+    if (!existing) {
+      const result = await db.insert(siteSettings).values({ id: 1, ...settings }).returning();
+      return result[0];
+    }
+    const result = await db.update(siteSettings).set(settings).where(eq(siteSettings.id, 1)).returning();
+    return result[0];
   }
 }
 
