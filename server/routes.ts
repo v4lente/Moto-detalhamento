@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema } from "@shared/schema";
+import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -25,12 +25,20 @@ async function comparePasswords(supplied: string, stored: string): Promise<boole
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    customerId?: string;
   }
 }
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
+function requireCustomerAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.customerId) {
+    return res.status(401).json({ error: "Not authenticated" });
   }
   next();
 }
@@ -216,6 +224,259 @@ export async function registerRoutes(
       }
       console.error("Error updating settings:", error);
       res.status(500).json({ error: "Failed to update settings" });
+    }
+  });
+
+  // ===== CUSTOMER AUTH ROUTES =====
+  app.post("/api/customer/register", async (req, res) => {
+    try {
+      const validatedData = registerCustomerSchema.parse(req.body);
+      
+      const existingCustomer = await storage.getCustomerByEmail(validatedData.email);
+      if (existingCustomer && existingCustomer.isRegistered) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+
+      const hashedPassword = await hashPassword(validatedData.password);
+      
+      let customer;
+      if (existingCustomer) {
+        customer = await storage.updateCustomer(existingCustomer.id, {
+          ...validatedData,
+          password: hashedPassword,
+          isRegistered: true,
+        });
+      } else {
+        customer = await storage.createCustomer({
+          ...validatedData,
+          password: hashedPassword,
+          isRegistered: true,
+        });
+      }
+
+      req.session.customerId = customer!.id;
+      res.status(201).json({ id: customer!.id, name: customer!.name, email: customer!.email });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error registering customer:", error);
+      res.status(500).json({ error: "Failed to register" });
+    }
+  });
+
+  app.post("/api/customer/login", async (req, res) => {
+    try {
+      const validatedData = customerLoginSchema.parse(req.body);
+      
+      const customer = await storage.getCustomerByEmail(validatedData.email);
+      if (!customer || !customer.isRegistered || !customer.password) {
+        return res.status(401).json({ error: "Email ou senha inválidos" });
+      }
+
+      const isValid = await comparePasswords(validatedData.password, customer.password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Email ou senha inválidos" });
+      }
+
+      req.session.customerId = customer.id;
+      res.json({ id: customer.id, name: customer.name, email: customer.email });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error logging in customer:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  app.post("/api/customer/logout", (req, res) => {
+    req.session.customerId = undefined;
+    res.json({ success: true });
+  });
+
+  app.get("/api/customer/me", async (req, res) => {
+    if (!req.session.customerId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    try {
+      const customer = await storage.getCustomer(req.session.customerId);
+      if (!customer) {
+        req.session.customerId = undefined;
+        return res.status(401).json({ error: "Customer not found" });
+      }
+      res.json({ 
+        id: customer.id, 
+        name: customer.name, 
+        email: customer.email, 
+        phone: customer.phone,
+        nickname: customer.nickname,
+        deliveryAddress: customer.deliveryAddress 
+      });
+    } catch (error) {
+      console.error("Error fetching customer:", error);
+      res.status(500).json({ error: "Failed to fetch customer" });
+    }
+  });
+
+  app.patch("/api/customer/me", requireCustomerAuth, async (req, res) => {
+    try {
+      const { name, phone, nickname, deliveryAddress } = req.body;
+      const customer = await storage.updateCustomer(req.session.customerId!, {
+        name, phone, nickname, deliveryAddress
+      });
+      res.json(customer);
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      res.status(500).json({ error: "Failed to update customer" });
+    }
+  });
+
+  // ===== CHECKOUT ROUTE =====
+  app.post("/api/checkout", async (req, res) => {
+    try {
+      const validatedData = checkoutSchema.parse(req.body);
+      const { customer: customerData, items, total } = validatedData;
+
+      let customer = await storage.getCustomerByPhone(customerData.phone);
+      if (!customer) {
+        if (customerData.email) {
+          customer = await storage.getCustomerByEmail(customerData.email);
+        }
+      }
+
+      if (!customer) {
+        customer = await storage.createCustomer({
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email || null,
+          nickname: customerData.nickname || null,
+          deliveryAddress: customerData.deliveryAddress || null,
+          isRegistered: false,
+        });
+      } else {
+        await storage.updateCustomer(customer.id, {
+          name: customerData.name,
+          deliveryAddress: customerData.deliveryAddress || customer.deliveryAddress,
+        });
+      }
+
+      const itemsList = items.map(item => 
+        `• ${item.quantity}x ${item.productName} - R$ ${(item.productPrice * item.quantity).toFixed(2)}`
+      ).join("\n");
+
+      const whatsappMessage = `🏍️ *Novo Pedido*\n\n` +
+        `*Cliente:* ${customerData.name}\n` +
+        `*Telefone:* ${customerData.phone}\n` +
+        (customerData.email ? `*Email:* ${customerData.email}\n` : "") +
+        (customerData.deliveryAddress ? `*Endereço:* ${customerData.deliveryAddress}\n` : "") +
+        `\n*Itens:*\n${itemsList}\n\n` +
+        `*Total: R$ ${total.toFixed(2)}*`;
+
+      const order = await storage.createOrder({
+        customerId: customer.id,
+        status: "pending",
+        total,
+        customerName: customerData.name,
+        customerPhone: customerData.phone,
+        customerEmail: customerData.email || null,
+        deliveryAddress: customerData.deliveryAddress || null,
+        whatsappMessage,
+      });
+
+      for (const item of items) {
+        await storage.createOrderItem({
+          orderId: order.id,
+          productId: item.productId,
+          productName: item.productName,
+          productPrice: item.productPrice,
+          quantity: item.quantity,
+        });
+      }
+
+      res.status(201).json({ 
+        orderId: order.id, 
+        whatsappMessage,
+        customerId: customer.id 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error processing checkout:", error);
+      res.status(500).json({ error: "Failed to process checkout" });
+    }
+  });
+
+  // ===== ORDER ROUTES =====
+  app.get("/api/customer/orders", requireCustomerAuth, async (req, res) => {
+    try {
+      const orders = await storage.getOrdersByCustomer(req.session.customerId!);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/customer/orders/:id", requireCustomerAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id as string);
+      const order = await storage.getOrder(orderId);
+      
+      if (!order || order.customerId !== req.session.customerId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      const items = await storage.getOrderItems(orderId);
+      res.json({ ...order, items });
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
+  // Admin orders view
+  app.get("/api/orders", requireAuth, async (req, res) => {
+    try {
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/orders/:id", requireAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id as string);
+      const order = await storage.getOrder(orderId);
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      const items = await storage.getOrderItems(orderId);
+      res.json({ ...order, items });
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
+  app.patch("/api/orders/:id/status", requireAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id as string);
+      const { status } = req.body;
+      
+      const order = await storage.updateOrderStatus(orderId, status);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      res.status(500).json({ error: "Failed to update order status" });
     }
   });
 
