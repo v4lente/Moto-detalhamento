@@ -14,7 +14,8 @@ import {
   fetchSettings, updateSettings, getCurrentUser, logout 
 } from "@/lib/api";
 import { Product, UpdateSiteSettings } from "@shared/schema";
-import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Admin() {
   const [, setLocation] = useLocation();
@@ -142,6 +143,11 @@ export default function Admin() {
           </h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">Olá, {user.username}</span>
+            <Link href="/">
+              <Button variant="outline" size="sm" data-testid="link-home">
+                <Home className="h-4 w-4 mr-2" /> Loja
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout">
               <LogOut className="h-4 w-4 mr-2" /> Sair
             </Button>

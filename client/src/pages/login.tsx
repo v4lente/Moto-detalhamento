@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { login, register } from "@/lib/api";
-import { Lock, User } from "lucide-react";
+import { Lock, User, Home } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -97,7 +98,7 @@ export default function Login() {
               {isLoading ? "Carregando..." : isRegister ? "Criar Conta" : "Entrar"}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-center space-y-2">
             <Button
               variant="link"
               className="text-muted-foreground"
@@ -106,6 +107,11 @@ export default function Login() {
             >
               {isRegister ? "Já tem uma conta? Faça login" : "Não tem conta? Registre-se"}
             </Button>
+            <div>
+              <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors" data-testid="link-home">
+                <Home className="h-4 w-4" /> Voltar para a loja
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
