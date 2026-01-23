@@ -11,10 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { 
   fetchProducts, createProduct, updateProduct, deleteProduct,
-  fetchSettings, updateSettings, getCurrentUser, logout 
+  fetchSettings, updateSettings, getCurrentUser, logout,
+  fetchAllOrders, fetchOrderDetails, updateOrderStatus
 } from "@/lib/api";
-import { Product, UpdateSiteSettings } from "@shared/schema";
-import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home } from "lucide-react";
+import { Product, UpdateSiteSettings, Order, OrderItem } from "@shared/schema";
+import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 
 export default function Admin() {
@@ -23,6 +25,8 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -37,6 +41,11 @@ export default function Admin() {
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["settings"],
     queryFn: fetchSettings,
+  });
+
+  const { data: orders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["adminOrders"],
+    queryFn: fetchAllOrders,
   });
 
   useEffect(() => {
@@ -83,6 +92,25 @@ export default function Admin() {
     },
     onError: () => toast({ title: "Erro ao salvar configurações", variant: "destructive" }),
   });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => updateOrderStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
+      toast({ title: "Status do pedido atualizado!" });
+    },
+    onError: () => toast({ title: "Erro ao atualizar status", variant: "destructive" }),
+  });
+
+  const handleViewOrder = async (orderId: number) => {
+    try {
+      const orderDetails = await fetchOrderDetails(orderId);
+      setSelectedOrder(orderDetails);
+      setIsOrderDialogOpen(true);
+    } catch (error) {
+      toast({ title: "Erro ao carregar pedido", variant: "destructive" });
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -158,10 +186,13 @@ export default function Admin() {
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-card">
-            <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black">
+            <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-products">
               <Package className="h-4 w-4 mr-2" /> Produtos
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black">
+            <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-orders">
+              <ShoppingBag className="h-4 w-4 mr-2" /> Pedidos
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-settings">
               <Settings className="h-4 w-4 mr-2" /> Configurações
             </TabsTrigger>
           </TabsList>
@@ -257,6 +288,143 @@ export default function Admin() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="orders" className="space-y-6">
+            <h2 className="text-2xl font-display font-bold">Gerenciar Pedidos</h2>
+            
+            {ordersLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : orders && orders.length > 0 ? (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <Card key={order.id} className="bg-card border-border" data-testid={`admin-order-${order.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <div>
+                              <p className="font-bold">Pedido #{order.id}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(order.createdAt).toLocaleDateString("pt-BR", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            <div className="hidden md:block">
+                              <p className="text-sm text-muted-foreground">Cliente:</p>
+                              <p className="font-medium">{order.customerName}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="font-bold text-primary">R$ {order.total.toFixed(2)}</p>
+                          </div>
+                          <Select
+                            defaultValue={order.status}
+                            onValueChange={(value) => updateOrderStatusMutation.mutate({ id: order.id, status: value })}
+                          >
+                            <SelectTrigger className="w-[130px]" data-testid={`select-status-${order.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-yellow-500" /> Pendente
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="completed">
+                                <div className="flex items-center gap-2">
+                                  <Check className="h-4 w-4 text-green-500" /> Concluído
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="cancelled">
+                                <div className="flex items-center gap-2">
+                                  <X className="h-4 w-4 text-red-500" /> Cancelado
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleViewOrder(order.id)}
+                            data-testid={`button-view-order-${order.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>Nenhum pedido recebido ainda.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+              <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    Detalhes do Pedido #{selectedOrder?.id}
+                  </DialogTitle>
+                </DialogHeader>
+                {selectedOrder && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Cliente</p>
+                        <p className="font-medium">{selectedOrder.customerName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Telefone</p>
+                        <p className="font-medium">{selectedOrder.customerPhone}</p>
+                      </div>
+                      {selectedOrder.customerEmail && (
+                        <div>
+                          <p className="text-muted-foreground">Email</p>
+                          <p className="font-medium">{selectedOrder.customerEmail}</p>
+                        </div>
+                      )}
+                      {selectedOrder.deliveryAddress && (
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground">Endereço</p>
+                          <p className="font-medium">{selectedOrder.deliveryAddress}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-border pt-4">
+                      <p className="font-medium mb-2">Itens do Pedido</p>
+                      <div className="space-y-2">
+                        {selectedOrder.items.map((item) => (
+                          <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
+                            <span>{item.quantity}x {item.productName}</span>
+                            <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between font-bold mt-4 pt-4 border-t border-border">
+                        <span>Total</span>
+                        <span className="text-primary">R$ {selectedOrder.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="settings">

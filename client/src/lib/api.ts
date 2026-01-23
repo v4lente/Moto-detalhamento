@@ -246,3 +246,37 @@ export async function fetchCustomerOrder(id: number): Promise<Order & { items: O
   }
   return response.json();
 }
+
+// Admin Orders
+export async function fetchAllOrders(): Promise<Order[]> {
+  const response = await fetch(`${API_BASE}/orders`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch orders");
+  }
+  return response.json();
+}
+
+export async function fetchOrderDetails(id: number): Promise<Order & { items: OrderItem[] }> {
+  const response = await fetch(`${API_BASE}/orders/${id}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch order");
+  }
+  return response.json();
+}
+
+export async function updateOrderStatus(id: number, status: string): Promise<Order> {
+  const response = await fetch(`${API_BASE}/orders/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update order status");
+  }
+  return response.json();
+}

@@ -9,16 +9,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   customerLogin, customerRegister, customerLogout, getCurrentCustomer, 
-  fetchCustomerOrders, fetchSettings 
+  fetchCustomerOrders, fetchCustomerOrder, fetchSettings, updateCustomerProfile
 } from "@/lib/api";
 import { Navbar, Footer } from "@/components/layout";
-import { Lock, User, Mail, Phone, MapPin, Home, LogOut, Package, Loader2 } from "lucide-react";
-import type { Order } from "@shared/schema";
+import { Lock, User, Mail, Phone, MapPin, Home, LogOut, Package, Loader2, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Order, OrderItem } from "@shared/schema";
 
 export default function Conta() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [expandedOrders, setExpandedOrders] = useState<Record<number, OrderItem[]>>({});
+  const [loadingOrderId, setLoadingOrderId] = useState<number | null>(null);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [profileFormData, setProfileFormData] = useState({
+    name: "",
+    phone: "",
+    deliveryAddress: "",
+  });
 
   const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ["customer"],
@@ -48,6 +58,57 @@ export default function Conta() {
     },
   });
 
+  const updateProfileMutation = useMutation({
+    mutationFn: updateCustomerProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer"] });
+      toast({ title: "Perfil atualizado!" });
+      setIsProfileDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleToggleOrder = async (orderId: number) => {
+    if (expandedOrders[orderId]) {
+      setExpandedOrders(prev => {
+        const newState = { ...prev };
+        delete newState[orderId];
+        return newState;
+      });
+    } else {
+      setLoadingOrderId(orderId);
+      try {
+        const orderDetails = await fetchCustomerOrder(orderId);
+        setExpandedOrders(prev => ({
+          ...prev,
+          [orderId]: orderDetails.items,
+        }));
+      } catch (error) {
+        toast({ title: "Erro ao carregar detalhes do pedido", variant: "destructive" });
+      } finally {
+        setLoadingOrderId(null);
+      }
+    }
+  };
+
+  const handleOpenProfileEdit = () => {
+    if (customer) {
+      setProfileFormData({
+        name: customer.name,
+        phone: customer.phone,
+        deliveryAddress: customer.deliveryAddress || "",
+      });
+      setIsProfileDialogOpen(true);
+    }
+  };
+
+  const handleProfileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfileMutation.mutate(profileFormData);
+  };
+
   if (customerLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -74,6 +135,9 @@ export default function Conta() {
                 <p className="text-muted-foreground mt-1">{customer.email}</p>
               </div>
               <div className="flex gap-2">
+                <Button variant="outline" onClick={handleOpenProfileEdit} data-testid="button-edit-profile">
+                  <Pencil className="h-4 w-4 mr-2" /> Editar Perfil
+                </Button>
                 <Button variant="outline" onClick={() => setLocation("/")} data-testid="link-home">
                   <Home className="h-4 w-4 mr-2" /> Loja
                 </Button>
@@ -99,40 +163,71 @@ export default function Conta() {
                 ) : orders && orders.length > 0 ? (
                   <div className="space-y-4">
                     {orders.map((order: Order) => (
-                      <div 
-                        key={order.id} 
-                        className="border border-border/40 rounded-lg p-4 hover:border-primary/40 transition-colors"
-                        data-testid={`order-${order.id}`}
+                      <Collapsible 
+                        key={order.id}
+                        open={!!expandedOrders[order.id]}
+                        onOpenChange={() => handleToggleOrder(order.id)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Pedido #{order.id}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(order.createdAt).toLocaleDateString("pt-BR", {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-primary">R$ {order.total.toFixed(2)}</p>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              order.status === "completed" 
-                                ? "bg-green-500/20 text-green-500" 
-                                : order.status === "cancelled"
-                                ? "bg-red-500/20 text-red-500"
-                                : "bg-yellow-500/20 text-yellow-500"
-                            }`}>
-                              {order.status === "pending" ? "Pendente" : 
-                               order.status === "completed" ? "Concluído" : 
-                               order.status === "cancelled" ? "Cancelado" : order.status}
-                            </span>
-                          </div>
+                        <div 
+                          className="border border-border/40 rounded-lg overflow-hidden hover:border-primary/40 transition-colors"
+                          data-testid={`order-${order.id}`}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <button className="w-full p-4 flex items-center justify-between text-left hover:bg-background/50 transition-colors">
+                              <div>
+                                <p className="font-medium">Pedido #{order.id}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(order.createdAt).toLocaleDateString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "long",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="font-bold text-primary">R$ {order.total.toFixed(2)}</p>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    order.status === "completed" 
+                                      ? "bg-green-500/20 text-green-500" 
+                                      : order.status === "cancelled"
+                                      ? "bg-red-500/20 text-red-500"
+                                      : "bg-yellow-500/20 text-yellow-500"
+                                  }`}>
+                                    {order.status === "pending" ? "Pendente" : 
+                                     order.status === "completed" ? "Concluído" : 
+                                     order.status === "cancelled" ? "Cancelado" : order.status}
+                                  </span>
+                                </div>
+                                {loadingOrderId === order.id ? (
+                                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                ) : expandedOrders[order.id] ? (
+                                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            {expandedOrders[order.id] && (
+                              <div className="px-4 pb-4 border-t border-border/40 pt-4 bg-background/30">
+                                <p className="font-medium mb-2 text-sm">Itens do pedido:</p>
+                                <div className="space-y-2">
+                                  {expandedOrders[order.id].map((item) => (
+                                    <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
+                                      <span>{item.quantity}x {item.productName}</span>
+                                      <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CollapsibleContent>
                         </div>
-                      </div>
+                      </Collapsible>
                     ))}
                   </div>
                 ) : (
@@ -149,6 +244,68 @@ export default function Conta() {
           </div>
         </main>
         <Footer settings={settings} />
+
+        <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+          <DialogContent className="sm:max-w-md bg-card border-primary/20" aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle className="font-display uppercase tracking-widest text-primary">
+                Editar Perfil
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Nome</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="profile-name"
+                    value={profileFormData.name}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, name: e.target.value })}
+                    className="pl-10"
+                    required
+                    data-testid="input-profile-name"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-phone">Telefone</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="profile-phone"
+                    value={profileFormData.phone}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, phone: e.target.value })}
+                    className="pl-10"
+                    required
+                    data-testid="input-profile-phone"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-address">Endereço de Entrega</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="profile-address"
+                    value={profileFormData.deliveryAddress}
+                    onChange={(e) => setProfileFormData({ ...profileFormData, deliveryAddress: e.target.value })}
+                    className="pl-10"
+                    placeholder="Rua, número, bairro, cidade"
+                    data-testid="input-profile-address"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-primary text-black hover:bg-primary/90 font-bold"
+                disabled={updateProfileMutation.isPending}
+                data-testid="button-save-profile"
+              >
+                {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Alterações"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
