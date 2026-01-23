@@ -978,61 +978,66 @@ export default function Admin() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Imagens e Vídeos</Label>
-                      <div className="flex gap-2 mb-2">
-                        <div className="flex-shrink-0">
+                      <Label>Imagens e Vídeos ({serviceMediaUrls.length} adicionado{serviceMediaUrls.length !== 1 ? 's' : ''})</Label>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        {serviceMediaUrls.map((url, index) => (
+                          <div key={`media-${index}`} className="relative group">
+                            {serviceMediaTypes[index] === "image" ? (
+                              <img
+                                src={url}
+                                alt={`Mídia ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border border-border"
+                              />
+                            ) : (
+                              <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center border border-border">
+                                <Play className="h-8 w-8 text-primary" />
+                              </div>
+                            )}
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleRemoveServiceMedia(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        
+                        <div className="w-full h-24">
                           <ImageUpload
+                            key={`upload-${serviceMediaUrls.length}`}
                             value=""
-                            onChange={(url) => handleAddServiceMedia(url, "image")}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <Input
-                            placeholder="URL do vídeo (YouTube, Vimeo, etc.)"
-                            className="bg-background"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const input = e.currentTarget;
-                                if (input.value.trim()) {
-                                  handleAddServiceMedia(input.value.trim(), "video");
-                                  input.value = "";
-                                }
-                              }
+                            onChange={(url) => {
+                              if (url) handleAddServiceMedia(url, "image");
                             }}
-                            data-testid="input-service-video-url"
                           />
                         </div>
                       </div>
-                      
-                      {serviceMediaUrls.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2">
-                          {serviceMediaUrls.map((url, index) => (
-                            <div key={index} className="relative group">
-                              {serviceMediaTypes[index] === "image" ? (
-                                <img
-                                  src={url}
-                                  alt={`Mídia ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg"
-                                />
-                              ) : (
-                                <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
-                                  <Play className="h-8 w-8 text-primary" />
-                                </div>
-                              )}
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleRemoveServiceMedia(index)}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+
+                      <div className="flex gap-2">
+                        <Input
+                          id="videoUrlInput"
+                          placeholder="Cole a URL do vídeo (YouTube, Vimeo)"
+                          className="bg-background flex-1"
+                          data-testid="input-service-video-url"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const input = document.getElementById("videoUrlInput") as HTMLInputElement;
+                            if (input && input.value.trim()) {
+                              handleAddServiceMedia(input.value.trim(), "video");
+                              input.value = "";
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" /> Vídeo
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
