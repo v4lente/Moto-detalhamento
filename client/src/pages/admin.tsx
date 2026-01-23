@@ -19,7 +19,7 @@ import {
   fetchAppointments, updateAppointment, deleteAppointment
 } from "@/lib/api";
 import { Product, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost, Appointment } from "@shared/schema";
-import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image, Calendar, AlertTriangle, CheckCircle, XCircle, MessageCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image, Calendar, AlertTriangle, CheckCircle, XCircle, MessageCircle, LayoutDashboard, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
@@ -45,6 +45,15 @@ export default function Admin() {
   const [serviceMediaTypes, setServiceMediaTypes] = useState<string[]>([]);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
+  
+  // Dashboard state
+  const [dashboardOrderSearch, setDashboardOrderSearch] = useState("");
+  const [dashboardOrderDateFilter, setDashboardOrderDateFilter] = useState("");
+  const [dashboardOrderPage, setDashboardOrderPage] = useState(1);
+  const [dashboardAppointmentSearch, setDashboardAppointmentSearch] = useState("");
+  const [dashboardAppointmentDateFilter, setDashboardAppointmentDateFilter] = useState("");
+  const [dashboardAppointmentPage, setDashboardAppointmentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -407,8 +416,11 @@ export default function Admin() {
       </nav>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="bg-card">
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="bg-card flex-wrap">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-dashboard">
+              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
+            </TabsTrigger>
             <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-products">
               <Package className="h-4 w-4 mr-2" /> Produtos
             </TabsTrigger>
@@ -431,6 +443,252 @@ export default function Admin() {
               <Settings className="h-4 w-4 mr-2" /> Configurações
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard" className="space-y-6">
+            <h2 className="text-2xl font-display font-bold">Dashboard</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Orders Section */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingBag className="h-5 w-5 text-primary" />
+                    Pedidos Recentes
+                  </CardTitle>
+                  <CardDescription>
+                    {orders?.length || 0} pedidos no total
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por cliente..."
+                        value={dashboardOrderSearch}
+                        onChange={(e) => {
+                          setDashboardOrderSearch(e.target.value);
+                          setDashboardOrderPage(1);
+                        }}
+                        className="pl-9"
+                        data-testid="input-dashboard-order-search"
+                      />
+                    </div>
+                    <Input
+                      type="date"
+                      value={dashboardOrderDateFilter}
+                      onChange={(e) => {
+                        setDashboardOrderDateFilter(e.target.value);
+                        setDashboardOrderPage(1);
+                      }}
+                      className="w-40"
+                      data-testid="input-dashboard-order-date"
+                    />
+                  </div>
+                  
+                  {ordersLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : (() => {
+                    const filteredOrders = (orders || []).filter(order => {
+                      const matchesSearch = !dashboardOrderSearch || 
+                        order.customerName.toLowerCase().includes(dashboardOrderSearch.toLowerCase());
+                      const matchesDate = !dashboardOrderDateFilter || 
+                        new Date(order.createdAt).toISOString().slice(0, 10) === dashboardOrderDateFilter;
+                      return matchesSearch && matchesDate;
+                    });
+                    const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+                    const paginatedOrders = filteredOrders.slice(
+                      (dashboardOrderPage - 1) * ITEMS_PER_PAGE,
+                      dashboardOrderPage * ITEMS_PER_PAGE
+                    );
+                    
+                    return (
+                      <>
+                        {paginatedOrders.length > 0 ? (
+                          <div className="space-y-2">
+                            {paginatedOrders.map((order) => (
+                              <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg" data-testid={`dashboard-order-${order.id}`}>
+                                <div className="flex-1">
+                                  <p className="font-medium">{order.customerName}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {new Date(order.createdAt).toLocaleDateString('pt-BR')} - R$ {(order.total / 100).toFixed(2).replace('.', ',')}
+                                  </p>
+                                </div>
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  order.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                  order.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                                  'bg-yellow-500/20 text-yellow-500'
+                                }`}>
+                                  {order.status === 'pending' ? 'Pendente' : 
+                                   order.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-center text-muted-foreground py-4">Nenhum pedido encontrado</p>
+                        )}
+                        
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between pt-4 border-t border-border">
+                            <p className="text-sm text-muted-foreground">
+                              Página {dashboardOrderPage} de {totalPages}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDashboardOrderPage(p => Math.max(1, p - 1))}
+                                disabled={dashboardOrderPage === 1}
+                                data-testid="button-dashboard-order-prev"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDashboardOrderPage(p => Math.min(totalPages, p + 1))}
+                                disabled={dashboardOrderPage === totalPages}
+                                data-testid="button-dashboard-order-next"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+
+              {/* Appointments Section */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Pré-Agendamentos
+                  </CardTitle>
+                  <CardDescription>
+                    {appointments?.filter(a => a.status === 'pre_agendamento').length || 0} aguardando análise
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por cliente..."
+                        value={dashboardAppointmentSearch}
+                        onChange={(e) => {
+                          setDashboardAppointmentSearch(e.target.value);
+                          setDashboardAppointmentPage(1);
+                        }}
+                        className="pl-9"
+                        data-testid="input-dashboard-appointment-search"
+                      />
+                    </div>
+                    <Input
+                      type="date"
+                      value={dashboardAppointmentDateFilter}
+                      onChange={(e) => {
+                        setDashboardAppointmentDateFilter(e.target.value);
+                        setDashboardAppointmentPage(1);
+                      }}
+                      className="w-40"
+                      data-testid="input-dashboard-appointment-date"
+                    />
+                  </div>
+                  
+                  {appointmentsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : (() => {
+                    const filteredAppointments = (appointments || []).filter(apt => {
+                      if (apt.status !== 'pre_agendamento') return false;
+                      const matchesSearch = !dashboardAppointmentSearch || 
+                        (apt.customerName || '').toLowerCase().includes(dashboardAppointmentSearch.toLowerCase()) ||
+                        apt.vehicleInfo.toLowerCase().includes(dashboardAppointmentSearch.toLowerCase());
+                      const matchesDate = !dashboardAppointmentDateFilter || 
+                        new Date(apt.preferredDate).toISOString().slice(0, 10) === dashboardAppointmentDateFilter;
+                      return matchesSearch && matchesDate;
+                    });
+                    const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE);
+                    const paginatedAppointments = filteredAppointments.slice(
+                      (dashboardAppointmentPage - 1) * ITEMS_PER_PAGE,
+                      dashboardAppointmentPage * ITEMS_PER_PAGE
+                    );
+                    
+                    const statusConfig: Record<string, { label: string; color: string }> = {
+                      pre_agendamento: { label: "Pré-agendamento", color: "bg-yellow-500/20 text-yellow-500" },
+                      agendado_nao_iniciado: { label: "Agendado", color: "bg-blue-500/20 text-blue-500" },
+                      em_andamento: { label: "Em andamento", color: "bg-orange-500/20 text-orange-500" },
+                      concluido: { label: "Concluído", color: "bg-green-500/20 text-green-500" },
+                      cancelado: { label: "Cancelado", color: "bg-red-500/20 text-red-500" },
+                    };
+                    
+                    return (
+                      <>
+                        {paginatedAppointments.length > 0 ? (
+                          <div className="space-y-2">
+                            {paginatedAppointments.map((apt) => {
+                              const status = statusConfig[apt.status] || statusConfig.pre_agendamento;
+                              return (
+                                <div key={apt.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg" data-testid={`dashboard-appointment-${apt.id}`}>
+                                  <div className="flex-1">
+                                    <p className="font-medium">{apt.customerName || 'Cliente logado'}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {apt.vehicleInfo} - {new Date(apt.preferredDate).toLocaleDateString('pt-BR')}
+                                    </p>
+                                  </div>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>
+                                    {status.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-center text-muted-foreground py-4">Nenhum agendamento encontrado</p>
+                        )}
+                        
+                        {totalPages > 1 && (
+                          <div className="flex items-center justify-between pt-4 border-t border-border">
+                            <p className="text-sm text-muted-foreground">
+                              Página {dashboardAppointmentPage} de {totalPages}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDashboardAppointmentPage(p => Math.max(1, p - 1))}
+                                disabled={dashboardAppointmentPage === 1}
+                                data-testid="button-dashboard-appointment-prev"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDashboardAppointmentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={dashboardAppointmentPage === totalPages}
+                                data-testid="button-dashboard-appointment-next"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="products" className="space-y-6">
             <div className="flex justify-between items-center">
