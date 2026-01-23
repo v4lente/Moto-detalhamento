@@ -509,21 +509,29 @@ export default function Admin() {
                         {paginatedOrders.length > 0 ? (
                           <div className="space-y-2">
                             {paginatedOrders.map((order) => (
-                              <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg" data-testid={`dashboard-order-${order.id}`}>
+                              <div 
+                                key={order.id} 
+                                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors" 
+                                onClick={() => handleViewOrder(order.id)}
+                                data-testid={`dashboard-order-${order.id}`}
+                              >
                                 <div className="flex-1">
                                   <p className="font-medium">{order.customerName}</p>
                                   <p className="text-sm text-muted-foreground">
                                     {new Date(order.createdAt).toLocaleDateString('pt-BR')} - R$ {(order.total / 100).toFixed(2).replace('.', ',')}
                                   </p>
                                 </div>
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  order.status === 'completed' ? 'bg-green-500/20 text-green-500' :
-                                  order.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
-                                  'bg-yellow-500/20 text-yellow-500'
-                                }`}>
-                                  {order.status === 'pending' ? 'Pendente' : 
-                                   order.status === 'completed' ? 'Concluído' : 'Cancelado'}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    order.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                                    order.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                                    'bg-yellow-500/20 text-yellow-500'
+                                  }`}>
+                                    {order.status === 'pending' ? 'Pendente' : 
+                                     order.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                                  </span>
+                                  <Eye className="h-4 w-4 text-muted-foreground" />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -637,16 +645,27 @@ export default function Admin() {
                             {paginatedAppointments.map((apt) => {
                               const status = statusConfig[apt.status] || statusConfig.pre_agendamento;
                               return (
-                                <div key={apt.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg" data-testid={`dashboard-appointment-${apt.id}`}>
+                                <div 
+                                  key={apt.id} 
+                                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors" 
+                                  onClick={() => {
+                                    setEditingAppointment(apt);
+                                    setIsAppointmentDialogOpen(true);
+                                  }}
+                                  data-testid={`dashboard-appointment-${apt.id}`}
+                                >
                                   <div className="flex-1">
                                     <p className="font-medium">{apt.customerName || 'Cliente logado'}</p>
                                     <p className="text-sm text-muted-foreground">
                                       {apt.vehicleInfo} - {new Date(apt.preferredDate).toLocaleDateString('pt-BR')}
                                     </p>
                                   </div>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>
-                                    {status.label}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${status.color}`}>
+                                      {status.label}
+                                    </span>
+                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                  </div>
                                 </div>
                               );
                             })}
@@ -1718,6 +1737,119 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Standalone Appointment Dialog for Dashboard */}
+        <Dialog open={isAppointmentDialogOpen && editingAppointment !== null} onOpenChange={(open) => {
+          setIsAppointmentDialogOpen(open);
+          if (!open) setEditingAppointment(null);
+        }}>
+          <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle className="font-display">Detalhes do Agendamento</DialogTitle>
+            </DialogHeader>
+            {editingAppointment && (
+              <form key={`standalone-form-appointment-${editingAppointment.id}`} onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const confirmedDateStr = formData.get("confirmedDate") as string;
+                const estimatedPriceStr = formData.get("estimatedPrice") as string;
+                
+                updateAppointmentMutation.mutate({
+                  id: editingAppointment.id,
+                  data: {
+                    status: formData.get("status") as "pre_agendamento" | "agendado_nao_iniciado" | "em_andamento" | "concluido" | "cancelado",
+                    confirmedDate: confirmedDateStr || undefined,
+                    estimatedPrice: estimatedPriceStr ? Math.round(parseFloat(estimatedPriceStr) * 100) : undefined,
+                    adminNotes: formData.get("adminNotes") as string || undefined,
+                  }
+                });
+              }} className="space-y-4">
+                <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                  <p className="text-sm"><strong>Cliente:</strong> {editingAppointment.customerName || 'Cliente logado'}</p>
+                  {editingAppointment.customerPhone && (
+                    <p className="text-sm"><strong>Telefone:</strong> {editingAppointment.customerPhone}</p>
+                  )}
+                  <p className="text-sm"><strong>Veículo:</strong> {editingAppointment.vehicleInfo}</p>
+                  <p className="text-sm"><strong>Serviço:</strong> {editingAppointment.serviceDescription}</p>
+                  <p className="text-sm"><strong>Data Preferencial:</strong> {new Date(editingAppointment.preferredDate).toLocaleString('pt-BR')}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select name="status" defaultValue={editingAppointment.status}>
+                    <SelectTrigger data-testid="select-standalone-appointment-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pre_agendamento">Pré-agendamento</SelectItem>
+                      <SelectItem value="agendado_nao_iniciado">Agendado (não iniciado)</SelectItem>
+                      <SelectItem value="em_andamento">Em andamento</SelectItem>
+                      <SelectItem value="concluido">Concluído</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmedDate">Data Confirmada</Label>
+                  <Input
+                    type="datetime-local"
+                    name="confirmedDate"
+                    defaultValue={editingAppointment.confirmedDate ? new Date(editingAppointment.confirmedDate).toISOString().slice(0, 16) : ""}
+                    data-testid="input-standalone-confirmed-date"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedPrice">Preço Estimado (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    name="estimatedPrice"
+                    defaultValue={editingAppointment.estimatedPrice ? (Number(editingAppointment.estimatedPrice) / 100).toFixed(2) : ""}
+                    placeholder="0.00"
+                    data-testid="input-standalone-estimated-price"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="adminNotes">Notas Internas</Label>
+                  <Textarea
+                    name="adminNotes"
+                    defaultValue={editingAppointment.adminNotes || ""}
+                    placeholder="Observações internas (não visível para o cliente)"
+                    rows={3}
+                    data-testid="input-standalone-admin-notes"
+                  />
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button type="submit" className="flex-1 bg-primary text-black hover:bg-primary/90" disabled={updateAppointmentMutation.isPending} data-testid="button-standalone-save-appointment">
+                    {updateAppointmentMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                  </Button>
+                  {editingAppointment.customerPhone && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-green-500 text-green-500 hover:bg-green-500/10"
+                      asChild
+                    >
+                      <a
+                        href={`https://wa.me/${editingAppointment.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Sobre seu agendamento de serviço para ${editingAppointment.vehicleInfo}...`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="link-standalone-whatsapp-appointment"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
