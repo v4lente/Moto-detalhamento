@@ -891,57 +891,7 @@ export default function Admin() {
               </Card>
             )}
 
-            <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
-              <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
-                <DialogHeader>
-                  <DialogTitle className="font-display">
-                    Detalhes do Pedido #{selectedOrder?.id}
-                  </DialogTitle>
-                </DialogHeader>
-                {selectedOrder && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Cliente</p>
-                        <p className="font-medium">{selectedOrder.customerName}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-medium">{selectedOrder.customerPhone}</p>
-                      </div>
-                      {selectedOrder.customerEmail && (
-                        <div>
-                          <p className="text-muted-foreground">Email</p>
-                          <p className="font-medium">{selectedOrder.customerEmail}</p>
-                        </div>
-                      )}
-                      {selectedOrder.deliveryAddress && (
-                        <div className="col-span-2">
-                          <p className="text-muted-foreground">Endereço</p>
-                          <p className="font-medium">{selectedOrder.deliveryAddress}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-border pt-4">
-                      <p className="font-medium mb-2">Itens do Pedido</p>
-                      <div className="space-y-2">
-                        {selectedOrder.items.map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
-                            <span>{item.quantity}x {item.productName}</span>
-                            <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between font-bold mt-4 pt-4 border-t border-border">
-                        <span>Total</span>
-                        <span className="text-primary">R$ {selectedOrder.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          </TabsContent>
+            </TabsContent>
 
           <TabsContent value="customers" className="space-y-6">
             <div className="flex justify-between items-center">
@@ -1737,6 +1687,58 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Standalone Order Dialog */}
+        <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+          <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle className="font-display">
+                Detalhes do Pedido #{selectedOrder?.id}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedOrder && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Cliente</p>
+                    <p className="font-medium">{selectedOrder.customerName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Telefone</p>
+                    <p className="font-medium">{selectedOrder.customerPhone}</p>
+                  </div>
+                  {selectedOrder.customerEmail && (
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="font-medium">{selectedOrder.customerEmail}</p>
+                    </div>
+                  )}
+                  {selectedOrder.deliveryAddress && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Endereço</p>
+                      <p className="font-medium">{selectedOrder.deliveryAddress}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="border-t border-border pt-4">
+                  <p className="font-medium mb-2">Itens do Pedido</p>
+                  <div className="space-y-2">
+                    {selectedOrder.items.map((item) => (
+                      <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
+                        <span>{item.quantity}x {item.productName}</span>
+                        <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between font-bold mt-4 pt-4 border-t border-border">
+                    <span>Total</span>
+                    <span className="text-primary">R$ {selectedOrder.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Standalone Appointment Dialog for Dashboard */}
         <Dialog open={isAppointmentDialogOpen && editingAppointment !== null} onOpenChange={(open) => {
