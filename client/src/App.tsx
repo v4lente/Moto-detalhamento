@@ -10,6 +10,7 @@ import Admin from "@/pages/admin";
 import Conta from "@/pages/conta";
 import Produtos from "@/pages/produtos";
 import Produto from "@/pages/produto";
+import Agendar from "@/pages/agendar";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/conta" component={Conta} />
       <Route path="/produtos" component={Produtos} />
       <Route path="/produto/:id" component={Produto} />
+      <Route path="/agendar" component={Agendar} />
       <Route component={NotFound} />
     </Switch>
   );

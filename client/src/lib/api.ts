@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -522,4 +522,72 @@ export async function deleteServicePost(id: number): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete service post");
   }
+}
+
+// Appointments
+export async function fetchAppointments(): Promise<Appointment[]> {
+  const response = await fetch(`${API_BASE}/appointments`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch appointments");
+  }
+  return response.json();
+}
+
+export async function fetchAppointment(id: number): Promise<Appointment> {
+  const response = await fetch(`${API_BASE}/appointments/${id}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch appointment");
+  }
+  return response.json();
+}
+
+export async function createAppointment(data: CreateAppointment): Promise<{ appointment: Appointment; whatsappNumber: string; message: string }> {
+  const response = await fetch(`${API_BASE}/appointments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create appointment");
+  }
+  return response.json();
+}
+
+export async function updateAppointment(id: number, data: UpdateAppointment): Promise<Appointment> {
+  const response = await fetch(`${API_BASE}/appointments/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update appointment");
+  }
+  return response.json();
+}
+
+export async function deleteAppointment(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/appointments/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete appointment");
+  }
+}
+
+export async function fetchCustomerAppointments(): Promise<Appointment[]> {
+  const response = await fetch(`${API_BASE}/customer/appointments`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch appointments");
+  }
+  return response.json();
 }

@@ -262,7 +262,7 @@ export async function registerRoutes(
 
   app.get("/api/appointments/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid appointment ID" });
       }
@@ -345,7 +345,7 @@ export async function registerRoutes(
 
   app.patch("/api/appointments/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid appointment ID" });
       }
@@ -388,7 +388,7 @@ export async function registerRoutes(
 
   app.delete("/api/appointments/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid appointment ID" });
       }
@@ -417,7 +417,7 @@ export async function registerRoutes(
 
   app.get("/api/products/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
