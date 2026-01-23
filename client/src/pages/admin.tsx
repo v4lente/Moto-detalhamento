@@ -640,7 +640,6 @@ export default function Admin() {
                     </div>
                   ) : (() => {
                     const filteredAppointments = (appointments || []).filter(apt => {
-                      if (apt.status !== 'pre_agendamento') return false;
                       const matchesSearch = !dashboardAppointmentSearch || 
                         (apt.customerName || '').toLowerCase().includes(dashboardAppointmentSearch.toLowerCase()) ||
                         apt.vehicleInfo.toLowerCase().includes(dashboardAppointmentSearch.toLowerCase());
