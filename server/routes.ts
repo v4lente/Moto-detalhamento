@@ -8,6 +8,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { sendNewCustomerNotification } from "./email";
 
 const scryptAsync = promisify(scrypt);
 
@@ -368,6 +369,18 @@ export async function registerRoutes(
           isRegistered: true,
         });
       }
+
+      // Send email notification to admins
+      const admins = await storage.getAllUsers();
+      const adminEmails = admins
+        .filter(u => u.username.includes('@'))
+        .map(u => u.username);
+      
+      sendNewCustomerNotification(adminEmails, {
+        name: customer!.name,
+        email: customer!.email,
+        phone: customer!.phone
+      }).catch(err => console.error('Email notification failed:', err));
 
       req.session.customerId = customer!.id;
       res.status(201).json({ id: customer!.id, name: customer!.name, email: customer!.email });
