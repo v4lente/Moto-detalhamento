@@ -92,9 +92,11 @@ export default function Home() {
                   Ver Produtos
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8" data-testid="button-agendar">
-                Agendar Serviço
-              </Button>
+              <Link href="/agendar">
+                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8" data-testid="button-agendar">
+                  Agendar Serviço
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
