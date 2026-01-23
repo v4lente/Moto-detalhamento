@@ -201,3 +201,23 @@ export const createReviewSchema = z.object({
 
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
+
+export const servicePosts = pgTable("service_posts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  clientName: text("client_name"),
+  vehicleInfo: text("vehicle_info"),
+  mediaUrls: text("media_urls").array().notNull(),
+  mediaTypes: text("media_types").array().notNull(),
+  featured: boolean("featured").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertServicePostSchema = createInsertSchema(servicePosts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertServicePost = z.infer<typeof insertServicePostSchema>;
+export type ServicePost = typeof servicePosts.$inferSelect;
