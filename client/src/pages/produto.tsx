@@ -150,9 +150,9 @@ export default function Produto() {
             </div>
 
             <div className="flex items-center gap-2">
-              {renderStars(reviewsData?.avgRating || 0)}
+              {renderStars(parseFloat(String(reviewsData?.avgRating || 0)))}
               <span className="text-muted-foreground">
-                ({reviewsData?.avgRating.toFixed(1) || "0.0"}) - {reviewsData?.reviews.length || 0} avaliações
+                ({parseFloat(String(reviewsData?.avgRating || 0)).toFixed(1)}) - {reviewsData?.reviews.length || 0} avaliações
               </span>
             </div>
 
