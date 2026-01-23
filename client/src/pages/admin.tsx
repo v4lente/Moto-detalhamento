@@ -1275,7 +1275,7 @@ export default function Admin() {
                                 <DialogHeader>
                                   <DialogTitle className="font-display">Atualizar Agendamento</DialogTitle>
                                 </DialogHeader>
-                                <form onSubmit={(e) => {
+                                <form key={`form-appointment-${appointment.id}`} onSubmit={(e) => {
                                   e.preventDefault();
                                   const formData = new FormData(e.currentTarget);
                                   const confirmedDateStr = formData.get("confirmedDate") as string;
