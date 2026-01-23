@@ -86,6 +86,23 @@ export const customerLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+export const adminCreateCustomerSchema = z.object({
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  email: z.string().email().optional().or(z.literal("")),
+  nickname: z.string().optional(),
+  deliveryAddress: z.string().optional(),
+  password: z.string().min(6).optional(),
+});
+
+export const adminUpdateCustomerSchema = z.object({
+  name: z.string().min(2).optional(),
+  phone: z.string().min(10).optional(),
+  email: z.string().email().optional().or(z.literal("")).or(z.null()),
+  nickname: z.string().optional().or(z.null()),
+  deliveryAddress: z.string().optional().or(z.null()),
+});
+
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
 

@@ -280,3 +280,76 @@ export async function updateOrderStatus(id: number, status: string): Promise<Ord
   }
   return response.json();
 }
+
+// Admin Customer Management
+import type { Customer } from "@shared/schema";
+
+export async function fetchAllCustomers(): Promise<Customer[]> {
+  const response = await fetch(`${API_BASE}/customers`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch customers");
+  }
+  return response.json();
+}
+
+export async function fetchCustomer(id: string): Promise<Customer> {
+  const response = await fetch(`${API_BASE}/customers/${id}`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch customer");
+  }
+  return response.json();
+}
+
+export async function createAdminCustomer(data: {
+  name: string;
+  phone: string;
+  email?: string;
+  nickname?: string;
+  deliveryAddress?: string;
+  password?: string;
+}): Promise<Customer> {
+  const response = await fetch(`${API_BASE}/customers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create customer");
+  }
+  return response.json();
+}
+
+export async function updateAdminCustomer(id: string, data: Partial<{
+  name: string;
+  phone: string;
+  email: string | null;
+  nickname: string | null;
+  deliveryAddress: string | null;
+}>): Promise<Customer> {
+  const response = await fetch(`${API_BASE}/customers/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update customer");
+  }
+  return response.json();
+}
+
+export async function deleteAdminCustomer(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/customers/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete customer");
+  }
+}
