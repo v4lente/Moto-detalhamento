@@ -482,9 +482,16 @@ export default function Admin() {
                       />
                     </div>
                     <DatePicker
-                      value={dashboardOrderDateFilter ? new Date(dashboardOrderDateFilter + 'T00:00:00') : undefined}
+                      value={dashboardOrderDateFilter ? new Date(dashboardOrderDateFilter + 'T12:00:00') : undefined}
                       onChange={(date) => {
-                        setDashboardOrderDateFilter(date ? date.toISOString().slice(0, 10) : '');
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          setDashboardOrderDateFilter(`${year}-${month}-${day}`);
+                        } else {
+                          setDashboardOrderDateFilter('');
+                        }
                         setDashboardOrderPage(1);
                       }}
                       placeholder="Filtrar por data"
@@ -612,9 +619,16 @@ export default function Admin() {
                       />
                     </div>
                     <DatePicker
-                      value={dashboardAppointmentDateFilter ? new Date(dashboardAppointmentDateFilter + 'T00:00:00') : undefined}
+                      value={dashboardAppointmentDateFilter ? new Date(dashboardAppointmentDateFilter + 'T12:00:00') : undefined}
                       onChange={(date) => {
-                        setDashboardAppointmentDateFilter(date ? date.toISOString().slice(0, 10) : '');
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          setDashboardAppointmentDateFilter(`${year}-${month}-${day}`);
+                        } else {
+                          setDashboardAppointmentDateFilter('');
+                        }
                         setDashboardAppointmentPage(1);
                       }}
                       placeholder="Filtrar por data"
