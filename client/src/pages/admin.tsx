@@ -18,6 +18,7 @@ import {
 } from "@/lib/api";
 import { Product, UpdateSiteSettings, Order, OrderItem, Customer } from "@shared/schema";
 import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 
@@ -33,6 +34,9 @@ export default function Admin() {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [productImage, setProductImage] = useState("");
+  const [logoImage, setLogoImage] = useState("");
+  const [backgroundImage, setBackgroundImage] = useState("");
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -69,6 +73,13 @@ export default function Admin() {
       setLocation("/login");
     }
   }, [user, userLoading, setLocation]);
+
+  useEffect(() => {
+    if (settings) {
+      setLogoImage(settings.logoImage || "");
+      setBackgroundImage(settings.backgroundImage || "");
+    }
+  }, [settings]);
 
   const createProductMutation = useMutation({
     mutationFn: createProduct,
@@ -201,7 +212,7 @@ export default function Admin() {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       price: parseFloat(formData.get("price") as string),
-      image: formData.get("image") as string,
+      image: productImage,
       category: formData.get("category") as string,
     };
 
@@ -223,8 +234,8 @@ export default function Admin() {
       heroSubtitle: formData.get("heroSubtitle") as string,
       footerText: formData.get("footerText") as string,
       copyrightText: formData.get("copyrightText") as string,
-      logoImage: formData.get("logoImage") as string,
-      backgroundImage: formData.get("backgroundImage") as string,
+      logoImage: logoImage,
+      backgroundImage: backgroundImage,
     };
     updateSettingsMutation.mutate(settingsData);
   };
@@ -335,7 +346,10 @@ export default function Admin() {
               <h2 className="text-2xl font-display font-bold">Gerenciar Produtos</h2>
               <Dialog open={isProductDialogOpen} onOpenChange={(open) => {
                 setIsProductDialogOpen(open);
-                if (!open) setEditingProduct(null);
+                if (!open) {
+                  setEditingProduct(null);
+                  setProductImage("");
+                }
               }}>
                 <DialogTrigger asChild>
                   <Button className="bg-primary text-black hover:bg-primary/90" data-testid="button-add-product">
@@ -368,8 +382,8 @@ export default function Admin() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="image">URL da Imagem</Label>
-                      <Input id="image" name="image" defaultValue={editingProduct?.image} required data-testid="input-product-image" />
+                      <Label>Imagem do Produto</Label>
+                      <ImageUpload value={productImage} onChange={setProductImage} />
                     </div>
                     <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90" data-testid="button-save-product">
                       {editingProduct ? "Atualizar" : "Criar"} Produto
@@ -401,6 +415,7 @@ export default function Admin() {
                           size="icon"
                           onClick={() => {
                             setEditingProduct(product);
+                            setProductImage(product.image);
                             setIsProductDialogOpen(true);
                           }}
                           data-testid={`button-edit-${product.id}`}
@@ -851,12 +866,12 @@ export default function Admin() {
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <Label htmlFor="logoImage">URL do Logo</Label>
-                        <Input id="logoImage" name="logoImage" defaultValue={settings?.logoImage || ""} data-testid="input-logo" />
+                        <Label>Logo</Label>
+                        <ImageUpload value={logoImage} onChange={setLogoImage} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="backgroundImage">URL da Imagem de Fundo</Label>
-                        <Input id="backgroundImage" name="backgroundImage" defaultValue={settings?.backgroundImage || ""} data-testid="input-background" />
+                        <Label>Imagem de Fundo</Label>
+                        <ImageUpload value={backgroundImage} onChange={setBackgroundImage} />
                       </div>
                     </div>
                     <Button type="submit" className="bg-primary text-black hover:bg-primary/90 font-bold" data-testid="button-save-settings">
