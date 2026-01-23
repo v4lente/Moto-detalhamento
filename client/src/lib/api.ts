@@ -469,3 +469,57 @@ export async function fetchRecentReviews(limit: number = 6): Promise<RecentRevie
   }
   return response.json();
 }
+
+import { ServicePost } from "@shared/schema";
+
+export async function fetchServicePosts(): Promise<ServicePost[]> {
+  const response = await fetch(`${API_BASE}/service-posts`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch service posts");
+  }
+  return response.json();
+}
+
+export async function fetchFeaturedServicePosts(limit: number = 8): Promise<ServicePost[]> {
+  const response = await fetch(`${API_BASE}/service-posts/featured?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch featured service posts");
+  }
+  return response.json();
+}
+
+export async function createServicePost(post: Omit<ServicePost, "id" | "createdAt">): Promise<ServicePost> {
+  const response = await fetch(`${API_BASE}/service-posts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(post),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to create service post");
+  }
+  return response.json();
+}
+
+export async function updateServicePost(id: number, post: Partial<ServicePost>): Promise<ServicePost> {
+  const response = await fetch(`${API_BASE}/service-posts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(post),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update service post");
+  }
+  return response.json();
+}
+
+export async function deleteServicePost(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/service-posts/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete service post");
+  }
+}

@@ -14,10 +14,11 @@ import {
   fetchSettings, updateSettings, getCurrentUser, logout,
   fetchAllOrders, fetchOrderDetails, updateOrderStatus,
   fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer,
-  fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser, SafeUser
+  fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser, SafeUser,
+  fetchServicePosts, createServicePost, updateServicePost, deleteServicePost
 } from "@/lib/api";
-import { Product, UpdateSiteSettings, Order, OrderItem, Customer } from "@shared/schema";
-import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key } from "lucide-react";
+import { Product, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost } from "@shared/schema";
+import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
@@ -37,6 +38,10 @@ export default function Admin() {
   const [productImage, setProductImage] = useState("");
   const [logoImage, setLogoImage] = useState("");
   const [backgroundImage, setBackgroundImage] = useState("");
+  const [editingServicePost, setEditingServicePost] = useState<ServicePost | null>(null);
+  const [isServicePostDialogOpen, setIsServicePostDialogOpen] = useState(false);
+  const [serviceMediaUrls, setServiceMediaUrls] = useState<string[]>([]);
+  const [serviceMediaTypes, setServiceMediaTypes] = useState<string[]>([]);
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -66,6 +71,11 @@ export default function Admin() {
   const { data: adminUsers, isLoading: usersLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: fetchAllUsers,
+  });
+
+  const { data: servicePosts, isLoading: servicePostsLoading } = useQuery({
+    queryKey: ["servicePosts"],
+    queryFn: fetchServicePosts,
   });
 
   useEffect(() => {
@@ -189,6 +199,53 @@ export default function Admin() {
     },
     onError: (error: Error) => toast({ title: error.message, variant: "destructive" }),
   });
+
+  const createServicePostMutation = useMutation({
+    mutationFn: createServicePost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["servicePosts"] });
+      queryClient.invalidateQueries({ queryKey: ["featuredServicePosts"] });
+      toast({ title: "Post de serviço criado com sucesso!" });
+      setIsServicePostDialogOpen(false);
+      setServiceMediaUrls([]);
+      setServiceMediaTypes([]);
+    },
+    onError: () => toast({ title: "Erro ao criar post de serviço", variant: "destructive" }),
+  });
+
+  const updateServicePostMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<ServicePost> }) => updateServicePost(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["servicePosts"] });
+      queryClient.invalidateQueries({ queryKey: ["featuredServicePosts"] });
+      toast({ title: "Post de serviço atualizado!" });
+      setEditingServicePost(null);
+      setIsServicePostDialogOpen(false);
+      setServiceMediaUrls([]);
+      setServiceMediaTypes([]);
+    },
+    onError: () => toast({ title: "Erro ao atualizar post de serviço", variant: "destructive" }),
+  });
+
+  const deleteServicePostMutation = useMutation({
+    mutationFn: deleteServicePost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["servicePosts"] });
+      queryClient.invalidateQueries({ queryKey: ["featuredServicePosts"] });
+      toast({ title: "Post de serviço removido!" });
+    },
+    onError: () => toast({ title: "Erro ao remover post de serviço", variant: "destructive" }),
+  });
+
+  const handleAddServiceMedia = (url: string, type: "image" | "video") => {
+    setServiceMediaUrls([...serviceMediaUrls, url]);
+    setServiceMediaTypes([...serviceMediaTypes, type]);
+  };
+
+  const handleRemoveServiceMedia = (index: number) => {
+    setServiceMediaUrls(serviceMediaUrls.filter((_, i) => i !== index));
+    setServiceMediaTypes(serviceMediaTypes.filter((_, i) => i !== index));
+  };
 
   const handleViewOrder = async (orderId: number) => {
     try {
@@ -335,6 +392,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-users">
               <Shield className="h-4 w-4 mr-2" /> Usuários
+            </TabsTrigger>
+            <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-services">
+              <Camera className="h-4 w-4 mr-2" /> Serviços
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-settings">
               <Settings className="h-4 w-4 mr-2" /> Configurações
@@ -815,6 +875,273 @@ export default function Admin() {
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <Shield className="h-12 w-12 mx-auto mb-4 opacity-20" />
                   <p>Nenhum usuário cadastrado ainda.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="services" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-display font-bold">Galeria de Serviços</h2>
+              <Dialog open={isServicePostDialogOpen} onOpenChange={(open) => {
+                setIsServicePostDialogOpen(open);
+                if (!open) {
+                  setEditingServicePost(null);
+                  setServiceMediaUrls([]);
+                  setServiceMediaTypes([]);
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary text-black hover:bg-primary/90" data-testid="button-add-service">
+                    <Plus className="h-4 w-4 mr-2" /> Novo Serviço
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingServicePost ? "Editar Serviço" : "Adicionar Serviço"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.currentTarget);
+                      const postData = {
+                        title: formData.get("title") as string,
+                        description: formData.get("description") as string || null,
+                        clientName: formData.get("clientName") as string || null,
+                        vehicleInfo: formData.get("vehicleInfo") as string || null,
+                        mediaUrls: serviceMediaUrls,
+                        mediaTypes: serviceMediaTypes,
+                        featured: formData.get("featured") === "on",
+                      };
+
+                      if (editingServicePost) {
+                        updateServicePostMutation.mutate({
+                          id: editingServicePost.id,
+                          data: postData,
+                        });
+                      } else {
+                        createServicePostMutation.mutate(postData);
+                      }
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Título do Serviço *</Label>
+                      <Input
+                        id="title"
+                        name="title"
+                        defaultValue={editingServicePost?.title || ""}
+                        placeholder="Ex: Detalhamento Completo BMW R1250GS"
+                        required
+                        className="bg-background"
+                        data-testid="input-service-title"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        defaultValue={editingServicePost?.description || ""}
+                        placeholder="Descreva o serviço realizado..."
+                        className="bg-background min-h-[100px]"
+                        data-testid="input-service-description"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="clientName">Nome do Cliente</Label>
+                        <Input
+                          id="clientName"
+                          name="clientName"
+                          defaultValue={editingServicePost?.clientName || ""}
+                          placeholder="Ex: João Silva"
+                          className="bg-background"
+                          data-testid="input-service-client"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleInfo">Veículo</Label>
+                        <Input
+                          id="vehicleInfo"
+                          name="vehicleInfo"
+                          defaultValue={editingServicePost?.vehicleInfo || ""}
+                          placeholder="Ex: Harley Davidson Sportster"
+                          className="bg-background"
+                          data-testid="input-service-vehicle"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Imagens e Vídeos</Label>
+                      <div className="flex gap-2 mb-2">
+                        <ImageUpload
+                          value=""
+                          onChange={(url) => handleAddServiceMedia(url, "image")}
+                          label="Adicionar Imagem"
+                        />
+                        <div className="flex-1">
+                          <Input
+                            placeholder="URL do vídeo (YouTube, Vimeo, etc.)"
+                            className="bg-background"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const input = e.currentTarget;
+                                if (input.value.trim()) {
+                                  handleAddServiceMedia(input.value.trim(), "video");
+                                  input.value = "";
+                                }
+                              }
+                            }}
+                            data-testid="input-service-video-url"
+                          />
+                        </div>
+                      </div>
+                      
+                      {serviceMediaUrls.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {serviceMediaUrls.map((url, index) => (
+                            <div key={index} className="relative group">
+                              {serviceMediaTypes[index] === "image" ? (
+                                <img
+                                  src={url}
+                                  alt={`Mídia ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg"
+                                />
+                              ) : (
+                                <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                                  <Play className="h-8 w-8 text-primary" />
+                                </div>
+                              )}
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleRemoveServiceMedia(index)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="featured"
+                        name="featured"
+                        defaultChecked={editingServicePost?.featured || false}
+                        className="rounded"
+                        data-testid="input-service-featured"
+                      />
+                      <Label htmlFor="featured">Destacar na página inicial</Label>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary text-black hover:bg-primary/90 font-bold"
+                      disabled={createServicePostMutation.isPending || updateServicePostMutation.isPending}
+                      data-testid="button-save-service"
+                    >
+                      {(createServicePostMutation.isPending || updateServicePostMutation.isPending) && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      {editingServicePost ? "Atualizar" : "Criar"} Serviço
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {servicePostsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : servicePosts && servicePosts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {servicePosts.map((post) => (
+                  <Card key={post.id} className="bg-card border-border overflow-hidden" data-testid={`card-service-${post.id}`}>
+                    <div className="aspect-video relative">
+                      {post.mediaUrls && post.mediaUrls.length > 0 ? (
+                        post.mediaTypes[0] === "video" ? (
+                          <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <Play className="h-12 w-12 text-primary" />
+                          </div>
+                        ) : (
+                          <img
+                            src={post.mediaUrls[0]}
+                            alt={post.title}
+                            className="w-full h-full object-cover"
+                          />
+                        )
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <Image className="h-12 w-12 text-muted-foreground" />
+                        </div>
+                      )}
+                      {post.featured && (
+                        <div className="absolute top-2 left-2 bg-primary text-black text-xs font-bold px-2 py-1 rounded">
+                          DESTAQUE
+                        </div>
+                      )}
+                      {post.mediaUrls && post.mediaUrls.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                          +{post.mediaUrls.length - 1} mídia(s)
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-display font-bold text-lg mb-2">{post.title}</h3>
+                      {post.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{post.description}</p>
+                      )}
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        {post.clientName && <p>Cliente: {post.clientName}</p>}
+                        {post.vehicleInfo && <p>Veículo: {post.vehicleInfo}</p>}
+                        <p>{new Date(post.createdAt).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingServicePost(post);
+                            setServiceMediaUrls(post.mediaUrls || []);
+                            setServiceMediaTypes(post.mediaTypes || []);
+                            setIsServicePostDialogOpen(true);
+                          }}
+                          data-testid={`button-edit-service-${post.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" /> Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteServicePostMutation.mutate(post.id)}
+                          data-testid={`button-delete-service-${post.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="py-12 text-center">
+                  <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhum serviço cadastrado ainda.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Adicione fotos e vídeos dos seus trabalhos!</p>
                 </CardContent>
               </Card>
             )}
