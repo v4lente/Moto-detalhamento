@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema } from "@shared/schema";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -711,6 +712,8 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to delete user" });
     }
   });
+
+  registerObjectStorageRoutes(app);
 
   return httpServer;
 }
