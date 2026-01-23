@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema } from "@shared/schema";
+import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -32,6 +32,17 @@ declare module "express-session" {
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const user = await storage.getUser(req.session.userId);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Acesso negado. Permissão de admin necessária." });
   }
   next();
 }
@@ -596,6 +607,108 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting customer:", error);
       res.status(500).json({ error: "Failed to delete customer" });
+    }
+  });
+
+  // Admin User Management Routes
+  app.get("/api/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const sanitizedUsers = users.map(({ password, ...user }) => user);
+      res.json(sanitizedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = adminCreateUserSchema.parse(req.body);
+      
+      const existingUser = await storage.getUserByUsername(validatedData.username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Nome de usuário já existe" });
+      }
+
+      const hashedPassword = await hashPassword(validatedData.password);
+      const user = await storage.createUser({
+        username: validatedData.username,
+        password: hashedPassword,
+        role: validatedData.role || "admin",
+      });
+
+      const { password, ...sanitizedUser } = user;
+      res.status(201).json(sanitizedUser);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0]?.message || "Dados inválidos" });
+      }
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = adminUpdateUserSchema.parse(req.body);
+      const userId = req.params.id as string;
+      
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      if (req.session.userId === userId && validatedData.role && validatedData.role !== "admin") {
+        return res.status(400).json({ error: "Você não pode rebaixar seu próprio perfil" });
+      }
+
+      if (validatedData.username && validatedData.username !== existingUser.username) {
+        const userWithUsername = await storage.getUserByUsername(validatedData.username);
+        if (userWithUsername) {
+          return res.status(400).json({ error: "Nome de usuário já existe" });
+        }
+      }
+
+      const updateData: any = {};
+      if (validatedData.username) updateData.username = validatedData.username;
+      if (validatedData.role) updateData.role = validatedData.role;
+      if (validatedData.password) {
+        updateData.password = await hashPassword(validatedData.password);
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      if (updatedUser) {
+        const { password, ...sanitizedUser } = updatedUser;
+        res.json(sanitizedUser);
+      } else {
+        res.status(404).json({ error: "Usuário não encontrado" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0]?.message || "Dados inválidos" });
+      }
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id as string;
+      
+      if (req.session.userId === userId) {
+        return res.status(400).json({ error: "Você não pode excluir sua própria conta" });
+      }
+
+      const success = await storage.deleteUser(userId);
+      if (!success) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
     }
   });
 

@@ -13,10 +13,11 @@ import {
   fetchProducts, createProduct, updateProduct, deleteProduct,
   fetchSettings, updateSettings, getCurrentUser, logout,
   fetchAllOrders, fetchOrderDetails, updateOrderStatus,
-  fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer
+  fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer,
+  fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser, SafeUser
 } from "@/lib/api";
 import { Product, UpdateSiteSettings, Order, OrderItem, Customer } from "@shared/schema";
-import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
 
@@ -30,6 +31,8 @@ export default function Admin() {
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -54,6 +57,11 @@ export default function Admin() {
   const { data: customers, isLoading: customersLoading } = useQuery({
     queryKey: ["adminCustomers"],
     queryFn: fetchAllCustomers,
+  });
+
+  const { data: adminUsers, isLoading: usersLoading } = useQuery({
+    queryKey: ["adminUsers"],
+    queryFn: fetchAllUsers,
   });
 
   useEffect(() => {
@@ -140,6 +148,37 @@ export default function Admin() {
     onError: () => toast({ title: "Erro ao remover cliente", variant: "destructive" }),
   });
 
+  const createUserMutation = useMutation({
+    mutationFn: createAdminUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      setIsUserDialogOpen(false);
+      toast({ title: "Usuário criado com sucesso!" });
+    },
+    onError: (error: Error) => toast({ title: error.message, variant: "destructive" }),
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateAdminUser>[1] }) =>
+      updateAdminUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      setIsUserDialogOpen(false);
+      setEditingUser(null);
+      toast({ title: "Usuário atualizado!" });
+    },
+    onError: (error: Error) => toast({ title: error.message, variant: "destructive" }),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: deleteAdminUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      toast({ title: "Usuário removido!" });
+    },
+    onError: (error: Error) => toast({ title: error.message, variant: "destructive" }),
+  });
+
   const handleViewOrder = async (orderId: number) => {
     try {
       const orderDetails = await fetchOrderDetails(orderId);
@@ -216,6 +255,30 @@ export default function Admin() {
     }
   };
 
+  const handleUserSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    if (editingUser) {
+      const updateData: Parameters<typeof updateAdminUser>[1] = {
+        username: formData.get("username") as string,
+        role: formData.get("role") as "admin" | "viewer",
+      };
+      const password = formData.get("password") as string;
+      if (password) {
+        updateData.password = password;
+      }
+      updateUserMutation.mutate({ id: editingUser.id, data: updateData });
+    } else {
+      const createData = {
+        username: formData.get("username") as string,
+        password: formData.get("password") as string,
+        role: formData.get("role") as "admin" | "viewer",
+      };
+      createUserMutation.mutate(createData);
+    }
+  };
+
   if (userLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -258,6 +321,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-customers">
               <Users className="h-4 w-4 mr-2" /> Clientes
+            </TabsTrigger>
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-users">
+              <Shield className="h-4 w-4 mr-2" /> Usuários
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-settings">
               <Settings className="h-4 w-4 mr-2" /> Configurações
@@ -619,6 +685,121 @@ export default function Admin() {
                 <CardContent className="p-8 text-center text-muted-foreground">
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
                   <p>Nenhum cliente cadastrado ainda.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-display font-bold">Gerenciar Usuários Admin</h2>
+              <Dialog open={isUserDialogOpen} onOpenChange={(open) => {
+                setIsUserDialogOpen(open);
+                if (!open) setEditingUser(null);
+              }}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary text-black hover:bg-primary/90" data-testid="button-add-user">
+                    <Plus className="h-4 w-4 mr-2" /> Novo Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-primary/20 max-w-md" aria-describedby={undefined}>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      {editingUser ? "Editar Usuário" : "Novo Usuário"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleUserSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Nome de Usuário *</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="username" name="username" defaultValue={editingUser?.username} required className="pl-10" data-testid="input-user-username" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">{editingUser ? "Nova Senha (deixe vazio para manter)" : "Senha *"}</Label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input id="password" name="password" type="password" required={!editingUser} className="pl-10" data-testid="input-user-password" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Perfil *</Label>
+                      <Select name="role" defaultValue={editingUser?.role || "admin"}>
+                        <SelectTrigger data-testid="select-user-role">
+                          <SelectValue placeholder="Selecione o perfil" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin (acesso total)</SelectItem>
+                          <SelectItem value="viewer">Visualizador (somente leitura)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90" data-testid="button-save-user">
+                      {editingUser ? "Atualizar" : "Criar"} Usuário
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {usersLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : adminUsers && adminUsers.length > 0 ? (
+              <div className="grid gap-4">
+                {adminUsers.map((adminUser) => (
+                  <Card key={adminUser.id} className="bg-card border-border" data-testid={`admin-user-${adminUser.id}`}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 bg-background rounded-full flex items-center justify-center border border-border">
+                        <Shield className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold">{adminUser.username}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {adminUser.role === "admin" ? "Administrador" : "Visualizador"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          adminUser.role === "admin" 
+                            ? "bg-primary/20 text-primary" 
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          {adminUser.role === "admin" ? "Admin" : "Viewer"}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setEditingUser(adminUser);
+                            setIsUserDialogOpen(true);
+                          }}
+                          data-testid={`button-edit-user-${adminUser.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {user?.id !== adminUser.id && (
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => deleteUserMutation.mutate(adminUser.id)}
+                            data-testid={`button-delete-user-${adminUser.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="bg-card border-border">
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Shield className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p>Nenhum usuário cadastrado ainda.</p>
                 </CardContent>
               </Card>
             )}

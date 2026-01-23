@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -351,5 +351,65 @@ export async function deleteAdminCustomer(id: string): Promise<void> {
   });
   if (!response.ok) {
     throw new Error("Failed to delete customer");
+  }
+}
+
+// Admin User Management
+export type SafeUser = Omit<User, "password">;
+
+export async function fetchAllUsers(): Promise<SafeUser[]> {
+  const response = await fetch(`${API_BASE}/users`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch users");
+  }
+  return response.json();
+}
+
+export async function createAdminUser(data: {
+  username: string;
+  password: string;
+  role?: "admin" | "viewer";
+}): Promise<SafeUser> {
+  const response = await fetch(`${API_BASE}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create user");
+  }
+  return response.json();
+}
+
+export async function updateAdminUser(id: string, data: {
+  username?: string;
+  role?: "admin" | "viewer";
+  password?: string;
+}): Promise<SafeUser> {
+  const response = await fetch(`${API_BASE}/users/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to update user");
+  }
+  return response.json();
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/users/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to delete user");
   }
 }
