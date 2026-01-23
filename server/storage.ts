@@ -5,10 +5,11 @@ import {
   type Customer, type InsertCustomer,
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
-  users, products, siteSettings, customers, orders, orderItems 
+  type Review, type InsertReview,
+  users, products, siteSettings, customers, orders, orderItems, reviews
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql, asc } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -43,6 +44,11 @@ export interface IStorage {
 
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
+
+  createReview(review: InsertReview): Promise<Review>;
+  getReviewsByProduct(productId: number): Promise<Review[]>;
+  getProductAverageRating(productId: number): Promise<number>;
+  getProductsWithStats(): Promise<Array<Product & { avgRating: number; reviewCount: number; purchaseCount: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -178,6 +184,50 @@ export class DatabaseStorage implements IStorage {
 
   async getOrderItems(orderId: number): Promise<OrderItem[]> {
     return await db.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+  }
+
+  async createReview(review: InsertReview): Promise<Review> {
+    const result = await db.insert(reviews).values(review).returning();
+    return result[0];
+  }
+
+  async getReviewsByProduct(productId: number): Promise<Review[]> {
+    return await db.select().from(reviews).where(eq(reviews.productId, productId)).orderBy(desc(reviews.createdAt));
+  }
+
+  async getProductAverageRating(productId: number): Promise<number> {
+    const result = await db.select({
+      avg: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`
+    }).from(reviews).where(eq(reviews.productId, productId));
+    return result[0]?.avg || 0;
+  }
+
+  async getProductsWithStats(): Promise<Array<Product & { avgRating: number; reviewCount: number; purchaseCount: number }>> {
+    const allProducts = await db.select().from(products);
+    
+    const productsWithStats = await Promise.all(allProducts.map(async (product) => {
+      const reviewStats = await db.select({
+        avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+        reviewCount: sql<number>`COUNT(${reviews.id})`
+      }).from(reviews).where(eq(reviews.productId, product.id));
+
+      const purchaseStats = await db.select({
+        purchaseCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`
+      }).from(orderItems).where(eq(orderItems.productId, product.id));
+
+      return {
+        ...product,
+        avgRating: Number(reviewStats[0]?.avgRating) || 0,
+        reviewCount: Number(reviewStats[0]?.reviewCount) || 0,
+        purchaseCount: Number(purchaseStats[0]?.purchaseCount) || 0,
+      };
+    }));
+
+    return productsWithStats.sort((a, b) => {
+      const scoreA = a.avgRating * 2 + a.purchaseCount;
+      const scoreB = b.avgRating * 2 + b.purchaseCount;
+      return scoreB - scoreA;
+    });
   }
 }
 

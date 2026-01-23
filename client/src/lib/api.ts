@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -412,4 +412,47 @@ export async function deleteAdminUser(id: string): Promise<void> {
     const error = await response.json();
     throw new Error(error.error || "Failed to delete user");
   }
+}
+
+// Products with stats
+export interface ProductWithStats extends Product {
+  avgRating: number;
+  reviewCount: number;
+  purchaseCount: number;
+}
+
+export async function fetchProductsWithStats(): Promise<ProductWithStats[]> {
+  const response = await fetch(`${API_BASE}/products-with-stats`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch products");
+  }
+  return response.json();
+}
+
+// Reviews
+export interface ReviewsResponse {
+  reviews: Review[];
+  avgRating: number;
+}
+
+export async function fetchProductReviews(productId: number): Promise<ReviewsResponse> {
+  const response = await fetch(`${API_BASE}/products/${productId}/reviews`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch reviews");
+  }
+  return response.json();
+}
+
+export async function createReview(productId: number, rating: number, comment?: string): Promise<Review> {
+  const response = await fetch(`${API_BASE}/products/${productId}/reviews`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ productId, rating, comment }),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create review");
+  }
+  return response.json();
 }

@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema } from "@shared/schema";
+import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 import session from "express-session";
@@ -141,6 +141,16 @@ export async function registerRoutes(
       res.json(products);
     } catch (error) {
       console.error("Error fetching products:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/products-with-stats", async (req, res) => {
+    try {
+      const products = await storage.getProductsWithStats();
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching products with stats:", error);
       res.status(500).json({ error: "Failed to fetch products" });
     }
   });
@@ -710,6 +720,56 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // ===== REVIEWS ROUTES =====
+  app.get("/api/products/:id/reviews", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+      const productReviews = await storage.getReviewsByProduct(productId);
+      const avgRating = await storage.getProductAverageRating(productId);
+      res.json({ reviews: productReviews, avgRating });
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      res.status(500).json({ error: "Failed to fetch reviews" });
+    }
+  });
+
+  app.post("/api/products/:id/reviews", requireCustomer, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+      
+      const product = await storage.getProduct(productId);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const validatedData = createReviewSchema.parse({ ...req.body, productId });
+      const customerId = req.session.customerId!;
+      const customer = await storage.getCustomer(customerId);
+      
+      const review = await storage.createReview({
+        productId,
+        customerId,
+        customerName: customer?.name || "Cliente",
+        rating: validatedData.rating,
+        comment: validatedData.comment || null,
+      });
+      
+      res.status(201).json(review);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating review:", error);
+      res.status(500).json({ error: "Failed to create review" });
     }
   });
 

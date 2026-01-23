@@ -177,3 +177,27 @@ export const checkoutSchema = z.object({
 });
 
 export type CheckoutData = z.infer<typeof checkoutSchema>;
+
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  customerId: varchar("customer_id").references(() => customers.id),
+  customerName: text("customer_name").notNull(),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const createReviewSchema = z.object({
+  productId: z.number(),
+  rating: z.number().min(1).max(5),
+  comment: z.string().optional(),
+});
+
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Review = typeof reviews.$inferSelect;
