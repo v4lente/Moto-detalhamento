@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Upload, X, Loader2 } from "lucide-react";
 
 interface ImageUploadProps {
@@ -13,6 +12,11 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
+
+  useEffect(() => {
+    setPreview(value || null);
+  }, [value]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,11 +41,15 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
 
       const { uploadURL, objectPath } = await response.json();
 
-      await fetch(uploadURL, {
+      const uploadResponse = await fetch(uploadURL, {
         method: "PUT",
         body: file,
         headers: { "Content-Type": file.type },
       });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Falha ao enviar arquivo");
+      }
 
       setPreview(objectPath);
       onChange(objectPath);
@@ -72,7 +80,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
         accept="image/*"
         onChange={handleFileChange}
         className="hidden"
-        id="image-upload"
+        id={inputId}
       />
       
       {preview ? (
@@ -113,11 +121,6 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
           )}
         </Button>
       )}
-
-      <Input
-        type="hidden"
-        value={preview || ""}
-      />
     </div>
   );
 }
