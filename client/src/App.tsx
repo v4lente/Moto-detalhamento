@@ -8,6 +8,8 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
 import Conta from "@/pages/conta";
+import Produtos from "@/pages/produtos";
+import Produto from "@/pages/produto";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/admin" component={Admin} />
       <Route path="/conta" component={Conta} />
+      <Route path="/produtos" component={Produtos} />
+      <Route path="/produto/:id" component={Produto} />
       <Route component={NotFound} />
     </Switch>
   );

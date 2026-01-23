@@ -2,14 +2,14 @@ import { Navbar, Footer } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProducts, fetchSettings } from "@/lib/api";
+import { fetchProductsWithStats, fetchSettings } from "@/lib/api";
 import { Loader2, Settings } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Home() {
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
-    queryKey: ["products"],
-    queryFn: fetchProducts,
+    queryKey: ["products-with-stats"],
+    queryFn: fetchProductsWithStats,
   });
 
   const { data: settings } = useQuery({
@@ -52,9 +52,11 @@ export default function Home() {
               {heroSubtitle}
             </p>
             <div className="flex gap-4">
-              <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8" data-testid="button-ver-produtos">
-                Ver Produtos
-              </Button>
+              <Link href="/produtos">
+                <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8" data-testid="button-ver-produtos">
+                  Ver Produtos
+                </Button>
+              </Link>
               <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8" data-testid="button-agendar">
                 Agendar Serviço
               </Button>
@@ -69,6 +71,11 @@ export default function Home() {
             <h2 className="text-3xl font-display font-bold uppercase mb-2">Loja Oficial</h2>
             <p className="text-muted-foreground">Produtos profissionais para você cuidar da sua máquina em casa.</p>
           </div>
+          <Link href="/produtos">
+            <Button variant="outline" className="border-primary/30 hover:bg-primary/10">
+              Ver Todos
+            </Button>
+          </Link>
         </div>
 
         {productsLoading && (

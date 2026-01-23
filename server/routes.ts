@@ -726,7 +726,7 @@ export async function registerRoutes(
   // ===== REVIEWS ROUTES =====
   app.get("/api/products/:id/reviews", async (req, res) => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(String(req.params.id));
       if (isNaN(productId)) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
@@ -739,9 +739,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/products/:id/reviews", requireCustomer, async (req, res) => {
+  app.post("/api/products/:id/reviews", requireCustomerAuth, async (req, res) => {
     try {
-      const productId = parseInt(req.params.id);
+      const productId = parseInt(String(req.params.id));
       if (isNaN(productId)) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
