@@ -17,8 +17,13 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> 
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
   
-  canvas.width = crop.width * scaleX;
-  canvas.height = crop.height * scaleY;
+  const cropX = crop.x * scaleX;
+  const cropY = crop.y * scaleY;
+  const cropWidth = crop.width * scaleX;
+  const cropHeight = crop.height * scaleY;
+  
+  canvas.width = cropWidth;
+  canvas.height = cropHeight;
   
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -29,14 +34,14 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> 
 
   ctx.drawImage(
     image,
-    crop.x * scaleX,
-    crop.y * scaleY,
-    crop.width * scaleX,
-    crop.height * scaleY,
+    cropX,
+    cropY,
+    cropWidth,
+    cropHeight,
     0,
     0,
-    canvas.width,
-    canvas.height
+    cropWidth,
+    cropHeight
   );
 
   return new Promise((resolve, reject) => {
@@ -62,6 +67,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
   const [crop, setCrop] = useState<CropType>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -72,7 +78,6 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const aspect = aspectRatio || 16 / 9;
     
     const newCrop = centerCrop(
       makeAspectCrop(
@@ -80,7 +85,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
           unit: "%",
           width: 90,
         },
-        aspect,
+        aspectRatio || 1,
         width,
         height
       ),
@@ -111,6 +116,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
   const handleCropConfirm = async () => {
     if (!imgRef.current || !completedCrop || !originalFile) return;
 
+    setIsConfirming(true);
     setIsUploading(true);
     setCropDialogOpen(false);
 
@@ -151,15 +157,23 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
       alert("Erro ao fazer upload da imagem");
     } finally {
       setIsUploading(false);
+      setIsConfirming(false);
       setImageSrc(null);
       setOriginalFile(null);
     }
   };
 
   const handleCropCancel = () => {
+    if (isConfirming) return;
     setCropDialogOpen(false);
     setImageSrc(null);
     setOriginalFile(null);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    if (!open && !isConfirming) {
+      handleCropCancel();
+    }
   };
 
   const handleClear = () => {
@@ -220,7 +234,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
         </Button>
       )}
 
-      <Dialog open={cropDialogOpen} onOpenChange={(open) => !open && handleCropCancel()}>
+      <Dialog open={cropDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-2xl bg-card border-primary/20" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-display">
