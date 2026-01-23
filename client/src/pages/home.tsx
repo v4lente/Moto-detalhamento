@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Navbar, Footer } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProductsWithStats, fetchSettings, fetchRecentReviews } from "@/lib/api";
-import { Loader2, Settings, Star, Quote } from "lucide-react";
+import { fetchProductsWithStats, fetchSettings, fetchRecentReviews, fetchFeaturedServicePosts } from "@/lib/api";
+import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera } from "lucide-react";
 import { Link } from "wouter";
+import { ServicePost } from "@shared/schema";
 
 export default function Home() {
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
@@ -22,6 +25,19 @@ export default function Home() {
     queryKey: ["recent-reviews"],
     queryFn: () => fetchRecentReviews(6),
   });
+
+  const { data: featuredServices } = useQuery({
+    queryKey: ["featuredServicePosts"],
+    queryFn: () => fetchFeaturedServicePosts(8),
+  });
+
+  const [selectedService, setSelectedService] = useState<ServicePost | null>(null);
+  const [mediaIndex, setMediaIndex] = useState(0);
+
+  const openServiceModal = (service: ServicePost) => {
+    setSelectedService(service);
+    setMediaIndex(0);
+  };
 
   const heroTitle = settings?.heroTitle || "Estética Premium";
   const heroSubtitle = settings?.heroSubtitle || "Cuidado profissional para sua moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.";
@@ -117,6 +133,132 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {featuredServices && featuredServices.length > 0 && (
+        <section className="py-16 bg-gradient-to-b from-background to-card/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-display font-bold uppercase mb-2">Nossos Trabalhos</h2>
+              <p className="text-muted-foreground">Confira alguns dos serviços de detalhamento realizados</p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {featuredServices.map((service, index) => (
+                <div
+                  key={service.id}
+                  className={`relative group cursor-pointer overflow-hidden rounded-xl ${
+                    index === 0 ? 'col-span-2 row-span-2' : ''
+                  }`}
+                  onClick={() => openServiceModal(service)}
+                  data-testid={`service-gallery-${service.id}`}
+                >
+                  <div className={`${index === 0 ? 'aspect-square' : 'aspect-square'} w-full`}>
+                    {service.mediaUrls && service.mediaUrls.length > 0 ? (
+                      service.mediaTypes[0] === "video" ? (
+                        <div className="w-full h-full bg-muted flex items-center justify-center relative">
+                          <Play className="h-12 w-12 text-primary" />
+                        </div>
+                      ) : (
+                        <img
+                          src={service.mediaUrls[0]}
+                          alt={service.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      )
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Camera className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                    <h3 className="font-display font-bold text-sm md:text-base line-clamp-1">{service.title}</h3>
+                    {service.vehicleInfo && (
+                      <p className="text-xs text-gray-300 mt-1">{service.vehicleInfo}</p>
+                    )}
+                    {service.mediaUrls && service.mediaUrls.length > 1 && (
+                      <p className="text-xs text-primary mt-1">+{service.mediaUrls.length - 1} fotos</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <Dialog open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
+        <DialogContent className="max-w-4xl bg-card border-border p-0 overflow-hidden">
+          {selectedService && (
+            <div className="relative">
+              <div className="aspect-video bg-black relative">
+                {selectedService.mediaUrls && selectedService.mediaUrls.length > 0 ? (
+                  selectedService.mediaTypes[mediaIndex] === "video" ? (
+                    <iframe
+                      src={selectedService.mediaUrls[mediaIndex]}
+                      className="w-full h-full"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <img
+                      src={selectedService.mediaUrls[mediaIndex]}
+                      alt={selectedService.title}
+                      className="w-full h-full object-contain"
+                    />
+                  )
+                ) : null}
+
+                {selectedService.mediaUrls && selectedService.mediaUrls.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                      onClick={() => setMediaIndex((prev) => prev === 0 ? selectedService.mediaUrls.length - 1 : prev - 1)}
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white"
+                      onClick={() => setMediaIndex((prev) => prev === selectedService.mediaUrls.length - 1 ? 0 : prev + 1)}
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </Button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                      {selectedService.mediaUrls.map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`w-2 h-2 rounded-full transition-colors ${idx === mediaIndex ? 'bg-primary' : 'bg-white/50'}`}
+                          onClick={() => setMediaIndex(idx)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="p-6">
+                <h3 className="font-display font-bold text-xl mb-2">{selectedService.title}</h3>
+                {selectedService.description && (
+                  <p className="text-muted-foreground mb-4">{selectedService.description}</p>
+                )}
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  {selectedService.clientName && (
+                    <span>Cliente: <span className="text-primary">{selectedService.clientName}</span></span>
+                  )}
+                  {selectedService.vehicleInfo && (
+                    <span>Veículo: <span className="text-primary">{selectedService.vehicleInfo}</span></span>
+                  )}
+                  <span>{new Date(selectedService.createdAt).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {recentReviews && recentReviews.length > 0 && (
         <section className="py-16 bg-card/50">

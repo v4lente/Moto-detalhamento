@@ -980,11 +980,12 @@ export default function Admin() {
                     <div className="space-y-2">
                       <Label>Imagens e Vídeos</Label>
                       <div className="flex gap-2 mb-2">
-                        <ImageUpload
-                          value=""
-                          onChange={(url) => handleAddServiceMedia(url, "image")}
-                          label="Adicionar Imagem"
-                        />
+                        <div className="flex-shrink-0">
+                          <ImageUpload
+                            value=""
+                            onChange={(url) => handleAddServiceMedia(url, "image")}
+                          />
+                        </div>
                         <div className="flex-1">
                           <Input
                             placeholder="URL do vídeo (YouTube, Vimeo, etc.)"
