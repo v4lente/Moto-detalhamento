@@ -42,6 +42,8 @@ export default function Produto() {
     mutationFn: () => createReview(productId, rating, comment || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reviews", productId] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["recent-reviews"] });
       toast({ title: "Avaliação enviada com sucesso!" });
       setRating(0);
       setComment("");

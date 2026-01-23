@@ -155,6 +155,17 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/recent-reviews", async (req, res) => {
+    try {
+      const limit = parseInt(String(req.query.limit)) || 6;
+      const reviews = await storage.getRecentReviews(limit);
+      res.json(reviews);
+    } catch (error) {
+      console.error("Error fetching recent reviews:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

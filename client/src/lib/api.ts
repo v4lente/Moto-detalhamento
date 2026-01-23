@@ -456,3 +456,16 @@ export async function createReview(productId: number, rating: number, comment?: 
   }
   return response.json();
 }
+
+export interface RecentReview extends Review {
+  productName: string;
+  productImage: string;
+}
+
+export async function fetchRecentReviews(limit: number = 6): Promise<RecentReview[]> {
+  const response = await fetch(`${API_BASE}/recent-reviews?limit=${limit}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch recent reviews");
+  }
+  return response.json();
+}

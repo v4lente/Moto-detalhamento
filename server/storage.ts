@@ -49,6 +49,7 @@ export interface IStorage {
   getReviewsByProduct(productId: number): Promise<Review[]>;
   getProductAverageRating(productId: number): Promise<number>;
   getProductsWithStats(): Promise<Array<Product & { avgRating: number; reviewCount: number; purchaseCount: number }>>;
+  getRecentReviews(limit?: number): Promise<Array<Review & { productName: string; productImage: string }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -228,6 +229,26 @@ export class DatabaseStorage implements IStorage {
       const scoreB = b.avgRating * 2 + b.purchaseCount;
       return scoreB - scoreA;
     });
+  }
+
+  async getRecentReviews(limit: number = 6): Promise<Array<Review & { productName: string; productImage: string }>> {
+    const recentReviews = await db.select({
+      id: reviews.id,
+      productId: reviews.productId,
+      customerId: reviews.customerId,
+      customerName: reviews.customerName,
+      rating: reviews.rating,
+      comment: reviews.comment,
+      createdAt: reviews.createdAt,
+      productName: products.name,
+      productImage: products.image,
+    })
+    .from(reviews)
+    .innerJoin(products, eq(reviews.productId, products.id))
+    .orderBy(desc(reviews.createdAt))
+    .limit(limit);
+    
+    return recentReviews;
   }
 }
 
