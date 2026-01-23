@@ -221,3 +221,48 @@ export const insertServicePostSchema = createInsertSchema(servicePosts).omit({
 
 export type InsertServicePost = z.infer<typeof insertServicePostSchema>;
 export type ServicePost = typeof servicePosts.$inferSelect;
+
+// Appointments / Service Scheduling
+export const appointments = pgTable("appointments", {
+  id: serial("id").primaryKey(),
+  customerId: varchar("customer_id").references(() => customers.id),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone").notNull(),
+  customerEmail: text("customer_email"),
+  vehicleInfo: text("vehicle_info").notNull(),
+  serviceDescription: text("service_description").notNull(),
+  preferredDate: timestamp("preferred_date").notNull(),
+  confirmedDate: timestamp("confirmed_date"),
+  status: text("status").notNull().default("pre_agendamento"),
+  adminNotes: text("admin_notes"),
+  estimatedPrice: real("estimated_price"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const createAppointmentSchema = z.object({
+  vehicleInfo: z.string().min(2, "Informe o veículo"),
+  serviceDescription: z.string().min(5, "Descreva o serviço desejado"),
+  preferredDate: z.string().or(z.date()),
+  customerName: z.string().min(2).optional(),
+  customerPhone: z.string().min(10).optional(),
+  customerEmail: z.string().email().optional().or(z.literal("")),
+});
+
+export const updateAppointmentSchema = z.object({
+  status: z.enum(["pre_agendamento", "agendado_nao_iniciado", "em_andamento", "concluido", "cancelado"]).optional(),
+  confirmedDate: z.string().or(z.date()).optional().nullable(),
+  adminNotes: z.string().optional().nullable(),
+  estimatedPrice: z.number().optional().nullable(),
+});
+
+export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
+export type Appointment = typeof appointments.$inferSelect;
+export type CreateAppointment = z.infer<typeof createAppointmentSchema>;
+export type UpdateAppointment = z.infer<typeof updateAppointmentSchema>;

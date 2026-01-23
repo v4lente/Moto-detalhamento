@@ -7,7 +7,8 @@ import {
   type OrderItem, type InsertOrderItem,
   type Review, type InsertReview,
   type ServicePost, type InsertServicePost,
-  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts
+  type Appointment, type InsertAppointment,
+  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts, appointments
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, sql, asc } from "drizzle-orm";
@@ -58,6 +59,13 @@ export interface IStorage {
   createServicePost(post: InsertServicePost): Promise<ServicePost>;
   updateServicePost(id: number, post: Partial<InsertServicePost>): Promise<ServicePost | undefined>;
   deleteServicePost(id: number): Promise<boolean>;
+
+  getAllAppointments(): Promise<Appointment[]>;
+  getAppointment(id: number): Promise<Appointment | undefined>;
+  getAppointmentsByCustomer(customerId: string): Promise<Appointment[]>;
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
+  deleteAppointment(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -284,6 +292,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteServicePost(id: number): Promise<boolean> {
     const result = await db.delete(servicePosts).where(eq(servicePosts.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllAppointments(): Promise<Appointment[]> {
+    return await db.select().from(appointments).orderBy(desc(appointments.createdAt));
+  }
+
+  async getAppointment(id: number): Promise<Appointment | undefined> {
+    const result = await db.select().from(appointments).where(eq(appointments.id, id));
+    return result[0];
+  }
+
+  async getAppointmentsByCustomer(customerId: string): Promise<Appointment[]> {
+    return await db.select().from(appointments).where(eq(appointments.customerId, customerId)).orderBy(desc(appointments.createdAt));
+  }
+
+  async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
+    const result = await db.insert(appointments).values(appointment).returning();
+    return result[0];
+  }
+
+  async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined> {
+    const result = await db.update(appointments).set({ ...appointment, updatedAt: new Date() }).where(eq(appointments.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteAppointment(id: number): Promise<boolean> {
+    const result = await db.delete(appointments).where(eq(appointments.id, id)).returning();
     return result.length > 0;
   }
 }
