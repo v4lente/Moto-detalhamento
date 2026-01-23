@@ -22,6 +22,7 @@ import { Product, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost, A
 import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image, Calendar, AlertTriangle, CheckCircle, XCircle, MessageCircle, LayoutDashboard, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Link } from "wouter";
 
 export default function Admin() {
@@ -480,20 +481,14 @@ export default function Admin() {
                         data-testid="input-dashboard-order-search"
                       />
                     </div>
-                    <Input
-                      type="date"
-                      value={dashboardOrderDateFilter}
-                      onChange={(e) => {
-                        setDashboardOrderDateFilter(e.target.value);
+                    <DatePicker
+                      value={dashboardOrderDateFilter ? new Date(dashboardOrderDateFilter + 'T00:00:00') : undefined}
+                      onChange={(date) => {
+                        setDashboardOrderDateFilter(date ? date.toISOString().slice(0, 10) : '');
                         setDashboardOrderPage(1);
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          setDashboardOrderPage(1);
-                        }
-                      }}
-                      className="w-40"
+                      placeholder="Filtrar por data"
+                      className="w-44"
                       data-testid="input-dashboard-order-date"
                     />
                   </div>
@@ -616,20 +611,14 @@ export default function Admin() {
                         data-testid="input-dashboard-appointment-search"
                       />
                     </div>
-                    <Input
-                      type="date"
-                      value={dashboardAppointmentDateFilter}
-                      onChange={(e) => {
-                        setDashboardAppointmentDateFilter(e.target.value);
+                    <DatePicker
+                      value={dashboardAppointmentDateFilter ? new Date(dashboardAppointmentDateFilter + 'T00:00:00') : undefined}
+                      onChange={(date) => {
+                        setDashboardAppointmentDateFilter(date ? date.toISOString().slice(0, 10) : '');
                         setDashboardAppointmentPage(1);
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          setDashboardAppointmentPage(1);
-                        }
-                      }}
-                      className="w-40"
+                      placeholder="Filtrar por data"
+                      className="w-44"
                       data-testid="input-dashboard-appointment-date"
                     />
                   </div>
