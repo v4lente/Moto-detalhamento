@@ -470,6 +470,12 @@ export default function Admin() {
                           setDashboardOrderSearch(e.target.value);
                           setDashboardOrderPage(1);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            setDashboardOrderPage(1);
+                          }
+                        }}
                         className="pl-9"
                         data-testid="input-dashboard-order-search"
                       />
@@ -480,6 +486,12 @@ export default function Admin() {
                       onChange={(e) => {
                         setDashboardOrderDateFilter(e.target.value);
                         setDashboardOrderPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          setDashboardOrderPage(1);
+                        }
                       }}
                       className="w-40"
                       data-testid="input-dashboard-order-date"
@@ -594,6 +606,12 @@ export default function Admin() {
                           setDashboardAppointmentSearch(e.target.value);
                           setDashboardAppointmentPage(1);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            setDashboardAppointmentPage(1);
+                          }
+                        }}
                         className="pl-9"
                         data-testid="input-dashboard-appointment-search"
                       />
@@ -604,6 +622,12 @@ export default function Admin() {
                       onChange={(e) => {
                         setDashboardAppointmentDateFilter(e.target.value);
                         setDashboardAppointmentPage(1);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          setDashboardAppointmentPage(1);
+                        }
                       }}
                       className="w-40"
                       data-testid="input-dashboard-appointment-date"
