@@ -1602,7 +1602,23 @@ export default function Admin() {
                                         asChild
                                       >
                                         <a
-                                          href={`https://wa.me/${appointment.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Sobre seu agendamento de serviço para ${appointment.vehicleInfo}...`)}`}
+                                          href={`https://wa.me/${appointment.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                            `Olá ${appointment.customerName || 'Cliente'}!\n\n` +
+                                            `Sobre seu agendamento de serviço:\n\n` +
+                                            `🏍️ Veículo: ${appointment.vehicleInfo}\n` +
+                                            `📅 Data Solicitada: ${new Date(appointment.preferredDate).toLocaleDateString('pt-BR')}\n` +
+                                            `📋 Status: ${
+                                              appointment.status === 'pre_agendamento' ? 'Pré-agendamento' :
+                                              appointment.status === 'agendado_nao_iniciado' ? 'Agendado' :
+                                              appointment.status === 'em_andamento' ? 'Em andamento' :
+                                              appointment.status === 'concluido' ? 'Concluído' :
+                                              appointment.status === 'cancelado' ? 'Cancelado' : appointment.status
+                                            }\n` +
+                                            (appointment.confirmedDate ? `✅ Data Confirmada: ${new Date(appointment.confirmedDate).toLocaleDateString('pt-BR')}\n` : '') +
+                                            (appointment.estimatedPrice ? `💰 Preço Estimado: R$ ${appointment.estimatedPrice.toFixed(2)}\n` : '') +
+                                            (appointment.adminNotes ? `📝 Observações: ${appointment.adminNotes}\n` : '') +
+                                            `\nDaniel Valente Moto Detalhamento`
+                                          )}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           data-testid={`link-whatsapp-appointment-${appointment.id}`}
@@ -1860,7 +1876,23 @@ export default function Admin() {
                       asChild
                     >
                       <a
-                        href={`https://wa.me/${editingAppointment.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Sobre seu agendamento de serviço para ${editingAppointment.vehicleInfo}...`)}`}
+                        href={`https://wa.me/${editingAppointment.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                          `Olá ${editingAppointment.customerName || 'Cliente'}!\n\n` +
+                          `Sobre seu agendamento de serviço:\n\n` +
+                          `🏍️ Veículo: ${editingAppointment.vehicleInfo}\n` +
+                          `📅 Data Solicitada: ${new Date(editingAppointment.preferredDate).toLocaleDateString('pt-BR')}\n` +
+                          `📋 Status: ${
+                            editingAppointment.status === 'pre_agendamento' ? 'Pré-agendamento' :
+                            editingAppointment.status === 'agendado_nao_iniciado' ? 'Agendado' :
+                            editingAppointment.status === 'em_andamento' ? 'Em andamento' :
+                            editingAppointment.status === 'concluido' ? 'Concluído' :
+                            editingAppointment.status === 'cancelado' ? 'Cancelado' : editingAppointment.status
+                          }\n` +
+                          (editingAppointment.confirmedDate ? `✅ Data Confirmada: ${new Date(editingAppointment.confirmedDate).toLocaleDateString('pt-BR')}\n` : '') +
+                          (editingAppointment.estimatedPrice ? `💰 Preço Estimado: R$ ${editingAppointment.estimatedPrice.toFixed(2)}\n` : '') +
+                          (editingAppointment.adminNotes ? `📝 Observações: ${editingAppointment.adminNotes}\n` : '') +
+                          `\nDaniel Valente Moto Detalhamento`
+                        )}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         data-testid="link-standalone-whatsapp-appointment"
