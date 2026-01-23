@@ -166,6 +166,88 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/service-posts", async (req, res) => {
+    try {
+      const posts = await storage.getAllServicePosts();
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching service posts:", error);
+      res.status(500).json({ error: "Failed to fetch service posts" });
+    }
+  });
+
+  app.get("/api/service-posts/featured", async (req, res) => {
+    try {
+      const limit = parseInt(String(req.query.limit)) || 8;
+      const posts = await storage.getFeaturedServicePosts(limit);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching featured service posts:", error);
+      res.status(500).json({ error: "Failed to fetch service posts" });
+    }
+  });
+
+  app.get("/api/service-posts/:id", async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service post ID" });
+      }
+      const post = await storage.getServicePost(id);
+      if (!post) {
+        return res.status(404).json({ error: "Service post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      console.error("Error fetching service post:", error);
+      res.status(500).json({ error: "Failed to fetch service post" });
+    }
+  });
+
+  app.post("/api/service-posts", requireAuth, async (req, res) => {
+    try {
+      const post = await storage.createServicePost(req.body);
+      res.status(201).json(post);
+    } catch (error) {
+      console.error("Error creating service post:", error);
+      res.status(500).json({ error: "Failed to create service post" });
+    }
+  });
+
+  app.patch("/api/service-posts/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service post ID" });
+      }
+      const post = await storage.updateServicePost(id, req.body);
+      if (!post) {
+        return res.status(404).json({ error: "Service post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      console.error("Error updating service post:", error);
+      res.status(500).json({ error: "Failed to update service post" });
+    }
+  });
+
+  app.delete("/api/service-posts/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service post ID" });
+      }
+      const deleted = await storage.deleteServicePost(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Service post not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting service post:", error);
+      res.status(500).json({ error: "Failed to delete service post" });
+    }
+  });
+
   app.get("/api/products/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);

@@ -6,7 +6,8 @@ import {
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
   type Review, type InsertReview,
-  users, products, siteSettings, customers, orders, orderItems, reviews
+  type ServicePost, type InsertServicePost,
+  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, sql, asc } from "drizzle-orm";
@@ -50,6 +51,13 @@ export interface IStorage {
   getProductAverageRating(productId: number): Promise<number>;
   getProductsWithStats(): Promise<Array<Product & { avgRating: number; reviewCount: number; purchaseCount: number }>>;
   getRecentReviews(limit?: number): Promise<Array<Review & { productName: string; productImage: string }>>;
+
+  getAllServicePosts(): Promise<ServicePost[]>;
+  getServicePost(id: number): Promise<ServicePost | undefined>;
+  getFeaturedServicePosts(limit?: number): Promise<ServicePost[]>;
+  createServicePost(post: InsertServicePost): Promise<ServicePost>;
+  updateServicePost(id: number, post: Partial<InsertServicePost>): Promise<ServicePost | undefined>;
+  deleteServicePost(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,6 +257,34 @@ export class DatabaseStorage implements IStorage {
     .limit(limit);
     
     return recentReviews;
+  }
+
+  async getAllServicePosts(): Promise<ServicePost[]> {
+    return await db.select().from(servicePosts).orderBy(desc(servicePosts.createdAt));
+  }
+
+  async getServicePost(id: number): Promise<ServicePost | undefined> {
+    const result = await db.select().from(servicePosts).where(eq(servicePosts.id, id));
+    return result[0];
+  }
+
+  async getFeaturedServicePosts(limit: number = 8): Promise<ServicePost[]> {
+    return await db.select().from(servicePosts).orderBy(desc(servicePosts.createdAt)).limit(limit);
+  }
+
+  async createServicePost(post: InsertServicePost): Promise<ServicePost> {
+    const result = await db.insert(servicePosts).values(post).returning();
+    return result[0];
+  }
+
+  async updateServicePost(id: number, post: Partial<InsertServicePost>): Promise<ServicePost | undefined> {
+    const result = await db.update(servicePosts).set(post).where(eq(servicePosts.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteServicePost(id: number): Promise<boolean> {
+    const result = await db.delete(servicePosts).where(eq(servicePosts.id, id)).returning();
+    return result.length > 0;
   }
 }
 
