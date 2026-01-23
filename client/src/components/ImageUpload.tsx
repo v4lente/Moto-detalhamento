@@ -1,16 +1,68 @@
-import { useState, useRef, useEffect, useId } from "react";
+import { useState, useRef, useEffect, useId, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Upload, X, Loader2, Crop } from "lucide-react";
+import ReactCrop, { centerCrop, makeAspectCrop, type Crop as CropType, type PixelCrop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 interface ImageUploadProps {
   value?: string;
   onChange: (url: string) => void;
   className?: string;
+  aspectRatio?: number;
 }
 
-export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
+function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  
+  canvas.width = crop.width * scaleX;
+  canvas.height = crop.height * scaleY;
+  
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("No 2d context");
+  }
+
+  ctx.imageSmoothingQuality = "high";
+
+  ctx.drawImage(
+    image,
+    crop.x * scaleX,
+    crop.y * scaleY,
+    crop.width * scaleX,
+    crop.height * scaleY,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas is empty"));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/jpeg",
+      0.9
+    );
+  });
+}
+
+export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState<CropType>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
 
@@ -18,20 +70,61 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
     setPreview(value || null);
   }, [value]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const aspect = aspectRatio || 16 / 9;
+    
+    const newCrop = centerCrop(
+      makeAspectCrop(
+        {
+          unit: "%",
+          width: 90,
+        },
+        aspect,
+        width,
+        height
+      ),
+      width,
+      height
+    );
+    
+    setCrop(newCrop);
+  }, [aspectRatio]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setOriginalFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageSrc(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
+
+  const handleCropConfirm = async () => {
+    if (!imgRef.current || !completedCrop || !originalFile) return;
+
     setIsUploading(true);
-    
+    setCropDialogOpen(false);
+
     try {
+      const croppedBlob = await getCroppedImg(imgRef.current, completedCrop);
+      const croppedFile = new File([croppedBlob], originalFile.name, { type: "image/jpeg" });
+
       const response = await fetch("/api/uploads/request-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type,
+          name: croppedFile.name,
+          size: croppedFile.size,
+          contentType: croppedFile.type,
         }),
       });
 
@@ -43,8 +136,8 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
 
       const uploadResponse = await fetch(uploadURL, {
         method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
+        body: croppedFile,
+        headers: { "Content-Type": croppedFile.type },
       });
 
       if (!uploadResponse.ok) {
@@ -58,10 +151,15 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
       alert("Erro ao fazer upload da imagem");
     } finally {
       setIsUploading(false);
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
+      setImageSrc(null);
+      setOriginalFile(null);
     }
+  };
+
+  const handleCropCancel = () => {
+    setCropDialogOpen(false);
+    setImageSrc(null);
+    setOriginalFile(null);
   };
 
   const handleClear = () => {
@@ -78,7 +176,7 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
         ref={inputRef}
         type="file"
         accept="image/*"
-        onChange={handleFileChange}
+        onChange={handleFileSelect}
         className="hidden"
         id={inputId}
       />
@@ -121,6 +219,51 @@ export function ImageUpload({ value, onChange, className }: ImageUploadProps) {
           )}
         </Button>
       )}
+
+      <Dialog open={cropDialogOpen} onOpenChange={(open) => !open && handleCropCancel()}>
+        <DialogContent className="max-w-2xl bg-card border-primary/20" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display">
+              <Crop className="h-5 w-5" />
+              Recortar Imagem
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex justify-center py-4 max-h-[60vh] overflow-auto">
+            {imageSrc && (
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={aspectRatio}
+                className="max-w-full"
+              >
+                <img
+                  ref={imgRef}
+                  src={imageSrc}
+                  alt="Crop"
+                  onLoad={onImageLoad}
+                  style={{ maxHeight: "50vh" }}
+                />
+              </ReactCrop>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={handleCropCancel}>
+              Cancelar
+            </Button>
+            <Button 
+              type="button" 
+              className="bg-primary text-black hover:bg-primary/90"
+              onClick={handleCropConfirm}
+              disabled={!completedCrop}
+            >
+              Confirmar Recorte
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
