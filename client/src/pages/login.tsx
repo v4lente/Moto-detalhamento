@@ -31,7 +31,7 @@ export default function Login() {
         await login(username, password);
         toast({ title: "Login realizado com sucesso!" });
       }
-      await queryClient.invalidateQueries({ queryKey: ["user"] });
+      await queryClient.refetchQueries({ queryKey: ["user"] });
       setLocation("/admin");
     } catch (error: any) {
       toast({
