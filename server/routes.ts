@@ -62,6 +62,11 @@ export async function registerRoutes(
 ): Promise<Server> {
   const MemStore = MemoryStore(session);
   
+  // Trust proxy for production (Replit uses reverse proxy)
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+  
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "moto-detalhamento-secret-key",
@@ -72,6 +77,7 @@ export async function registerRoutes(
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       },
     })
   );
