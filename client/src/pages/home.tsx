@@ -356,47 +356,56 @@ export default function Home() {
               <p className="text-muted-foreground">Confira alguns dos serviços de detalhamento realizados</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {featuredServices.map((service, index) => (
-                <div
-                  key={service.id}
-                  className={`relative group cursor-pointer overflow-hidden rounded-xl ${
-                    index === 0 ? 'col-span-2 row-span-2' : ''
-                  }`}
-                  onClick={() => openServiceModal(service)}
-                  data-testid={`service-gallery-${service.id}`}
-                >
-                  <div className={`${index === 0 ? 'aspect-square' : 'aspect-square'} w-full`}>
-                    {service.mediaUrls && service.mediaUrls.length > 0 ? (
-                      service.mediaTypes[0] === "video" ? (
-                        <div className="w-full h-full bg-muted flex items-center justify-center relative">
-                          <Play className="h-12 w-12 text-primary" />
-                        </div>
-                      ) : (
-                        <img
-                          src={service.mediaUrls[0]}
-                          alt={service.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            <div className="relative group/works">
+              <div className="overflow-x-auto scrollbar-hide pb-4">
+                <div className="flex gap-6" style={{ width: 'max-content' }}>
+                  {featuredServices.map((service) => (
+                    <Card
+                      key={service.id}
+                      className="bg-card border-border hover:border-primary/50 transition-colors w-[320px] sm:w-[360px] flex-shrink-0 cursor-pointer"
+                      onClick={() => openServiceModal(service)}
+                      data-testid={`service-gallery-${service.id}`}
+                    >
+                      <CardContent className="p-6">
+                        <h3 className="font-display font-bold text-lg mb-3 text-primary">{service.title}</h3>
+                        {service.vehicleInfo && (
+                          <p className="text-sm text-muted-foreground mb-2">{service.vehicleInfo}</p>
+                        )}
+                        {service.clientName && (
+                          <p className="text-xs text-muted-foreground mb-4">Cliente: {service.clientName}</p>
+                        )}
+                        
+                        <ServiceMediaCarousel 
+                          servicePost={service} 
+                          onOpenModal={() => openServiceModal(service)}
                         />
-                      )
-                    ) : (
-                      <div className="w-full h-full bg-muted flex items-center justify-center">
-                        <Camera className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                    <h3 className="font-display font-bold text-sm md:text-base line-clamp-1">{service.title}</h3>
-                    {service.vehicleInfo && (
-                      <p className="text-xs text-gray-300 mt-1">{service.vehicleInfo}</p>
-                    )}
-                    {service.mediaUrls && service.mediaUrls.length > 1 && (
-                      <p className="text-xs text-primary mt-1">+{service.mediaUrls.length - 1} fotos</p>
-                    )}
-                  </div>
+                        
+                        {service.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">{service.description}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ))}
+              </div>
+              <button 
+                onClick={() => {
+                  const container = document.querySelector('.group\\/works .overflow-x-auto');
+                  if (container) container.scrollBy({ left: -380, behavior: 'smooth' });
+                }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/works:opacity-100 transition-opacity z-10 hidden sm:flex"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  const container = document.querySelector('.group\\/works .overflow-x-auto');
+                  if (container) container.scrollBy({ left: 380, behavior: 'smooth' });
+                }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/works:opacity-100 transition-opacity z-10 hidden sm:flex"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </section>
