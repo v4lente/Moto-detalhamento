@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, Shoppin
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
+import { CreatableSelect } from "@/components/ui/creatable-select";
 import { Link } from "wouter";
 
 export default function Admin() {
@@ -38,6 +39,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [productImage, setProductImage] = useState("");
+  const [productCategory, setProductCategory] = useState("");
   const [logoImage, setLogoImage] = useState("");
   const [backgroundImage, setBackgroundImage] = useState("");
   const [editingServicePost, setEditingServicePost] = useState<ServicePost | null>(null);
@@ -300,15 +302,31 @@ export default function Admin() {
     setLocation("/login");
   };
 
+  const existingCategories = React.useMemo(() => {
+    if (!products) return [];
+    const categories = products.map(p => p.category).filter(Boolean);
+    return Array.from(new Set(categories)).sort();
+  }, [products]);
+
   const handleProductSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    if (!productCategory.trim()) {
+      toast({
+        title: "Categoria obrigatória",
+        description: "Por favor, selecione ou crie uma categoria.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const formData = new FormData(e.currentTarget);
     const productData = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       price: parseFloat(formData.get("price") as string),
       image: productImage,
-      category: formData.get("category") as string,
+      category: productCategory.trim(),
     };
 
     if (editingProduct) {
@@ -745,10 +763,19 @@ export default function Admin() {
                 if (!open) {
                   setEditingProduct(null);
                   setProductImage("");
+                  setProductCategory("");
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button className="bg-primary text-black hover:bg-primary/90" data-testid="button-add-product">
+                  <Button 
+                    className="bg-primary text-black hover:bg-primary/90" 
+                    data-testid="button-add-product"
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setProductImage("");
+                      setProductCategory("");
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" /> Novo Produto
                   </Button>
                 </DialogTrigger>
@@ -774,7 +801,14 @@ export default function Admin() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="category">Categoria</Label>
-                        <Input id="category" name="category" defaultValue={editingProduct?.category} required data-testid="input-product-category" />
+                        <CreatableSelect
+                          value={productCategory}
+                          onChange={setProductCategory}
+                          options={existingCategories}
+                          placeholder="Selecione ou crie"
+                          createLabel="Criar categoria"
+                          data-testid="input-product-category"
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -812,6 +846,7 @@ export default function Admin() {
                           onClick={() => {
                             setEditingProduct(product);
                             setProductImage(product.image);
+                            setProductCategory(product.category);
                             setIsProductDialogOpen(true);
                           }}
                           data-testid={`button-edit-${product.id}`}
