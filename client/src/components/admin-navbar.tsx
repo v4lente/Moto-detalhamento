@@ -78,8 +78,8 @@ function AdminTab({ value, testId, children }: AdminTabProps) {
     outline: 'none',
     border: 'none',
     cursor: 'pointer',
-    backgroundColor: isActive ? '#d4ff00' : (isHovered ? 'rgba(212, 255, 0, 0.2)' : 'transparent'),
-    color: isActive ? '#000000' : (isHovered ? '#d4ff00' : 'rgba(156, 163, 175, 0.6)'),
+    backgroundColor: isActive ? '#eab308' : (isHovered ? 'rgba(234, 179, 8, 0.2)' : 'transparent'),
+    color: isActive ? '#000000' : (isHovered ? '#eab308' : 'rgba(156, 163, 175, 0.6)'),
   };
 
   return (

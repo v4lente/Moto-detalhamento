@@ -97,19 +97,19 @@ button.admin-tab-trigger {
 }
 
 button.admin-tab-trigger:hover {
-  background-color: rgba(212, 255, 0, 0.2) !important;
-  color: #d4ff00 !important;
+  background-color: rgba(234, 179, 8, 0.2) !important;
+  color: #eab308 !important;
 }
 
 button.admin-tab-trigger[data-state="active"] {
-  background-color: #d4ff00 !important;
+  background-color: #eab308 !important;
   color: #000000 !important;
   font-weight: 700 !important;
   opacity: 1 !important;
 }
 
 button.admin-tab-trigger[data-state="active"]:hover {
-  background-color: #d4ff00 !important;
+  background-color: #eab308 !important;
   color: #000000 !important;
 }
 
