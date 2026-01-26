@@ -226,6 +226,34 @@ export const insertServicePostSchema = createInsertSchema(servicePosts).omit({
 export type InsertServicePost = z.infer<typeof insertServicePostSchema>;
 export type ServicePost = typeof servicePosts.$inferSelect;
 
+// Offered Services (Services that can be hired)
+export const offeredServices = pgTable("offered_services", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  details: text("details").notNull(),
+  approximatePrice: real("approximate_price"),
+  exampleWorkId: integer("example_work_id").references(() => servicePosts.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertOfferedServiceSchema = createInsertSchema(offeredServices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateOfferedServiceSchema = z.object({
+  name: z.string().min(2).optional(),
+  details: z.string().min(5).optional(),
+  approximatePrice: z.number().nullable().optional(),
+  exampleWorkId: z.number().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type InsertOfferedService = z.infer<typeof insertOfferedServiceSchema>;
+export type OfferedService = typeof offeredServices.$inferSelect;
+export type UpdateOfferedService = z.infer<typeof updateOfferedServiceSchema>;
+
 // Appointments / Service Scheduling
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
