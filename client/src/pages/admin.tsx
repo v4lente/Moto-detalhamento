@@ -350,6 +350,7 @@ export default function Admin() {
       copyrightText: formData.get("copyrightText") as string,
       logoImage: logoImage,
       backgroundImage: backgroundImage,
+      businessAddress: formData.get("businessAddress") as string,
     };
     updateSettingsMutation.mutate(settingsData);
   };
@@ -1723,6 +1724,11 @@ export default function Admin() {
                     <div className="space-y-2">
                       <Label htmlFor="copyrightText">Texto de Copyright</Label>
                       <Input id="copyrightText" name="copyrightText" defaultValue={settings?.copyrightText} data-testid="input-copyright" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="businessAddress">Endereço do Estabelecimento</Label>
+                      <Input id="businessAddress" name="businessAddress" defaultValue={settings?.businessAddress || ""} placeholder="Rua, Número - Bairro, Cidade - Estado" data-testid="input-business-address" />
+                      <p className="text-xs text-muted-foreground">Este endereço será exibido no rodapé com um botão "Como Chegar"</p>
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">

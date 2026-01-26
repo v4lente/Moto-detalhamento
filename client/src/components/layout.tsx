@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ShoppingCart, Phone, Settings, User } from "lucide-react";
+import { ShoppingCart, Phone, Settings, User, MapPin, Navigation } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSettings, getCurrentCustomer } from "@/lib/api";
@@ -173,6 +173,7 @@ interface FooterProps {
     siteName?: string;
     footerText?: string;
     copyrightText?: string;
+    businessAddress?: string;
   } | null;
 }
 
@@ -181,6 +182,20 @@ export function Footer({ settings }: FooterProps) {
   const nameParts = siteName.split(" ");
   const firstName = nameParts[0] || "Daniel";
   const lastName = nameParts.slice(1).join(" ") || "Valente";
+  const businessAddress = settings?.businessAddress;
+
+  const handleGetDirections = () => {
+    if (businessAddress) {
+      const encodedAddress = encodeURIComponent(businessAddress);
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, '_blank');
+      } else {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+      }
+    }
+  };
 
   return (
     <footer className="bg-secondary py-12 mt-20 border-t border-primary/10">
@@ -188,9 +203,29 @@ export function Footer({ settings }: FooterProps) {
         <h2 className="font-display font-bold text-2xl uppercase mb-4">
           <span className="text-primary">{firstName}</span> {lastName}
         </h2>
-        <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
+        <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
           {settings?.footerText || "Especialistas em detalhamento de motos. Cuidamos da sua máquina com os melhores produtos do mercado."}
         </p>
+        
+        {businessAddress && (
+          <div className="mb-6">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm mb-3">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span>{businessAddress}</span>
+            </div>
+            <Button 
+              onClick={handleGetDirections}
+              variant="outline"
+              size="sm"
+              className="border-primary/30 hover:bg-primary hover:text-black transition-colors"
+              data-testid="button-directions"
+            >
+              <Navigation className="h-4 w-4 mr-2" />
+              Como Chegar
+            </Button>
+          </div>
+        )}
+        
         <div className="text-xs text-muted-foreground/50 mb-4">
           {settings?.copyrightText || "© 2024 Daniel Valente Moto Detalhamento. Todos os direitos reservados."}
         </div>

@@ -62,6 +62,7 @@ export const siteSettings = pgTable("site_settings", {
   copyrightText: text("copyright_text").notNull().default("© 2024 Daniel Valente Moto Detalhamento. Todos os direitos reservados."),
   logoImage: text("logo_image").default("/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg"),
   backgroundImage: text("background_image").default("/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg"),
+  businessAddress: text("business_address").default(""),
 });
 
 export const updateSiteSettingsSchema = createInsertSchema(siteSettings).omit({
