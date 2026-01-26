@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { AdminNavbar } from "@/components/admin-navbar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -437,32 +438,7 @@ export default function Admin() {
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="bg-card inline-flex min-w-max sm:flex-wrap">
-              <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-dashboard">
-                <LayoutDashboard className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Dashboard</span>
-              </TabsTrigger>
-              <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-products">
-                <Package className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Produtos</span>
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-orders">
-                <ShoppingBag className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Pedidos</span>
-              </TabsTrigger>
-              <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-customers">
-                <Users className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Clientes</span>
-              </TabsTrigger>
-              <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-users">
-                <Shield className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Usuários</span>
-              </TabsTrigger>
-              <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-services">
-                <Camera className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Serviços</span>
-              </TabsTrigger>
-              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-appointments">
-                <Calendar className="h-4 w-4 sm:mr-2 text-primary" /> <span className="hidden sm:inline">Agenda</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-settings">
-                <Settings className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Config</span>
-              </TabsTrigger>
-            </TabsList>
+            <AdminNavbar />
           </div>
 
           <TabsContent value="dashboard" className="space-y-6">
