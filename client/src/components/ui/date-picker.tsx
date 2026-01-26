@@ -20,6 +20,7 @@ interface DatePickerProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  minDate?: Date
   "data-testid"?: string
 }
 
@@ -29,6 +30,7 @@ export function DatePicker({
   placeholder = "Selecione uma data",
   className,
   disabled,
+  minDate,
   "data-testid": dataTestId,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
@@ -46,17 +48,17 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "justify-start text-left font-normal",
+            "justify-start text-left font-normal border-primary/30 hover:border-primary/60 hover:bg-primary/5",
             !dateValue && "text-muted-foreground",
             className
           )}
           data-testid={dataTestId}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
           {dateValue ? format(dateValue, "dd/MM/yyyy", { locale: ptBR }) : placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 border-primary/30" align="start">
         <Calendar
           mode="single"
           selected={dateValue}
@@ -64,6 +66,7 @@ export function DatePicker({
             onChange?.(date)
             setOpen(false)
           }}
+          disabled={minDate ? (date) => date < minDate : undefined}
           initialFocus
         />
       </PopoverContent>

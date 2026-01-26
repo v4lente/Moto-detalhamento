@@ -10,11 +10,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { createAppointment, fetchSettings, getCurrentCustomer } from "@/lib/api";
 import { Loader2, Calendar, AlertTriangle, CheckCircle, MessageCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 export default function Agendar() {
   const { toast } = useToast();
   const [success, setSuccess] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState("");
+  const [preferredDate, setPreferredDate] = useState<Date | undefined>(undefined);
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
@@ -57,10 +59,19 @@ export default function Agendar() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    if (!preferredDate) {
+      toast({
+        title: "Data obrigatória",
+        description: "Por favor, selecione a data e hora preferencial.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     createMutation.mutate({
       vehicleInfo: formData.get("vehicleInfo") as string,
       serviceDescription: formData.get("serviceDescription") as string,
-      preferredDate: formData.get("preferredDate") as string,
+      preferredDate: preferredDate.toISOString(),
       customerName: customer ? undefined : formData.get("customerName") as string,
       customerPhone: customer ? undefined : formData.get("customerPhone") as string,
       customerEmail: customer ? undefined : formData.get("customerEmail") as string,
@@ -223,13 +234,11 @@ export default function Agendar() {
 
                   <div className="space-y-2">
                     <Label htmlFor="preferredDate">Data e Hora Preferencial *</Label>
-                    <Input
-                      id="preferredDate"
-                      name="preferredDate"
-                      type="datetime-local"
-                      required
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="bg-background"
+                    <DateTimePicker
+                      value={preferredDate}
+                      onChange={setPreferredDate}
+                      placeholder="Selecione data e hora"
+                      minDate={new Date()}
                       data-testid="input-preferred-date"
                     />
                     <p className="text-xs text-muted-foreground">
