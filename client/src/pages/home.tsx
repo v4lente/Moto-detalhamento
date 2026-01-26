@@ -72,7 +72,7 @@ export default function Home() {
         
         <div className="container mx-auto px-4 relative z-20">
           <div className="max-w-2xl">
-            <h1 className="text-5xl md:text-7xl font-display font-bold uppercase italic leading-none mb-6">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-bold uppercase italic leading-none mb-4 sm:mb-6">
               {heroTitle.split(" ").map((word, i) => (
                 i === 0 ? (
                   <span key={i}>{word} <br/></span>
@@ -83,17 +83,17 @@ export default function Home() {
                 )
               ))}
             </h1>
-            <p className="text-lg text-gray-300 mb-8 max-w-lg">
+            <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8 max-w-lg">
               {heroSubtitle}
             </p>
-            <div className="flex gap-4">
-              <Link href="/produtos">
-                <Button size="lg" className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-base px-8" data-testid="button-ver-produtos">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+              <Link href="/produtos" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full sm:w-auto bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider text-sm sm:text-base px-4 sm:px-8" data-testid="button-ver-produtos">
                   Ver Produtos
                 </Button>
               </Link>
-              <Link href="/agendar">
-                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-base px-8" data-testid="button-agendar">
+              <Link href="/agendar" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-sm sm:text-base px-4 sm:px-8" data-testid="button-agendar">
                   Agendar Serviço
                 </Button>
               </Link>
@@ -103,13 +103,13 @@ export default function Home() {
       </section>
 
       <section className="py-20 container mx-auto px-4 flex-1">
-        <div className="flex items-center justify-between mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12">
           <div>
-            <h2 className="text-3xl font-display font-bold uppercase mb-2">Loja Oficial</h2>
-            <p className="text-muted-foreground">Produtos profissionais para você cuidar da sua máquina em casa.</p>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">Loja Oficial</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">Produtos profissionais para você cuidar da sua máquina em casa.</p>
           </div>
           <Link href="/produtos">
-            <Button variant="outline" className="border-primary/30 hover:bg-primary/10">
+            <Button variant="outline" className="border-primary/30 hover:bg-primary/10 w-full sm:w-auto">
               Ver Todos
             </Button>
           </Link>
@@ -265,9 +265,9 @@ export default function Home() {
       {recentReviews && recentReviews.length > 0 && (
         <section className="py-16 bg-card/50">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-display font-bold uppercase mb-2">O Que Nossos Clientes Dizem</h2>
-              <p className="text-muted-foreground">Avaliações recentes dos nossos produtos</p>
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">O Que Nossos Clientes Dizem</h2>
+              <p className="text-sm sm:text-base text-muted-foreground">Avaliações recentes dos nossos produtos</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
