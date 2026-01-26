@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ShoppingCart, Phone, Settings, User, MapPin, Navigation } from "lucide-react";
+import { ShoppingCart, Phone, Settings, User, MapPin, Navigation, Instagram, Facebook, Youtube } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSettings, getCurrentCustomer } from "@/lib/api";
@@ -174,6 +174,9 @@ interface FooterProps {
     footerText?: string;
     copyrightText?: string;
     businessAddress?: string;
+    instagramUrl?: string;
+    facebookUrl?: string;
+    youtubeUrl?: string;
   } | null;
 }
 
@@ -183,6 +186,10 @@ export function Footer({ settings }: FooterProps) {
   const firstName = nameParts[0] || "Daniel";
   const lastName = nameParts.slice(1).join(" ") || "Valente";
   const businessAddress = settings?.businessAddress;
+  const instagramUrl = settings?.instagramUrl;
+  const facebookUrl = settings?.facebookUrl;
+  const youtubeUrl = settings?.youtubeUrl;
+  const hasSocialMedia = instagramUrl || facebookUrl || youtubeUrl;
 
   const handleGetDirections = () => {
     if (businessAddress) {
@@ -223,6 +230,47 @@ export function Footer({ settings }: FooterProps) {
               <Navigation className="h-4 w-4 mr-2" />
               Como Chegar
             </Button>
+          </div>
+        )}
+        
+        {hasSocialMedia && (
+          <div className="flex items-center justify-center gap-4 mb-6">
+            {instagramUrl && (
+              <a 
+                href={instagramUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-2 rounded-full border border-primary/30 text-muted-foreground hover:bg-primary hover:text-black hover:border-primary transition-colors"
+                data-testid="link-instagram"
+                title="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+            )}
+            {facebookUrl && (
+              <a 
+                href={facebookUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-2 rounded-full border border-primary/30 text-muted-foreground hover:bg-primary hover:text-black hover:border-primary transition-colors"
+                data-testid="link-facebook"
+                title="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+            )}
+            {youtubeUrl && (
+              <a 
+                href={youtubeUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-2 rounded-full border border-primary/30 text-muted-foreground hover:bg-primary hover:text-black hover:border-primary transition-colors"
+                data-testid="link-youtube"
+                title="YouTube"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
+            )}
           </div>
         )}
         

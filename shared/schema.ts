@@ -63,6 +63,9 @@ export const siteSettings = pgTable("site_settings", {
   logoImage: text("logo_image").default("/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg"),
   backgroundImage: text("background_image").default("/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg"),
   businessAddress: text("business_address").default(""),
+  instagramUrl: text("instagram_url").default(""),
+  facebookUrl: text("facebook_url").default(""),
+  youtubeUrl: text("youtube_url").default(""),
 });
 
 export const updateSiteSettingsSchema = createInsertSchema(siteSettings).omit({

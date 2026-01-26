@@ -351,6 +351,9 @@ export default function Admin() {
       logoImage: logoImage,
       backgroundImage: backgroundImage,
       businessAddress: formData.get("businessAddress") as string,
+      instagramUrl: formData.get("instagramUrl") as string,
+      facebookUrl: formData.get("facebookUrl") as string,
+      youtubeUrl: formData.get("youtubeUrl") as string,
     };
     updateSettingsMutation.mutate(settingsData);
   };
@@ -1730,6 +1733,26 @@ export default function Admin() {
                       <Input id="businessAddress" name="businessAddress" defaultValue={settings?.businessAddress || ""} placeholder="Rua, Número - Bairro, Cidade - Estado" data-testid="input-business-address" />
                       <p className="text-xs text-muted-foreground">Este endereço será exibido no rodapé com um botão "Como Chegar"</p>
                     </div>
+                    
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold">Redes Sociais</Label>
+                      <p className="text-xs text-muted-foreground -mt-2">Links das redes sociais que serão exibidos no rodapé</p>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="instagramUrl">Instagram</Label>
+                          <Input id="instagramUrl" name="instagramUrl" defaultValue={settings?.instagramUrl || ""} placeholder="https://instagram.com/seu_perfil" data-testid="input-instagram" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="facebookUrl">Facebook</Label>
+                          <Input id="facebookUrl" name="facebookUrl" defaultValue={settings?.facebookUrl || ""} placeholder="https://facebook.com/sua_pagina" data-testid="input-facebook" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="youtubeUrl">YouTube</Label>
+                          <Input id="youtubeUrl" name="youtubeUrl" defaultValue={settings?.youtubeUrl || ""} placeholder="https://youtube.com/@seu_canal" data-testid="input-youtube" />
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label>Logo</Label>
