@@ -207,7 +207,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-black data-[selected-single=true]:shadow-[0_0_10px_rgba(212,255,0,0.4)] data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-black data-[range-start=true]:shadow-[0_0_10px_rgba(212,255,0,0.4)] data-[range-end=true]:bg-primary data-[range-end=true]:text-black data-[range-end=true]:shadow-[0_0_10px_rgba(212,255,0,0.4)] group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-primary/40 flex items-center justify-center aspect-square h-[--cell-size] w-[--cell-size] min-w-[--cell-size] font-normal leading-none data-[range-end=true]:rounded-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] hover:bg-primary/10",
+        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-black data-[selected-single=true]:shadow-[0_0_10px_rgba(212,255,0,0.4)] data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-black data-[range-end=true]:bg-primary data-[range-end=true]:text-black group-data-[focused=true]/day:ring-primary/40 rounded-md hover:bg-primary/10 group-data-[focused=true]/day:ring-2",
         defaultClassNames.day,
         className
       )}
