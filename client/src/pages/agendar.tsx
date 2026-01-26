@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Navbar, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -81,9 +80,25 @@ export default function Agendar() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Navbar />
-        <main className="flex-grow container mx-auto px-4 py-12">
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Link href="/">
+                <Button variant="ghost" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+              </Link>
+              <h1 className="text-base sm:text-xl font-display font-bold text-primary truncate max-w-[120px] sm:max-w-none">
+                {settings?.siteName || "Agendamento"}
+              </h1>
+              <div className="w-10" />
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-12">
           <div className="max-w-xl mx-auto">
             <Card className="bg-card border-primary/30">
               <CardContent className="pt-8 text-center">
@@ -124,26 +139,33 @@ export default function Agendar() {
             </Card>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
-      <main className="flex-grow container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-6">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
             <Link href="/">
               <Button variant="ghost" className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 Voltar
               </Button>
             </Link>
+            <h1 className="text-base sm:text-xl font-display font-bold text-primary truncate max-w-[120px] sm:max-w-none">
+              {settings?.siteName || "Agendamento"}
+            </h1>
+            <div className="w-10" />
           </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">Agendar Serviço</h1>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">Agendar Serviço</h2>
             <p className="text-muted-foreground">Solicite um pré-agendamento para seu serviço de detalhamento</p>
           </div>
 
@@ -279,7 +301,6 @@ export default function Agendar() {
           </Card>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
