@@ -43,7 +43,7 @@ export function AdminNavbar() {
             <TooltipTrigger asChild>
               <TabsTrigger 
                 value={item.value} 
-                className="data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground data-[state=inactive]:opacity-60 data-[state=active]:opacity-100 data-[state=active]:font-semibold px-2 sm:px-4 transition-all duration-200 data-[state=active]:shadow-[0_0_12px_rgba(212,255,0,0.5)]" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground/50 data-[state=active]:font-bold px-2 sm:px-4 data-[state=active]:shadow-[0_0_15px_rgba(212,255,0,0.6)] hover:data-[state=inactive]:bg-primary/10 hover:data-[state=inactive]:text-primary" 
                 data-testid={item.testId}
               >
                 <span className="sm:mr-2">{item.icon}</span>
