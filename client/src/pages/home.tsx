@@ -267,52 +267,74 @@ export default function Home() {
               <p className="text-sm sm:text-base text-muted-foreground">Conheça os serviços de detalhamento que oferecemos</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {offeredServices.map((service) => {
-                const linkedPost = service.exampleWorkId ? allServicePosts?.find(s => s.id === service.exampleWorkId) : null;
-                
-                return (
-                  <Card 
-                    key={service.id} 
-                    className="bg-card border-border hover:border-primary/50 transition-colors" 
-                    data-testid={`home-service-${service.id}`}
-                  >
-                    <CardContent className="p-6">
-                      <h3 className="font-display font-bold text-lg mb-3 text-primary">{service.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
-                      
-                      {linkedPost && (
-                        <ServiceMediaCarousel 
-                          servicePost={linkedPost} 
-                          onOpenModal={() => openServiceModal(linkedPost)}
-                        />
-                      )}
-                      
-                      <div className="flex items-center justify-between">
-                        {service.approximatePrice ? (
-                          <div>
-                            <span className="text-xs text-muted-foreground">A partir de</span>
-                            <p className="text-xl font-bold text-primary">R$ {service.approximatePrice.toFixed(2)}</p>
+            <div className="relative group/services">
+              <div className="overflow-x-auto scrollbar-hide pb-4">
+                <div className="flex gap-6" style={{ width: 'max-content' }}>
+                  {offeredServices.map((service) => {
+                    const linkedPost = service.exampleWorkId ? allServicePosts?.find(s => s.id === service.exampleWorkId) : null;
+                    
+                    return (
+                      <Card 
+                        key={service.id} 
+                        className="bg-card border-border hover:border-primary/50 transition-colors w-[320px] sm:w-[360px] flex-shrink-0" 
+                        data-testid={`home-service-${service.id}`}
+                      >
+                        <CardContent className="p-6">
+                          <h3 className="font-display font-bold text-lg mb-3 text-primary">{service.name}</h3>
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
+                          
+                          {linkedPost && (
+                            <ServiceMediaCarousel 
+                              servicePost={linkedPost} 
+                              onOpenModal={() => openServiceModal(linkedPost)}
+                            />
+                          )}
+                          
+                          <div className="flex items-center justify-between">
+                            {service.approximatePrice ? (
+                              <div>
+                                <span className="text-xs text-muted-foreground">A partir de</span>
+                                <p className="text-xl font-bold text-primary">R$ {service.approximatePrice.toFixed(2)}</p>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground italic">Consulte-nos</span>
+                            )}
+                            {linkedPost && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:text-primary/80"
+                                onClick={() => openServiceModal(linkedPost)}
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Ver Detalhes
+                              </Button>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-sm text-muted-foreground italic">Consulte-nos</span>
-                        )}
-                        {linkedPost && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-primary hover:text-primary/80"
-                            onClick={() => openServiceModal(linkedPost)}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Ver Detalhes
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  const container = document.querySelector('.group\\/services .overflow-x-auto');
+                  if (container) container.scrollBy({ left: -380, behavior: 'smooth' });
+                }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/services:opacity-100 transition-opacity z-10 hidden sm:flex"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  const container = document.querySelector('.group\\/services .overflow-x-auto');
+                  if (container) container.scrollBy({ left: 380, behavior: 'smooth' });
+                }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/services:opacity-100 transition-opacity z-10 hidden sm:flex"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
 
             <div className="text-center mt-8">
