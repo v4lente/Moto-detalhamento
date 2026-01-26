@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createAppointment, fetchSettings, getCurrentCustomer } from "@/lib/api";
-import { Loader2, Calendar, AlertTriangle, CheckCircle, MessageCircle } from "lucide-react";
+import { Loader2, Calendar, AlertTriangle, CheckCircle, MessageCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { Link } from "wouter";
 
 export default function Agendar() {
   const { toast } = useToast();
@@ -133,6 +134,14 @@ export default function Agendar() {
       <Navbar />
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
+          <div className="mb-6">
+            <Link href="/">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+            </Link>
+          </div>
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">Agendar Serviço</h1>
             <p className="text-muted-foreground">Solicite um pré-agendamento para seu serviço de detalhamento</p>
