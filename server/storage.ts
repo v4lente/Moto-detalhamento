@@ -8,7 +8,8 @@ import {
   type Review, type InsertReview,
   type ServicePost, type InsertServicePost,
   type Appointment, type InsertAppointment,
-  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts, appointments
+  type OfferedService, type InsertOfferedService,
+  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts, appointments, offeredServices
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, sql, asc } from "drizzle-orm";
@@ -66,6 +67,13 @@ export interface IStorage {
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
   deleteAppointment(id: number): Promise<boolean>;
+
+  getAllOfferedServices(): Promise<OfferedService[]>;
+  getActiveOfferedServices(): Promise<OfferedService[]>;
+  getOfferedService(id: number): Promise<OfferedService | undefined>;
+  createOfferedService(service: InsertOfferedService): Promise<OfferedService>;
+  updateOfferedService(id: number, service: Partial<InsertOfferedService>): Promise<OfferedService | undefined>;
+  deleteOfferedService(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -320,6 +328,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAppointment(id: number): Promise<boolean> {
     const result = await db.delete(appointments).where(eq(appointments.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllOfferedServices(): Promise<OfferedService[]> {
+    return await db.select().from(offeredServices).orderBy(desc(offeredServices.createdAt));
+  }
+
+  async getActiveOfferedServices(): Promise<OfferedService[]> {
+    return await db.select().from(offeredServices).where(eq(offeredServices.isActive, true)).orderBy(desc(offeredServices.createdAt));
+  }
+
+  async getOfferedService(id: number): Promise<OfferedService | undefined> {
+    const result = await db.select().from(offeredServices).where(eq(offeredServices.id, id));
+    return result[0];
+  }
+
+  async createOfferedService(service: InsertOfferedService): Promise<OfferedService> {
+    const result = await db.insert(offeredServices).values(service).returning();
+    return result[0];
+  }
+
+  async updateOfferedService(id: number, service: Partial<InsertOfferedService>): Promise<OfferedService | undefined> {
+    const result = await db.update(offeredServices).set(service).where(eq(offeredServices.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteOfferedService(id: number): Promise<boolean> {
+    const result = await db.delete(offeredServices).where(eq(offeredServices.id, id)).returning();
     return result.length > 0;
   }
 }
