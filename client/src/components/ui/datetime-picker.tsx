@@ -100,7 +100,7 @@ export function DateTimePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-primary/30" align="start">
-        <div className="p-3 space-y-3">
+        <div className="p-2 sm:p-3 space-y-2 sm:space-y-3">
           <Calendar
             mode="single"
             selected={dateValue}
