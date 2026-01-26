@@ -40,17 +40,20 @@ export function DateTimePicker({
   const dateValue = React.useMemo(() => {
     if (!value) return undefined
     if (value instanceof Date) return value
-    return new Date(value)
+    const parsed = new Date(value)
+    if (isNaN(parsed.getTime())) return undefined
+    return parsed
   }, [value])
 
-  const [selectedTime, setSelectedTime] = React.useState(() => {
+  const [selectedTime, setSelectedTime] = React.useState("09:00")
+  
+  React.useEffect(() => {
     if (dateValue) {
       const hours = dateValue.getHours().toString().padStart(2, '0')
       const minutes = dateValue.getMinutes().toString().padStart(2, '0')
-      return `${hours}:${minutes}`
+      setSelectedTime(`${hours}:${minutes}`)
     }
-    return "09:00"
-  })
+  }, [dateValue])
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {

@@ -439,7 +439,7 @@ export default function Admin() {
                 <Camera className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Serviços</span>
               </TabsTrigger>
               <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-appointments">
-                <Calendar className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Agenda</span>
+                <Calendar className="h-4 w-4 sm:mr-2 text-primary" /> <span className="hidden sm:inline">Agenda</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-settings">
                 <Settings className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Config</span>
