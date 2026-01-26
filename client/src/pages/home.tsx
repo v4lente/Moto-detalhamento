@@ -246,24 +246,15 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {offeredServices.map((service) => {
                 const linkedPost = service.exampleWorkId ? allServicePosts?.find(s => s.id === service.exampleWorkId) : null;
-                const backgroundImage = linkedPost?.mediaUrls?.[0] && linkedPost.mediaTypes?.[0] !== "video" 
-                  ? linkedPost.mediaUrls[0] 
-                  : null;
                 
                 return (
                   <Card 
                     key={service.id} 
-                    className="bg-card border-border hover:border-primary/50 transition-colors relative overflow-hidden" 
+                    className="bg-card border-border hover:border-primary/50 transition-colors" 
                     data-testid={`home-service-${service.id}`}
                   >
-                    {backgroundImage && (
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center opacity-10"
-                        style={{ backgroundImage: `url(${backgroundImage})` }}
-                      />
-                    )}
-                    <CardContent className="p-6 relative z-10">
-                      <h3 className="font-display font-bold text-lg mb-3">{service.name}</h3>
+                    <CardContent className="p-6">
+                      <h3 className="font-display font-bold text-lg mb-3 text-primary">{service.name}</h3>
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
                       
                       {linkedPost && (
