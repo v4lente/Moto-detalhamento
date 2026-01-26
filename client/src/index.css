@@ -113,3 +113,12 @@ button.admin-tab-trigger[data-state="active"]:hover {
   color: #000000 !important;
 }
 
+/* Hide scrollbar for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+

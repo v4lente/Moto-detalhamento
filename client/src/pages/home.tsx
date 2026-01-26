@@ -224,10 +224,34 @@ export default function Home() {
         )}
 
         {products && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div className="relative group/products">
+            <div className="overflow-x-auto scrollbar-hide pb-4">
+              <div className="flex gap-6" style={{ width: 'max-content' }}>
+                {products.map((product) => (
+                  <div key={product.id} className="w-[280px] sm:w-[300px] flex-shrink-0">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                const container = document.querySelector('.overflow-x-auto');
+                if (container) container.scrollBy({ left: -320, behavior: 'smooth' });
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/products:opacity-100 transition-opacity z-10 hidden sm:flex"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={() => {
+                const container = document.querySelector('.overflow-x-auto');
+                if (container) container.scrollBy({ left: 320, behavior: 'smooth' });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-black/80 hover:bg-black text-white rounded-full p-3 opacity-0 group-hover/products:opacity-100 transition-opacity z-10 hidden sm:flex"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
         )}
       </section>
