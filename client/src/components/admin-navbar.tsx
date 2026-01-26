@@ -36,28 +36,26 @@ const navItems: AdminNavItem[] = [
 
 export function AdminNavbar() {
   return (
-    <div className="admin-tabs">
-      <TabsList className="bg-card inline-flex flex-wrap gap-1">
-        <TooltipProvider delayDuration={300}>
-          {navItems.map((item) => (
-            <Tooltip key={item.value}>
-              <TooltipTrigger asChild>
-                <TabsTrigger 
-                  value={item.value} 
-                  className="admin-tab px-2 sm:px-3" 
-                  data-testid={item.testId}
-                >
-                  <span className="sm:mr-2">{item.icon}</span>
-                  <span className="hidden sm:inline">{item.label}</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="sm:hidden">
-                <p>{item.label}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
-      </TabsList>
-    </div>
+    <TabsList className="bg-card">
+      <TooltipProvider delayDuration={300}>
+        {navItems.map((item) => (
+          <Tooltip key={item.value}>
+            <TooltipTrigger asChild>
+              <TabsTrigger 
+                value={item.value} 
+                className="px-2 sm:px-3" 
+                data-testid={item.testId}
+              >
+                <span className="sm:mr-2">{item.icon}</span>
+                <span className="hidden sm:inline">{item.label}</span>
+              </TabsTrigger>
+            </TooltipTrigger>
+            <TooltipContent className="sm:hidden">
+              <p>{item.label}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </TooltipProvider>
+    </TabsList>
   );
 }

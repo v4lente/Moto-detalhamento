@@ -437,9 +437,7 @@ export default function Admin() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <AdminNavbar />
-          </div>
+          <AdminNavbar />
 
           <TabsContent value="dashboard" className="space-y-6">
             <h2 className="text-2xl font-display font-bold">Dashboard</h2>
