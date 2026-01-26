@@ -59,23 +59,41 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Link href="/conta">
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" data-testid="button-account">
-              <User className="h-5 w-5" />
-            </Button>
-          </Link>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/conta">
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary" data-testid="button-account">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Minha Conta</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="relative border-primary/20 hover:bg-primary/10 hover:text-primary" data-testid="button-cart">
-              <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center" data-testid="text-cart-count">
-                  {cartCount}
-                </span>
-              )}
-            </Button>
-          </SheetTrigger>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="relative border-primary/20 hover:bg-primary/10 hover:text-primary" data-testid="button-cart">
+                    <ShoppingCart className="h-5 w-5" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center" data-testid="text-cart-count">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Carrinho</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <SheetContent className="w-full sm:max-w-md bg-card border-l border-primary/20">
             <SheetHeader>
               <SheetTitle className="font-display uppercase tracking-widest text-primary">Seu Carrinho</SheetTitle>

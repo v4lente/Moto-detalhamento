@@ -880,13 +880,13 @@ export default function Admin() {
               <div className="space-y-4">
                 {orders.map((order) => (
                   <Card key={order.id} className="bg-card border-border" data-testid={`admin-order-${order.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-4">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                             <div>
-                              <p className="font-bold">Pedido #{order.id}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="font-bold text-sm sm:text-base">Pedido #{order.id}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">
                                 {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                                   day: "2-digit",
                                   month: "short",
@@ -896,21 +896,24 @@ export default function Admin() {
                                 })}
                               </p>
                             </div>
-                            <div className="hidden md:block">
+                            <div className="sm:hidden">
+                              <p className="text-xs text-muted-foreground">Cliente: <span className="font-medium text-foreground">{order.customerName}</span></p>
+                            </div>
+                            <div className="hidden sm:block">
                               <p className="text-sm text-muted-foreground">Cliente:</p>
                               <p className="font-medium">{order.customerName}</p>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="font-bold text-primary">R$ {order.total.toFixed(2)}</p>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                          <div className="text-left sm:text-right">
+                            <p className="font-bold text-primary text-sm sm:text-base">R$ {order.total.toFixed(2)}</p>
                           </div>
                           <Select
                             defaultValue={order.status}
                             onValueChange={(value) => updateOrderStatusMutation.mutate({ id: order.id, status: value })}
                           >
-                            <SelectTrigger className="w-[130px]" data-testid={`select-status-${order.id}`}>
+                            <SelectTrigger className="w-[100px] sm:w-[130px] text-xs sm:text-sm" data-testid={`select-status-${order.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
