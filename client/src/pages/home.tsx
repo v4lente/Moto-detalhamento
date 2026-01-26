@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Navbar, Footer } from "@/components/layout";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,95 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProductsWithStats, fetchSettings, fetchRecentReviews, fetchFeaturedServicePosts, fetchOfferedServices, fetchServicePosts } from "@/lib/api";
-import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera, Wrench, ExternalLink } from "lucide-react";
+import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera, Wrench, ExternalLink, ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { ServicePost, OfferedService } from "@shared/schema";
+
+function getYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/);
+  return match ? match[1] : null;
+}
+
+function ServiceMediaCarousel({ 
+  servicePost, 
+  onOpenModal 
+}: { 
+  servicePost: ServicePost; 
+  onOpenModal: () => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const mediaUrls = servicePost.mediaUrls || [];
+  const mediaTypes = servicePost.mediaTypes || [];
+  
+  const handlePrev = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => prev === 0 ? mediaUrls.length - 1 : prev - 1);
+  }, [mediaUrls.length]);
+  
+  const handleNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => prev === mediaUrls.length - 1 ? 0 : prev + 1);
+  }, [mediaUrls.length]);
+  
+  if (mediaUrls.length === 0) return null;
+  
+  const currentUrl = mediaUrls[currentIndex];
+  const currentType = mediaTypes[currentIndex];
+  const youtubeId = currentType === "video" ? getYouTubeId(currentUrl) : null;
+  
+  return (
+    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/20 mb-4 group/carousel">
+      {currentType === "video" && youtubeId ? (
+        <iframe
+          src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      ) : currentType === "video" ? (
+        <video
+          src={currentUrl}
+          className="w-full h-full object-cover"
+          controls
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <img
+          src={currentUrl}
+          alt={servicePost.title}
+          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+          onClick={onOpenModal}
+        />
+      )}
+      
+      {mediaUrls.length > 1 && (
+        <>
+          <button
+            onClick={handlePrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={handleNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/carousel:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {mediaUrls.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+                className={`w-2 h-2 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/50 hover:bg-white/70'}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
@@ -158,38 +244,60 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {offeredServices.map((service) => (
-                <Card key={service.id} className="bg-card border-border hover:border-primary/50 transition-colors" data-testid={`home-service-${service.id}`}>
-                  <CardContent className="p-6">
-                    <h3 className="font-display font-bold text-lg mb-3">{service.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
-                    <div className="flex items-center justify-between">
-                      {service.approximatePrice ? (
-                        <div>
-                          <span className="text-xs text-muted-foreground">A partir de</span>
-                          <p className="text-xl font-bold text-primary">R$ {service.approximatePrice.toFixed(2)}</p>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground italic">Consulte-nos</span>
+              {offeredServices.map((service) => {
+                const linkedPost = service.exampleWorkId ? allServicePosts?.find(s => s.id === service.exampleWorkId) : null;
+                const backgroundImage = linkedPost?.mediaUrls?.[0] && linkedPost.mediaTypes?.[0] !== "video" 
+                  ? linkedPost.mediaUrls[0] 
+                  : null;
+                
+                return (
+                  <Card 
+                    key={service.id} 
+                    className="bg-card border-border hover:border-primary/50 transition-colors relative overflow-hidden" 
+                    data-testid={`home-service-${service.id}`}
+                  >
+                    {backgroundImage && (
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center opacity-10"
+                        style={{ backgroundImage: `url(${backgroundImage})` }}
+                      />
+                    )}
+                    <CardContent className="p-6 relative z-10">
+                      <h3 className="font-display font-bold text-lg mb-3">{service.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
+                      
+                      {linkedPost && (
+                        <ServiceMediaCarousel 
+                          servicePost={linkedPost} 
+                          onOpenModal={() => openServiceModal(linkedPost)}
+                        />
                       )}
-                      {service.exampleWorkId && allServicePosts?.some(s => s.id === service.exampleWorkId) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-primary hover:text-primary/80"
-                          onClick={() => {
-                            const example = allServicePosts?.find(s => s.id === service.exampleWorkId);
-                            if (example) openServiceModal(example);
-                          }}
-                        >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Ver Exemplo
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      
+                      <div className="flex items-center justify-between">
+                        {service.approximatePrice ? (
+                          <div>
+                            <span className="text-xs text-muted-foreground">A partir de</span>
+                            <p className="text-xl font-bold text-primary">R$ {service.approximatePrice.toFixed(2)}</p>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground italic">Consulte-nos</span>
+                        )}
+                        {linkedPost && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-primary hover:text-primary/80"
+                            onClick={() => openServiceModal(linkedPost)}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Ver Detalhes
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             <div className="text-center mt-8">
