@@ -88,3 +88,15 @@
   }
 }
 
+/* Fix for Tabs active state because of tailwind-merge conflicts */
+[data-state="active"].inline-flex.items-center.justify-center.whitespace-nowrap.rounded-md.px-3.py-1\.5 {
+  background-color: #d4ff00 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+[data-state="inactive"].inline-flex.items-center.justify-center.whitespace-nowrap.rounded-md.px-3.py-1\.5:hover {
+  background-color: rgba(212, 255, 0, 0.2) !important;
+  color: #d4ff00 !important;
+}
+
