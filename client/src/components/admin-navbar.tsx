@@ -43,10 +43,10 @@ export function AdminNavbar() {
             <TooltipTrigger asChild>
               <TabsTrigger 
                 value={item.value} 
-                className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground px-2 sm:px-4 transition-all duration-200" 
                 data-testid={item.testId}
               >
-                <span className="sm:mr-2">{item.icon}</span>
+                <span className="sm:mr-2 transition-transform duration-200 group-data-[state=active]:scale-110 [&>svg]:data-[state=active]:drop-shadow-[0_0_4px_rgba(212,255,0,0.6)]">{item.icon}</span>
                 <span className="hidden sm:inline">{item.label}</span>
               </TabsTrigger>
             </TooltipTrigger>
