@@ -1245,11 +1245,12 @@ export default function Admin() {
                     onSubmit={(e) => {
                       e.preventDefault();
                       const formData = new FormData(e.currentTarget);
+                      const exampleWorkValue = formData.get("exampleWorkId") as string;
                       const serviceData = {
                         name: formData.get("name") as string,
                         details: formData.get("details") as string,
                         approximatePrice: formData.get("approximatePrice") ? parseFloat(formData.get("approximatePrice") as string) : null,
-                        exampleWorkId: formData.get("exampleWorkId") ? parseInt(formData.get("exampleWorkId") as string) : null,
+                        exampleWorkId: exampleWorkValue && exampleWorkValue !== "none" ? parseInt(exampleWorkValue) : null,
                         isActive: formData.get("isActive") === "on",
                       };
 
@@ -1310,13 +1311,13 @@ export default function Admin() {
                       <Label htmlFor="exampleWorkId">Trabalho de Exemplo (Galeria)</Label>
                       <Select 
                         name="exampleWorkId" 
-                        defaultValue={editingOfferedService?.exampleWorkId?.toString() || ""}
+                        defaultValue={editingOfferedService?.exampleWorkId?.toString() || "none"}
                       >
                         <SelectTrigger className="bg-background" data-testid="select-example-work">
                           <SelectValue placeholder="Selecione um trabalho da galeria" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {servicePosts?.map((post) => (
                             <SelectItem key={post.id} value={post.id.toString()}>
                               {post.title}
