@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment } from "@shared/schema";
+import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -590,4 +590,67 @@ export async function fetchCustomerAppointments(): Promise<Appointment[]> {
     throw new Error("Failed to fetch appointments");
   }
   return response.json();
+}
+
+// Offered Services
+export async function fetchOfferedServices(): Promise<OfferedService[]> {
+  const response = await fetch(`${API_BASE}/offered-services`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch offered services");
+  }
+  return response.json();
+}
+
+export async function fetchAllOfferedServices(): Promise<OfferedService[]> {
+  const response = await fetch(`${API_BASE}/offered-services/all`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch offered services");
+  }
+  return response.json();
+}
+
+export async function fetchOfferedService(id: number): Promise<OfferedService> {
+  const response = await fetch(`${API_BASE}/offered-services/${id}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch offered service");
+  }
+  return response.json();
+}
+
+export async function createOfferedService(service: Omit<InsertOfferedService, "id" | "createdAt">): Promise<OfferedService> {
+  const response = await fetch(`${API_BASE}/offered-services`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(service),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to create offered service");
+  }
+  return response.json();
+}
+
+export async function updateOfferedService(id: number, service: UpdateOfferedService): Promise<OfferedService> {
+  const response = await fetch(`${API_BASE}/offered-services/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(service),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update offered service");
+  }
+  return response.json();
+}
+
+export async function deleteOfferedService(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/offered-services/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete offered service");
+  }
 }

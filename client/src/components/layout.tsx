@@ -173,10 +173,10 @@ interface FooterProps {
     siteName?: string;
     footerText?: string;
     copyrightText?: string;
-    businessAddress?: string;
-    instagramUrl?: string;
-    facebookUrl?: string;
-    youtubeUrl?: string;
+    businessAddress?: string | null;
+    instagramUrl?: string | null;
+    facebookUrl?: string | null;
+    youtubeUrl?: string | null;
   } | null;
 }
 

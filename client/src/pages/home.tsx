@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProductsWithStats, fetchSettings, fetchRecentReviews, fetchFeaturedServicePosts } from "@/lib/api";
-import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera } from "lucide-react";
+import { fetchProductsWithStats, fetchSettings, fetchRecentReviews, fetchFeaturedServicePosts, fetchOfferedServices, fetchServicePosts } from "@/lib/api";
+import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera, Wrench, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
-import { ServicePost } from "@shared/schema";
+import { ServicePost, OfferedService } from "@shared/schema";
 
 export default function Home() {
   const { data: products, isLoading: productsLoading, error: productsError } = useQuery({
@@ -29,6 +29,16 @@ export default function Home() {
   const { data: featuredServices } = useQuery({
     queryKey: ["featuredServicePosts"],
     queryFn: () => fetchFeaturedServicePosts(8),
+  });
+
+  const { data: offeredServices } = useQuery({
+    queryKey: ["offeredServices"],
+    queryFn: fetchOfferedServices,
+  });
+
+  const { data: allServicePosts } = useQuery({
+    queryKey: ["allServicePosts"],
+    queryFn: fetchServicePosts,
   });
 
   const [selectedService, setSelectedService] = useState<ServicePost | null>(null);
@@ -135,6 +145,63 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {offeredServices && offeredServices.length > 0 && (
+        <section className="py-16 bg-gradient-to-b from-card/30 to-background">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">
+                <Wrench className="inline-block h-6 w-6 sm:h-8 sm:w-8 mr-2 text-primary" />
+                Serviços Prestados
+              </h2>
+              <p className="text-sm sm:text-base text-muted-foreground">Conheça os serviços de detalhamento que oferecemos</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {offeredServices.map((service) => (
+                <Card key={service.id} className="bg-card border-border hover:border-primary/50 transition-colors" data-testid={`home-service-${service.id}`}>
+                  <CardContent className="p-6">
+                    <h3 className="font-display font-bold text-lg mb-3">{service.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{service.details}</p>
+                    <div className="flex items-center justify-between">
+                      {service.approximatePrice ? (
+                        <div>
+                          <span className="text-xs text-muted-foreground">A partir de</span>
+                          <p className="text-xl font-bold text-primary">R$ {service.approximatePrice.toFixed(2)}</p>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground italic">Consulte-nos</span>
+                      )}
+                      {service.exampleWorkId && allServicePosts?.some(s => s.id === service.exampleWorkId) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary/80"
+                          onClick={() => {
+                            const example = allServicePosts?.find(s => s.id === service.exampleWorkId);
+                            if (example) openServiceModal(example);
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Ver Exemplo
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="text-center mt-8">
+              <Link href="/agendar">
+                <Button className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider">
+                  Agendar Serviço
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {featuredServices && featuredServices.length > 0 && (
         <section className="py-16 bg-gradient-to-b from-background to-card/30">

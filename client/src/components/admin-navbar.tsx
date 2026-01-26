@@ -14,7 +14,8 @@ import {
   Shield, 
   Camera, 
   Calendar, 
-  Settings 
+  Settings,
+  Wrench
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 
@@ -31,7 +32,8 @@ const navItems: AdminNavItem[] = [
   { value: "orders", label: "Pedidos", icon: <ShoppingBag className="h-4 w-4" />, testId: "tab-orders" },
   { value: "customers", label: "Clientes", icon: <Users className="h-4 w-4" />, testId: "tab-customers" },
   { value: "users", label: "Usuários", icon: <Shield className="h-4 w-4" />, testId: "tab-users" },
-  { value: "services", label: "Serviços", icon: <Camera className="h-4 w-4" />, testId: "tab-services" },
+  { value: "offered-services", label: "Serviços", icon: <Wrench className="h-4 w-4" />, testId: "tab-offered-services" },
+  { value: "services", label: "Galeria", icon: <Camera className="h-4 w-4" />, testId: "tab-services" },
   { value: "appointments", label: "Agenda", icon: <Calendar className="h-4 w-4" />, testId: "tab-appointments" },
   { value: "settings", label: "Config", icon: <Settings className="h-4 w-4" />, testId: "tab-settings" },
 ];
