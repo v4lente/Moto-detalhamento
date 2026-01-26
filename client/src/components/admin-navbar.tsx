@@ -30,20 +30,20 @@ const navItems: AdminNavItem[] = [
   { value: "customers", label: "Clientes", icon: <Users className="h-4 w-4" />, testId: "tab-customers" },
   { value: "users", label: "Usuários", icon: <Shield className="h-4 w-4" />, testId: "tab-users" },
   { value: "services", label: "Serviços", icon: <Camera className="h-4 w-4" />, testId: "tab-services" },
-  { value: "appointments", label: "Agenda", icon: <Calendar className="h-4 w-4 text-primary" />, testId: "tab-appointments" },
+  { value: "appointments", label: "Agenda", icon: <Calendar className="h-4 w-4" />, testId: "tab-appointments" },
   { value: "settings", label: "Config", icon: <Settings className="h-4 w-4" />, testId: "tab-settings" },
 ];
 
 export function AdminNavbar() {
   return (
-    <TabsList className="bg-card inline-flex min-w-max sm:flex-wrap gap-1">
+    <TabsList className="bg-card/50 inline-flex min-w-max sm:flex-wrap gap-1 p-1 rounded-lg border border-border/50">
       <TooltipProvider delayDuration={300}>
         {navItems.map((item) => (
           <Tooltip key={item.value}>
             <TooltipTrigger asChild>
               <TabsTrigger 
                 value={item.value} 
-                className="data-[state=active]:bg-primary data-[state=active]:text-black data-[state=inactive]:text-muted-foreground/50 data-[state=active]:font-bold px-2 sm:px-4 data-[state=active]:shadow-[0_0_15px_rgba(212,255,0,0.6)] hover:data-[state=inactive]:bg-primary/10 hover:data-[state=inactive]:text-primary" 
+                className="data-[state=active]:!bg-primary data-[state=active]:!text-black data-[state=inactive]:text-muted-foreground/60 data-[state=active]:font-bold px-2 sm:px-4 py-1.5 data-[state=active]:shadow-[0_0_20px_rgba(212,255,0,0.7)] hover:data-[state=inactive]:bg-primary/20 hover:data-[state=inactive]:text-primary rounded-md" 
                 data-testid={item.testId}
               >
                 <span className="sm:mr-2">{item.icon}</span>
