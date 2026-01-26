@@ -88,16 +88,26 @@
   }
 }
 
-/* Fix for Tabs active state because of tailwind-merge conflicts */
-button[data-state="active"].inline-flex.items-center.justify-center.whitespace-nowrap.rounded-md.px-3.py-1\.5 {
+/* Admin Tab Styling - direct styles for proper state management */
+.admin-tab-trigger {
+  background-color: transparent;
+  color: rgba(156, 163, 175, 0.6);
+  font-weight: 500;
+}
+
+.admin-tab-trigger:hover {
+  background-color: rgba(212, 255, 0, 0.2);
+  color: #d4ff00;
+}
+
+.admin-tab-trigger[data-state="active"] {
   background-color: #d4ff00 !important;
   color: #000000 !important;
   font-weight: 700 !important;
-  opacity: 1 !important;
 }
 
-button[data-state="inactive"].inline-flex.items-center.justify-center.whitespace-nowrap.rounded-md.px-3.py-1\.5:hover {
-  background-color: rgba(212, 255, 0, 0.2) !important;
-  color: #d4ff00 !important;
+.admin-tab-trigger[data-state="active"]:hover {
+  background-color: #d4ff00 !important;
+  color: #000000 !important;
 }
 

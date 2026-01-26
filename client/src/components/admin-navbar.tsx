@@ -1,4 +1,5 @@
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { TabsList } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +16,7 @@ import {
   Calendar, 
   Settings 
 } from "lucide-react";
+import React from "react";
 
 interface AdminNavItem {
   value: string;
@@ -41,14 +43,14 @@ export function AdminNavbar() {
         {navItems.map((item) => (
           <Tooltip key={item.value}>
             <TooltipTrigger asChild>
-              <TabsTrigger 
-                value={item.value} 
-                className="px-2 sm:px-3" 
+              <TabsPrimitive.Trigger
+                value={item.value}
                 data-testid={item.testId}
+                className="admin-tab-trigger inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 sm:px-3 py-1.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
               >
                 <span className="sm:mr-2">{item.icon}</span>
                 <span className="hidden sm:inline">{item.label}</span>
-              </TabsTrigger>
+              </TabsPrimitive.Trigger>
             </TooltipTrigger>
             <TooltipContent className="sm:hidden">
               <p>{item.label}</p>
