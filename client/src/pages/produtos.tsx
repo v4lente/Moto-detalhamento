@@ -91,7 +91,7 @@ export default function Produtos() {
                 Voltar
               </Button>
             </Link>
-            <h1 className="text-xl font-display font-bold text-primary">
+            <h1 className="text-base sm:text-xl font-display font-bold text-primary truncate max-w-[120px] sm:max-w-none">
               {settings?.siteName || "Produtos"}
             </h1>
             <Link href="/">
@@ -105,7 +105,7 @@ export default function Produtos() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 space-y-4">
-          <h2 className="text-3xl font-display font-bold">Nossos Produtos</h2>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold">Nossos Produtos</h2>
           
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">

@@ -43,12 +43,12 @@ export function Navbar() {
   return (
     <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
           {logoImage && (
-            <img src={logoImage} alt={siteName} className="h-10 w-10 rounded object-cover" />
+            <img src={logoImage} alt={siteName} className="h-8 w-8 sm:h-10 sm:w-10 rounded object-cover flex-shrink-0" />
           )}
-          <span className="font-display font-bold text-xl uppercase tracking-widest text-white">
-            <span className="text-primary">{firstName}</span> {lastName}
+          <span className="font-display font-bold text-sm sm:text-xl uppercase tracking-wider sm:tracking-widest text-white truncate">
+            <span className="text-primary">{firstName}</span> <span className="hidden sm:inline">{lastName}</span>
           </span>
         </Link>
 

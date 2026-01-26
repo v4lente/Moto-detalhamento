@@ -399,18 +399,18 @@ export default function Admin() {
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border/40 bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="font-display font-bold text-xl uppercase tracking-widest">
-            <span className="text-primary">Admin</span> Panel
+          <h1 className="font-display font-bold text-base sm:text-xl uppercase tracking-wider sm:tracking-widest">
+            <span className="text-primary">Admin</span> <span className="hidden sm:inline">Panel</span>
           </h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">Olá, {user.username}</span>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Olá, {user.username}</span>
             <Link href="/">
-              <Button variant="outline" size="sm" data-testid="link-home">
-                <Home className="h-4 w-4 mr-2" /> Loja
+              <Button variant="outline" size="sm" data-testid="link-home" className="px-2 sm:px-4">
+                <Home className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Loja</span>
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout">
-              <LogOut className="h-4 w-4 mr-2" /> Sair
+            <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout" className="px-2 sm:px-4">
+              <LogOut className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Sair</span>
             </Button>
           </div>
         </div>
@@ -418,32 +418,34 @@ export default function Admin() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="bg-card flex-wrap">
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-dashboard">
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-products">
-              <Package className="h-4 w-4 mr-2" /> Produtos
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-orders">
-              <ShoppingBag className="h-4 w-4 mr-2" /> Pedidos
-            </TabsTrigger>
-            <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-customers">
-              <Users className="h-4 w-4 mr-2" /> Clientes
-            </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-users">
-              <Shield className="h-4 w-4 mr-2" /> Usuários
-            </TabsTrigger>
-            <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-services">
-              <Camera className="h-4 w-4 mr-2" /> Serviços
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-appointments">
-              <Calendar className="h-4 w-4 mr-2" /> Agenda
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black" data-testid="tab-settings">
-              <Settings className="h-4 w-4 mr-2" /> Configurações
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-card inline-flex min-w-max sm:flex-wrap">
+              <TabsTrigger value="dashboard" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-dashboard">
+                <LayoutDashboard className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-products">
+                <Package className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Produtos</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-orders">
+                <ShoppingBag className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Pedidos</span>
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-customers">
+                <Users className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Clientes</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-users">
+                <Shield className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Usuários</span>
+              </TabsTrigger>
+              <TabsTrigger value="services" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-services">
+                <Camera className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Serviços</span>
+              </TabsTrigger>
+              <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-appointments">
+                <Calendar className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Agenda</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-black px-2 sm:px-4" data-testid="tab-settings">
+                <Settings className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Config</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="dashboard" className="space-y-6">
             <h2 className="text-2xl font-display font-bold">Dashboard</h2>
@@ -461,7 +463,7 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -598,7 +600,7 @@ export default function Admin() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -750,7 +752,7 @@ export default function Admin() {
                     <Plus className="h-4 w-4 mr-2" /> Novo Produto
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+                <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle className="font-display">
                       {editingProduct ? "Editar Produto" : "Novo Produto"}
@@ -931,7 +933,7 @@ export default function Admin() {
                     <Plus className="h-4 w-4 mr-2" /> Novo Cliente
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+                <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle className="font-display">
                       {editingCustomer ? "Editar Cliente" : "Novo Cliente"}
@@ -1061,7 +1063,7 @@ export default function Admin() {
                     <Plus className="h-4 w-4 mr-2" /> Novo Usuário
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-primary/20 max-w-md" aria-describedby={undefined}>
+                <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                   <DialogHeader>
                     <DialogTitle className="font-display">
                       {editingUser ? "Editar Usuário" : "Novo Usuário"}
@@ -1180,7 +1182,7 @@ export default function Admin() {
                     <Plus className="h-4 w-4 mr-2" /> Novo Serviço
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="bg-card border-border w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="font-display">
                       {editingServicePost ? "Editar Serviço" : "Adicionar Serviço"}
@@ -1524,7 +1526,7 @@ export default function Admin() {
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+                              <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
                                 <DialogHeader>
                                   <DialogTitle className="font-display">Atualizar Agendamento</DialogTitle>
                                 </DialogHeader>
@@ -1732,7 +1734,7 @@ export default function Admin() {
 
         {/* Standalone Order Dialog */}
         <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
-          <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+          <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle className="font-display">
                 Detalhes do Pedido #{selectedOrder?.id}
@@ -1787,7 +1789,7 @@ export default function Admin() {
           setIsAppointmentDialogOpen(open);
           if (!open) setEditingAppointment(null);
         }}>
-          <DialogContent className="bg-card border-primary/20 max-w-lg" aria-describedby={undefined}>
+          <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle className="font-display">Detalhes do Agendamento</DialogTitle>
             </DialogHeader>

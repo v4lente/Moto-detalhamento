@@ -127,22 +127,22 @@ export default function Conta() {
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <div>
-                <h1 className="font-display text-3xl font-bold uppercase tracking-widest">
+                <h1 className="font-display text-xl sm:text-3xl font-bold uppercase tracking-wider sm:tracking-widest">
                   Olá, <span className="text-primary">{customer.name}</span>
                 </h1>
-                <p className="text-muted-foreground mt-1">{customer.email}</p>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1">{customer.email}</p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleOpenProfileEdit} data-testid="button-edit-profile">
-                  <Pencil className="h-4 w-4 mr-2" /> Editar Perfil
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={handleOpenProfileEdit} data-testid="button-edit-profile" className="flex-1 sm:flex-none">
+                  <Pencil className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Editar Perfil</span><span className="sm:hidden">Perfil</span>
                 </Button>
-                <Button variant="outline" onClick={() => setLocation("/")} data-testid="link-home">
-                  <Home className="h-4 w-4 mr-2" /> Loja
+                <Button variant="outline" size="sm" onClick={() => setLocation("/")} data-testid="link-home" className="flex-1 sm:flex-none">
+                  <Home className="h-4 w-4 mr-1 sm:mr-2" /> Loja
                 </Button>
-                <Button variant="outline" onClick={() => logoutMutation.mutate()} data-testid="button-logout">
-                  <LogOut className="h-4 w-4 mr-2" /> Sair
+                <Button variant="outline" size="sm" onClick={() => logoutMutation.mutate()} data-testid="button-logout" className="flex-1 sm:flex-none">
+                  <LogOut className="h-4 w-4 mr-1 sm:mr-2" /> Sair
                 </Button>
               </div>
             </div>

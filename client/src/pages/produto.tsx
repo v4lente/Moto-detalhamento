@@ -136,7 +136,7 @@ export default function Produto() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12">
           <div className="aspect-square rounded-lg overflow-hidden border border-border">
             <img
               src={product.image}
@@ -148,7 +148,7 @@ export default function Produto() {
           <div className="space-y-6">
             <div>
               <span className="text-sm text-primary font-medium">{product.category}</span>
-              <h1 className="text-3xl font-display font-bold mt-2">{product.name}</h1>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold mt-2">{product.name}</h1>
             </div>
 
             <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ export default function Produto() {
 
             <p className="text-muted-foreground text-lg">{product.description}</p>
 
-            <div className="text-4xl font-bold text-primary">
+            <div className="text-3xl sm:text-4xl font-bold text-primary">
               R$ {product.price.toFixed(2)}
             </div>
 

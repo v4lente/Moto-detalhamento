@@ -123,7 +123,7 @@ export default function Agendar() {
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-display font-bold uppercase mb-2">Agendar Serviço</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold uppercase mb-2">Agendar Serviço</h1>
             <p className="text-muted-foreground">Solicite um pré-agendamento para seu serviço de detalhamento</p>
           </div>
 
