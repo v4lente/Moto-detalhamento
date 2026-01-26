@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema } from "@shared/schema";
+import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 import session from "express-session";
@@ -418,6 +418,96 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching customer appointments:", error);
       res.status(500).json({ error: "Failed to fetch appointments" });
+    }
+  });
+
+  // Offered Services routes
+  app.get("/api/offered-services", async (req, res) => {
+    try {
+      const services = await storage.getActiveOfferedServices();
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching offered services:", error);
+      res.status(500).json({ error: "Failed to fetch offered services" });
+    }
+  });
+
+  app.get("/api/offered-services/all", requireAuth, async (req, res) => {
+    try {
+      const services = await storage.getAllOfferedServices();
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching all offered services:", error);
+      res.status(500).json({ error: "Failed to fetch offered services" });
+    }
+  });
+
+  app.get("/api/offered-services/:id", async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service ID" });
+      }
+      const service = await storage.getOfferedService(id);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(service);
+    } catch (error) {
+      console.error("Error fetching offered service:", error);
+      res.status(500).json({ error: "Failed to fetch offered service" });
+    }
+  });
+
+  app.post("/api/offered-services", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertOfferedServiceSchema.parse(req.body);
+      const service = await storage.createOfferedService(validatedData);
+      res.status(201).json(service);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating offered service:", error);
+      res.status(500).json({ error: "Failed to create offered service" });
+    }
+  });
+
+  app.patch("/api/offered-services/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service ID" });
+      }
+      const validatedData = updateOfferedServiceSchema.parse(req.body);
+      const service = await storage.updateOfferedService(id, validatedData);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(service);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error updating offered service:", error);
+      res.status(500).json({ error: "Failed to update offered service" });
+    }
+  });
+
+  app.delete("/api/offered-services/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id));
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid service ID" });
+      }
+      const success = await storage.deleteOfferedService(id);
+      if (!success) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting offered service:", error);
+      res.status(500).json({ error: "Failed to delete offered service" });
     }
   });
 
