@@ -87,3 +87,24 @@
     @apply font-display uppercase tracking-wider;
   }
 }
+
+/* Admin Navigation Tab Styles - Custom CSS for guaranteed specificity */
+.admin-tabs .admin-tab {
+  transition: all 0.2s ease;
+}
+
+.admin-tabs .admin-tab[data-state="inactive"] {
+  background-color: transparent !important;
+  color: rgba(156, 163, 175, 0.5) !important;
+}
+
+.admin-tabs .admin-tab[data-state="inactive"]:hover {
+  background-color: rgba(212, 255, 0, 0.2) !important;
+  color: #d4ff00 !important;
+}
+
+.admin-tabs .admin-tab[data-state="active"] {
+  background-color: #d4ff00 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
