@@ -16,7 +16,7 @@ import {
   Calendar, 
   Settings 
 } from "lucide-react";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface AdminNavItem {
   value: string;
@@ -36,6 +36,66 @@ const navItems: AdminNavItem[] = [
   { value: "settings", label: "Config", icon: <Settings className="h-4 w-4" />, testId: "tab-settings" },
 ];
 
+interface AdminTabProps {
+  value: string;
+  testId: string;
+  children: React.ReactNode;
+}
+
+function AdminTab({ value, testId, children }: AdminTabProps) {
+  const [isActive, setIsActive] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const checkActive = () => {
+      if (ref.current) {
+        const state = ref.current.getAttribute('data-state');
+        setIsActive(state === 'active');
+      }
+    };
+    
+    checkActive();
+    
+    const observer = new MutationObserver(checkActive);
+    if (ref.current) {
+      observer.observe(ref.current, { attributes: true, attributeFilter: ['data-state'] });
+    }
+    
+    return () => observer.disconnect();
+  }, []);
+
+  const baseStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    whiteSpace: 'nowrap',
+    borderRadius: '0.375rem',
+    padding: '0.375rem 0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: isActive ? 700 : 500,
+    transition: 'all 0.2s ease',
+    outline: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    backgroundColor: isActive ? '#d4ff00' : (isHovered ? 'rgba(212, 255, 0, 0.2)' : 'transparent'),
+    color: isActive ? '#000000' : (isHovered ? '#d4ff00' : 'rgba(156, 163, 175, 0.6)'),
+  };
+
+  return (
+    <TabsPrimitive.Trigger
+      ref={ref}
+      value={value}
+      data-testid={testId}
+      style={baseStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {children}
+    </TabsPrimitive.Trigger>
+  );
+}
+
 export function AdminNavbar() {
   return (
     <TabsList className="bg-card">
@@ -43,14 +103,13 @@ export function AdminNavbar() {
         {navItems.map((item) => (
           <Tooltip key={item.value}>
             <TooltipTrigger asChild>
-              <TabsPrimitive.Trigger
+              <AdminTab
                 value={item.value}
-                data-testid={item.testId}
-                className="admin-tab-trigger inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 sm:px-3 py-1.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                testId={item.testId}
               >
                 <span className="sm:mr-2">{item.icon}</span>
                 <span className="hidden sm:inline">{item.label}</span>
-              </TabsPrimitive.Trigger>
+              </AdminTab>
             </TooltipTrigger>
             <TooltipContent className="sm:hidden">
               <p>{item.label}</p>
