@@ -51,6 +51,22 @@ export const insertProductSchema = createInsertSchema(products).omit({
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
+export const productVariations = pgTable("product_variations", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  price: real("price").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertProductVariationSchema = createInsertSchema(productVariations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertProductVariation = z.infer<typeof insertProductVariationSchema>;
+export type ProductVariation = typeof productVariations.$inferSelect;
+
 export const siteSettings = pgTable("site_settings", {
   id: integer("id").primaryKey().default(1),
   whatsappNumber: text("whatsapp_number").notNull().default("5511999999999"),
