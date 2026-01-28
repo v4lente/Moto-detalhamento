@@ -384,6 +384,7 @@ export default function Admin() {
       siteName: formData.get("siteName") as string,
       siteTagline: formData.get("siteTagline") as string,
       heroTitle: formData.get("heroTitle") as string,
+      heroTitleLine2: formData.get("heroTitleLine2") as string || undefined,
       heroSubtitle: formData.get("heroSubtitle") as string,
       footerText: formData.get("footerText") as string,
       copyrightText: formData.get("copyrightText") as string,
@@ -1975,12 +1976,16 @@ export default function Admin() {
                         <Input id="siteTagline" name="siteTagline" defaultValue={settings?.siteTagline} data-testid="input-tagline" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="heroTitle">Título Principal</Label>
-                        <Input id="heroTitle" name="heroTitle" defaultValue={settings?.heroTitle} data-testid="input-hero-title" />
+                        <Label htmlFor="heroTitle">Título (Linha 1)</Label>
+                        <Input id="heroTitle" name="heroTitle" defaultValue={settings?.heroTitle} placeholder="Ex: Estética" data-testid="input-hero-title" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="heroSubtitle">Subtítulo Principal</Label>
+                      <Label htmlFor="heroTitleLine2">Título (Linha 2)</Label>
+                      <Input id="heroTitleLine2" name="heroTitleLine2" defaultValue={settings?.heroTitleLine2 || ""} placeholder="Ex: Premium" data-testid="input-hero-title-line2" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="heroSubtitle">Subtítulo</Label>
                       <Textarea id="heroSubtitle" name="heroSubtitle" defaultValue={settings?.heroSubtitle} data-testid="input-hero-subtitle" />
                     </div>
                     <div className="space-y-2">
