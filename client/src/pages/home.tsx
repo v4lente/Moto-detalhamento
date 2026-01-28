@@ -135,7 +135,8 @@ export default function Home() {
     setMediaIndex(0);
   };
 
-  const heroTitle = settings?.heroTitle || "Estética Premium";
+  const heroTitleLine1 = settings?.heroTitle || "Estética";
+  const heroTitleLine2 = settings?.heroTitleLine2 || "Premium";
   const heroSubtitle = settings?.heroSubtitle || "Cuidado profissional para sua moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.";
   const backgroundImage = settings?.backgroundImage || "/assets/WhatsApp_Image_2026-01-21_at_22.14.47_1769044534872.jpeg";
 
@@ -169,15 +170,15 @@ export default function Home() {
         <div className="container mx-auto px-4 relative z-20">
           <div className="max-w-2xl">
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-bold uppercase italic leading-none mb-4 sm:mb-6">
-              {heroTitle.split(" ").map((word, i) => (
-                i === 0 ? (
-                  <span key={i}>{word} <br/></span>
-                ) : (
-                  <span key={i} className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-200">
-                    {word}
+              <span>{heroTitleLine1}</span>
+              {heroTitleLine2 && (
+                <>
+                  <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-yellow-200">
+                    {heroTitleLine2}
                   </span>
-                )
-              ))}
+                </>
+              )}
             </h1>
             <p className="text-sm sm:text-lg text-gray-300 mb-6 sm:mb-8 max-w-lg">
               {heroSubtitle}
