@@ -108,38 +108,44 @@ export function Navbar() {
               <>
                 <ScrollArea className="h-[60vh] my-4 pr-4">
                   <div className="space-y-4">
-                    {items.map((item) => (
-                      <div key={item.id} className="flex gap-4 items-start" data-testid={`cart-item-${item.id}`}>
-                        <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
-                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" data-testid={`img-cart-${item.id}`} />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium line-clamp-1" data-testid={`text-cart-name-${item.id}`}>{item.name}</h4>
-                          <p className="text-sm text-primary font-bold" data-testid={`text-cart-price-${item.id}`}>R$ {item.price.toFixed(2)}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6 text-[10px]"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              data-testid={`button-decrease-${item.id}`}
-                            >
-                              -
-                            </Button>
-                            <span className="text-xs w-4 text-center" data-testid={`text-quantity-${item.id}`}>{item.quantity}</span>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6 text-[10px]"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              data-testid={`button-increase-${item.id}`}
-                            >
-                              +
-                            </Button>
+                    {items.map((item) => {
+                      const itemKey = `${item.id}-${item.variationId || 'base'}`;
+                      return (
+                        <div key={itemKey} className="flex gap-4 items-start" data-testid={`cart-item-${itemKey}`}>
+                          <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
+                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" data-testid={`img-cart-${itemKey}`} />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium line-clamp-1" data-testid={`text-cart-name-${itemKey}`}>
+                              {item.name}
+                              {item.variationLabel && <span className="text-primary ml-1">({item.variationLabel})</span>}
+                            </h4>
+                            <p className="text-sm text-primary font-bold" data-testid={`text-cart-price-${itemKey}`}>R$ {item.price.toFixed(2)}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 text-[10px]"
+                                onClick={() => updateQuantity(item.id, item.quantity - 1, item.variationId)}
+                                data-testid={`button-decrease-${itemKey}`}
+                              >
+                                -
+                              </Button>
+                              <span className="text-xs w-4 text-center" data-testid={`text-quantity-${itemKey}`}>{item.quantity}</span>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 text-[10px]"
+                                onClick={() => updateQuantity(item.id, item.quantity + 1, item.variationId)}
+                                data-testid={`button-increase-${itemKey}`}
+                              >
+                                +
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
                 <div className="space-y-4">

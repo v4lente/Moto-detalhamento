@@ -1,16 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Product } from "@shared/schema";
+import { Product, ProductVariation } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CartItem extends Product {
   quantity: number;
+  variationId?: number;
+  variationLabel?: string;
+  variationPrice?: number;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
+  addToCart: (product: Product, variation?: ProductVariation) => void;
+  removeFromCart: (productId: number, variationId?: number) => void;
+  updateQuantity: (productId: number, quantity: number, variationId?: number) => void;
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
@@ -37,36 +40,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, variation?: ProductVariation) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find((item) => 
+        item.id === product.id && item.variationId === variation?.id
+      );
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id
+          item.id === product.id && item.variationId === variation?.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { 
+        ...product, 
+        quantity: 1,
+        variationId: variation?.id,
+        variationLabel: variation?.label,
+        variationPrice: variation?.price,
+        price: variation?.price ?? product.price
+      }];
     });
+    const itemName = variation 
+      ? `${product.name} (${variation.label})` 
+      : product.name;
     toast({
       title: "Adicionado ao carrinho",
-      description: `${product.name} foi adicionado.`,
+      description: `${itemName} foi adicionado.`,
     });
   };
 
-  const removeFromCart = (productId: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== productId));
+  const removeFromCart = (productId: number, variationId?: number) => {
+    setItems((prev) => prev.filter((item) => 
+      !(item.id === productId && item.variationId === variationId)
+    ));
   };
 
-  const updateQuantity = (productId: number, quantity: number) => {
+  const updateQuantity = (productId: number, quantity: number, variationId?: number) => {
     if (quantity < 1) {
-      removeFromCart(productId);
+      removeFromCart(productId, variationId);
       return;
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
+        item.id === productId && item.variationId === variationId 
+          ? { ...item, quantity } 
+          : item
       )
     );
   };

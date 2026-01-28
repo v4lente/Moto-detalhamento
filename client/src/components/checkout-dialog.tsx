@@ -82,7 +82,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       customer: customerData,
       items: items.map(item => ({
         productId: item.id,
-        productName: item.name,
+        productName: item.variationLabel ? `${item.name} (${item.variationLabel})` : item.name,
         productPrice: item.price,
         quantity: item.quantity,
       })),

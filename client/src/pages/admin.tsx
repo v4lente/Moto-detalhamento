@@ -18,9 +18,10 @@ import {
   fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser, SafeUser,
   fetchServicePosts, createServicePost, updateServicePost, deleteServicePost,
   fetchAppointments, updateAppointment, deleteAppointment,
-  fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService
+  fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService,
+  fetchProductVariations, createProductVariation, updateProductVariation, deleteProductVariation
 } from "@/lib/api";
-import { Product, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost, Appointment, OfferedService } from "@shared/schema";
+import { Product, ProductVariation, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost, Appointment, OfferedService } from "@shared/schema";
 import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image, Calendar, AlertTriangle, CheckCircle, XCircle, MessageCircle, LayoutDashboard, Search, ChevronLeft, ChevronRight, Wrench, Link as LinkIcon, ToggleLeft, ToggleRight } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -52,6 +53,17 @@ export default function Admin() {
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
   const [editingOfferedService, setEditingOfferedService] = useState<OfferedService | null>(null);
   const [isOfferedServiceDialogOpen, setIsOfferedServiceDialogOpen] = useState(false);
+  
+  // Variations state
+  const [isVariationsDialogOpen, setIsVariationsDialogOpen] = useState(false);
+  const [variationsProductId, setVariationsProductId] = useState<number | null>(null);
+  const [variationsProductName, setVariationsProductName] = useState<string>("");
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
+  const [variationsLoading, setVariationsLoading] = useState(false);
+  const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
+  const [variationLabel, setVariationLabel] = useState("");
+  const [variationPrice, setVariationPrice] = useState("");
+  const [productVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
   
   // Dashboard state
   const [dashboardOrderSearch, setDashboardOrderSearch] = useState("");
@@ -316,6 +328,127 @@ export default function Admin() {
     },
     onError: () => toast({ title: "Erro ao remover serviço", variant: "destructive" }),
   });
+
+  // Variation mutations
+  const createVariationMutation = useMutation({
+    mutationFn: ({ productId, data }: { productId: number; data: { label: string; price: number } }) =>
+      createProductVariation(productId, data),
+    onSuccess: (newVariation) => {
+      setVariations([...variations, newVariation]);
+      setProductVariationCounts(prev => ({
+        ...prev,
+        [newVariation.productId]: (prev[newVariation.productId] || 0) + 1
+      }));
+      toast({ title: "Variação criada!" });
+      setVariationLabel("");
+      setVariationPrice("");
+    },
+    onError: () => toast({ title: "Erro ao criar variação", variant: "destructive" }),
+  });
+
+  const updateVariationMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { label: string; price: number } }) =>
+      updateProductVariation(id, data),
+    onSuccess: (updatedVariation) => {
+      setVariations(variations.map(v => v.id === updatedVariation.id ? updatedVariation : v));
+      toast({ title: "Variação atualizada!" });
+      setEditingVariation(null);
+      setVariationLabel("");
+      setVariationPrice("");
+    },
+    onError: () => toast({ title: "Erro ao atualizar variação", variant: "destructive" }),
+  });
+
+  const deleteVariationMutation = useMutation({
+    mutationFn: deleteProductVariation,
+    onSuccess: (_, deletedId) => {
+      const deleted = variations.find(v => v.id === deletedId);
+      setVariations(variations.filter(v => v.id !== deletedId));
+      if (deleted && variationsProductId) {
+        setProductVariationCounts(prev => ({
+          ...prev,
+          [variationsProductId]: Math.max((prev[variationsProductId] || 0) - 1, 0)
+        }));
+      }
+      toast({ title: "Variação removida!" });
+    },
+    onError: () => toast({ title: "Erro ao remover variação", variant: "destructive" }),
+  });
+
+  // Load variation counts for products
+  useEffect(() => {
+    const loadVariationCounts = async () => {
+      if (!products) return;
+      const counts: Record<number, number> = {};
+      await Promise.all(
+        products.map(async (product) => {
+          try {
+            const productVariations = await fetchProductVariations(product.id);
+            counts[product.id] = productVariations.length;
+          } catch {
+            counts[product.id] = 0;
+          }
+        })
+      );
+      setProductVariationCounts(counts);
+    };
+    loadVariationCounts();
+  }, [products]);
+
+  const handleOpenVariationsDialog = async (product: Product) => {
+    setVariationsProductId(product.id);
+    setVariationsProductName(product.name);
+    setVariationsLoading(true);
+    setIsVariationsDialogOpen(true);
+    setEditingVariation(null);
+    setVariationLabel("");
+    setVariationPrice("");
+    
+    try {
+      const productVariations = await fetchProductVariations(product.id);
+      setVariations(productVariations);
+    } catch {
+      toast({ title: "Erro ao carregar variações", variant: "destructive" });
+      setVariations([]);
+    } finally {
+      setVariationsLoading(false);
+    }
+  };
+
+  const handleVariationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!variationsProductId) return;
+    
+    const price = parseFloat(variationPrice);
+    if (isNaN(price) || price <= 0) {
+      toast({ title: "Preço inválido", variant: "destructive" });
+      return;
+    }
+
+    if (editingVariation) {
+      updateVariationMutation.mutate({
+        id: editingVariation.id,
+        data: { label: variationLabel, price }
+      });
+    } else {
+      createVariationMutation.mutate({
+        productId: variationsProductId,
+        data: { label: variationLabel, price }
+      });
+    }
+  };
+
+  const handleEditVariation = (variation: ProductVariation) => {
+    setEditingVariation(variation);
+    setVariationLabel(variation.label);
+    setVariationPrice(variation.price.toString());
+  };
+
+  const handleCancelEditVariation = () => {
+    setEditingVariation(null);
+    setVariationLabel("");
+    setVariationPrice("");
+  };
 
   const handleAddServiceMedia = (url: string, type: "image" | "video") => {
     setServiceMediaUrls([...serviceMediaUrls, url]);
@@ -860,6 +993,15 @@ export default function Admin() {
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenVariationsDialog(product)}
+                          data-testid={`button-variations-${product.id}`}
+                        >
+                          <Package className="h-4 w-4 mr-1" />
+                          Variações{productVariationCounts[product.id] ? ` (${productVariationCounts[product.id]})` : ""}
+                        </Button>
+                        <Button
+                          variant="outline"
                           size="icon"
                           onClick={() => {
                             setEditingProduct(product);
@@ -885,6 +1027,141 @@ export default function Admin() {
                 ))}
               </div>
             )}
+
+            {/* Variations Dialog */}
+            <Dialog open={isVariationsDialogOpen} onOpenChange={(open) => {
+              setIsVariationsDialogOpen(open);
+              if (!open) {
+                setVariationsProductId(null);
+                setVariationsProductName("");
+                setVariations([]);
+                setEditingVariation(null);
+                setVariationLabel("");
+                setVariationPrice("");
+              }
+            }}>
+              <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+                <DialogHeader>
+                  <DialogTitle className="font-display">
+                    Variações: {variationsProductName}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                {variationsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Add/Edit Variation Form */}
+                    <form onSubmit={handleVariationSubmit} className="space-y-3 p-4 bg-background rounded-lg border border-border">
+                      <h4 className="font-medium text-sm">
+                        {editingVariation ? "Editar Variação" : "Nova Variação"}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="variationLabel" className="text-xs">Rótulo (ex: 100ml, 500ml)</Label>
+                          <Input
+                            id="variationLabel"
+                            value={variationLabel}
+                            onChange={(e) => setVariationLabel(e.target.value)}
+                            placeholder="100ml"
+                            required
+                            data-testid="input-variation-label"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="variationPrice" className="text-xs">Preço (R$)</Label>
+                          <Input
+                            id="variationPrice"
+                            type="number"
+                            step="0.01"
+                            value={variationPrice}
+                            onChange={(e) => setVariationPrice(e.target.value)}
+                            placeholder="29.90"
+                            required
+                            data-testid="input-variation-price"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          className="bg-primary text-black hover:bg-primary/90"
+                          disabled={createVariationMutation.isPending || updateVariationMutation.isPending}
+                          data-testid="button-save-variation"
+                        >
+                          {(createVariationMutation.isPending || updateVariationMutation.isPending) && (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          )}
+                          {editingVariation ? "Atualizar" : "Adicionar"}
+                        </Button>
+                        {editingVariation && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCancelEditVariation}
+                            data-testid="button-cancel-edit-variation"
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
+                    </form>
+
+                    {/* Existing Variations List */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm text-muted-foreground">
+                        Variações existentes ({variations.length})
+                      </h4>
+                      {variations.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhuma variação cadastrada.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {variations.map((variation) => (
+                            <div
+                              key={variation.id}
+                              className="flex items-center justify-between p-3 bg-background rounded-lg border border-border"
+                              data-testid={`variation-item-${variation.id}`}
+                            >
+                              <div>
+                                <p className="font-medium">{variation.label}</p>
+                                <p className="text-sm text-primary">R$ {variation.price.toFixed(2)}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditVariation(variation)}
+                                  data-testid={`button-edit-variation-${variation.id}`}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => deleteVariationMutation.mutate(variation.id)}
+                                  disabled={deleteVariationMutation.isPending}
+                                  data-testid={`button-delete-variation-${variation.id}`}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-6">

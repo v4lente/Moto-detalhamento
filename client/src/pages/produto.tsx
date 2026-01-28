@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { fetchProduct, fetchProductReviews, createReview, getCurrentCustomer } from "@/lib/api";
+import { fetchProduct, fetchProductReviews, createReview, getCurrentCustomer, fetchProductVariations } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ShoppingCart, Star, ArrowLeft, Plus, Minus, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ProductVariation } from "@shared/schema";
 
 export default function Produto() {
   const { id } = useParams<{ id: string }>();
@@ -20,12 +21,25 @@ export default function Produto() {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
 
   const { data: product, isLoading: productLoading } = useQuery({
     queryKey: ["product", productId],
     queryFn: () => fetchProduct(productId),
     enabled: productId > 0,
   });
+
+  const { data: variations } = useQuery({
+    queryKey: ["variations", productId],
+    queryFn: () => fetchProductVariations(productId),
+    enabled: productId > 0,
+  });
+
+  useEffect(() => {
+    if (variations && variations.length > 0 && !selectedVariation) {
+      setSelectedVariation(variations[0]);
+    }
+  }, [variations, selectedVariation]);
 
   const { data: reviewsData, isLoading: reviewsLoading } = useQuery({
     queryKey: ["reviews", productId],
@@ -55,10 +69,13 @@ export default function Produto() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    const hasVariations = variations && variations.length > 0;
     for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+      addToCart(product, hasVariations ? selectedVariation || undefined : undefined);
     }
   };
+
+  const currentPrice = selectedVariation?.price ?? product?.price ?? 0;
 
   const handleSubmitReview = () => {
     if (rating === 0) {
@@ -160,8 +177,29 @@ export default function Produto() {
 
             <p className="text-muted-foreground text-lg">{product.description}</p>
 
+            {variations && variations.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tamanho/Opção:</label>
+                <div className="flex flex-wrap gap-2">
+                  {variations.map((v) => (
+                    <Button
+                      key={v.id}
+                      variant={selectedVariation?.id === v.id ? "default" : "outline"}
+                      className={selectedVariation?.id === v.id 
+                        ? "bg-primary text-black hover:bg-primary/90" 
+                        : "border-border hover:border-primary"}
+                      onClick={() => setSelectedVariation(v)}
+                      data-testid={`variation-${v.id}`}
+                    >
+                      {v.label} - R$ {v.price.toFixed(2)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="text-3xl sm:text-4xl font-bold text-primary">
-              R$ {product.price.toFixed(2)}
+              R$ {currentPrice.toFixed(2)}
             </div>
 
             <div className="flex items-center gap-4">

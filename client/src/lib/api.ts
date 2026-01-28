@@ -1,4 +1,4 @@
-import { Product, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService } from "@shared/schema";
+import { Product, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService } from "@shared/schema";
 
 const API_BASE = "/api";
 
@@ -49,6 +49,51 @@ export async function deleteProduct(id: number): Promise<void> {
   });
   if (!response.ok) {
     throw new Error("Failed to delete product");
+  }
+}
+
+// Product Variations
+export async function fetchProductVariations(productId: number): Promise<ProductVariation[]> {
+  const response = await fetch(`${API_BASE}/products/${productId}/variations`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch variations");
+  }
+  return response.json();
+}
+
+export async function createProductVariation(productId: number, data: { label: string; price: number }): Promise<ProductVariation> {
+  const response = await fetch(`${API_BASE}/products/${productId}/variations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to create variation");
+  }
+  return response.json();
+}
+
+export async function updateProductVariation(id: number, data: Partial<{ label: string; price: number }>): Promise<ProductVariation> {
+  const response = await fetch(`${API_BASE}/variations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update variation");
+  }
+  return response.json();
+}
+
+export async function deleteProductVariation(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/variations/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to delete variation");
   }
 }
 
