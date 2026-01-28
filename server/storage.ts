@@ -1,6 +1,7 @@
 import { 
   type User, type InsertUser, 
   type Product, type InsertProduct,
+  type ProductVariation, type InsertProductVariation,
   type SiteSettings, type UpdateSiteSettings,
   type Customer, type InsertCustomer,
   type Order, type InsertOrder,
@@ -9,7 +10,7 @@ import {
   type ServicePost, type InsertServicePost,
   type Appointment, type InsertAppointment,
   type OfferedService, type InsertOfferedService,
-  users, products, siteSettings, customers, orders, orderItems, reviews, servicePosts, appointments, offeredServices
+  users, products, productVariations, siteSettings, customers, orders, orderItems, reviews, servicePosts, appointments, offeredServices
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, sql, asc } from "drizzle-orm";
@@ -27,6 +28,11 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product | undefined>;
   deleteProduct(id: number): Promise<boolean>;
+
+  getVariationsByProduct(productId: number): Promise<ProductVariation[]>;
+  createVariation(variation: InsertProductVariation): Promise<ProductVariation>;
+  updateVariation(id: number, variation: Partial<InsertProductVariation>): Promise<ProductVariation | undefined>;
+  deleteVariation(id: number): Promise<boolean>;
 
   getSiteSettings(): Promise<SiteSettings | undefined>;
   updateSiteSettings(settings: UpdateSiteSettings): Promise<SiteSettings>;
@@ -127,6 +133,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<boolean> {
     const result = await db.delete(products).where(eq(products.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getVariationsByProduct(productId: number): Promise<ProductVariation[]> {
+    return await db.select().from(productVariations).where(eq(productVariations.productId, productId)).orderBy(asc(productVariations.price));
+  }
+
+  async createVariation(variation: InsertProductVariation): Promise<ProductVariation> {
+    const [created] = await db.insert(productVariations).values(variation).returning();
+    return created;
+  }
+
+  async updateVariation(id: number, variation: Partial<InsertProductVariation>): Promise<ProductVariation | undefined> {
+    const [updated] = await db.update(productVariations).set(variation).where(eq(productVariations.id, id)).returning();
+    return updated;
+  }
+
+  async deleteVariation(id: number): Promise<boolean> {
+    const result = await db.delete(productVariations).where(eq(productVariations.id, id)).returning();
     return result.length > 0;
   }
 
