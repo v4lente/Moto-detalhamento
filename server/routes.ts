@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
+import { insertProductSchema, insertProductVariationSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { z } from "zod";
 import session from "express-session";
@@ -577,6 +577,70 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting product:", error);
       res.status(500).json({ error: "Failed to delete product" });
+    }
+  });
+
+  // ===== PRODUCT VARIATIONS ROUTES =====
+  app.get("/api/products/:id/variations", async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id as string);
+      if (isNaN(productId)) {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+      const variations = await storage.getVariationsByProduct(productId);
+      res.json(variations);
+    } catch (error) {
+      console.error("Error fetching variations:", error);
+      res.status(500).json({ error: "Failed to fetch variations" });
+    }
+  });
+
+  app.post("/api/products/:id/variations", requireAuth, async (req, res) => {
+    try {
+      const productId = parseInt(req.params.id as string);
+      if (isNaN(productId)) {
+        return res.status(400).json({ error: "Invalid product ID" });
+      }
+      const validatedData = insertProductVariationSchema.parse({ ...req.body, productId });
+      const variation = await storage.createVariation(validatedData);
+      res.status(201).json(variation);
+    } catch (error: any) {
+      console.error("Error creating variation:", error);
+      res.status(400).json({ error: error.message || "Failed to create variation" });
+    }
+  });
+
+  app.patch("/api/variations/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid variation ID" });
+      }
+      const updated = await storage.updateVariation(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Variation not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating variation:", error);
+      res.status(500).json({ error: "Failed to update variation" });
+    }
+  });
+
+  app.delete("/api/variations/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid variation ID" });
+      }
+      const deleted = await storage.deleteVariation(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Variation not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting variation:", error);
+      res.status(500).json({ error: "Failed to delete variation" });
     }
   });
 
