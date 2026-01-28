@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { fetchProductsWithStats, fetchSettings, ProductWithStats } from "@/lib/api";
+import { fetchProductsWithStats, fetchSettings, fetchProductVariations, ProductWithStats } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingCart, Star, Search, ArrowLeft, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ProductVariation } from "@shared/schema";
 
 type SortOption = "rating" | "price_asc" | "price_desc" | "name";
 
@@ -28,6 +29,23 @@ export default function Produtos() {
     queryKey: ["settings"],
     queryFn: fetchSettings,
   });
+
+  const [productVariations, setProductVariations] = useState<Record<number, ProductVariation[]>>({});
+
+  useEffect(() => {
+    if (products) {
+      products.forEach(async (product) => {
+        try {
+          const variations = await fetchProductVariations(product.id);
+          if (variations.length > 0) {
+            setProductVariations(prev => ({ ...prev, [product.id]: variations }));
+          }
+        } catch (e) {
+          // Ignore errors for individual product variations
+        }
+      });
+    }
+  }, [products]);
 
   const categories = useMemo(() => {
     if (!products) return [];
@@ -179,6 +197,19 @@ export default function Produtos() {
                   <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                     {product.description}
                   </p>
+                  {productVariations[product.id] && productVariations[product.id].length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {productVariations[product.id].map(v => (
+                        <span 
+                          key={v.id} 
+                          className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full"
+                          data-testid={`variation-badge-${v.id}`}
+                        >
+                          {v.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mb-3">
                     {renderStars(product.avgRating)}
                     <span className="text-xs text-muted-foreground">
@@ -186,17 +217,24 @@ export default function Produtos() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xl font-bold text-primary">
-                      R$ {product.price.toFixed(2)}
-                    </span>
-                    <Button 
-                      size="sm" 
-                      className="bg-primary text-black hover:bg-primary/90"
-                      onClick={() => handleAddToCart(product)}
-                      data-testid={`add-to-cart-${product.id}`}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    {productVariations[product.id] && productVariations[product.id].length > 0 ? (
+                      <span className="text-lg font-bold text-primary">
+                        A partir de R$ {Math.min(...productVariations[product.id].map(v => v.price)).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-xl font-bold text-primary">
+                        R$ {product.price.toFixed(2)}
+                      </span>
+                    )}
+                    <Link href={`/produto/${product.id}`}>
+                      <Button 
+                        size="sm" 
+                        className="bg-primary text-black hover:bg-primary/90"
+                        data-testid={`view-product-${product.id}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
