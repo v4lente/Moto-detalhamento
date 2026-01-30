@@ -63,6 +63,7 @@ export default function Admin() {
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
   const [variationLabel, setVariationLabel] = useState("");
   const [variationPrice, setVariationPrice] = useState("");
+  const [variationInStock, setVariationInStock] = useState(true);
   const [productVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
   
   // Dashboard state
@@ -428,12 +429,12 @@ export default function Admin() {
     if (editingVariation) {
       updateVariationMutation.mutate({
         id: editingVariation.id,
-        data: { label: variationLabel, price }
+        data: { label: variationLabel, price, inStock: variationInStock }
       });
     } else {
       createVariationMutation.mutate({
         productId: variationsProductId,
-        data: { label: variationLabel, price }
+        data: { label: variationLabel, price, inStock: variationInStock }
       });
     }
   };
@@ -442,12 +443,14 @@ export default function Admin() {
     setEditingVariation(variation);
     setVariationLabel(variation.label);
     setVariationPrice(variation.price.toString());
+    setVariationInStock(variation.inStock);
   };
 
   const handleCancelEditVariation = () => {
     setEditingVariation(null);
     setVariationLabel("");
     setVariationPrice("");
+    setVariationInStock(true);
   };
 
   const handleAddServiceMedia = (url: string, type: "image" | "video") => {
@@ -1084,6 +1087,17 @@ export default function Admin() {
                           />
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="variationInStock"
+                          checked={variationInStock}
+                          onCheckedChange={(checked) => setVariationInStock(checked === true)}
+                          data-testid="checkbox-variation-in-stock"
+                        />
+                        <Label htmlFor="variationInStock" className="text-xs cursor-pointer">
+                          Em estoque
+                        </Label>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           type="submit"
@@ -1129,7 +1143,14 @@ export default function Admin() {
                               data-testid={`variation-item-${variation.id}`}
                             >
                               <div>
-                                <p className="font-medium">{variation.label}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{variation.label}</p>
+                                  {!variation.inStock && (
+                                    <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
+                                      Sem estoque
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-sm text-primary">R$ {variation.price.toFixed(2)}</p>
                               </div>
                               <div className="flex gap-1">
