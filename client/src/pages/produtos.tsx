@@ -15,7 +15,7 @@ type SortOption = "rating" | "price_asc" | "price_desc" | "name";
 
 export default function Produtos() {
   const { toast } = useToast();
-  const { addToCart } = useCart();
+  const { addToCart, cartCount } = useCart();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -113,8 +113,13 @@ export default function Produtos() {
               {settings?.siteName || "Produtos"}
             </h1>
             <Link href="/">
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="relative">
                 <ShoppingCart className="h-4 w-4" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
           </div>
