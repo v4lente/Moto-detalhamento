@@ -6,7 +6,7 @@ import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingCart, Star, ArrowLeft, Plus, Minus, User, Phone } from "lucide-react";
+import { ShoppingCart, Star, ArrowLeft, Plus, Minus, User, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@shared/schema";
 import {
@@ -243,13 +243,53 @@ export default function Produto() {
       <main className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12">
           <div className="space-y-3">
-            <div className="aspect-square rounded-lg overflow-hidden border border-border">
-              <img
-                src={selectedImage || product.image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            {(() => {
+              const allImages = [product.image, ...(product.images || [])];
+              const currentIndex = selectedImage ? allImages.indexOf(selectedImage) : 0;
+              const handlePrev = () => {
+                const newIndex = currentIndex <= 0 ? allImages.length - 1 : currentIndex - 1;
+                setSelectedImage(newIndex === 0 ? null : allImages[newIndex]);
+              };
+              const handleNext = () => {
+                const newIndex = currentIndex >= allImages.length - 1 ? 0 : currentIndex + 1;
+                setSelectedImage(newIndex === 0 ? null : allImages[newIndex]);
+              };
+              
+              return (
+                <div className="relative group/gallery aspect-square rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={selectedImage || product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {allImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={handlePrev}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 opacity-0 group-hover/gallery:opacity-100 transition-opacity"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={handleNext}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 opacity-0 group-hover/gallery:opacity-100 transition-opacity"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                        {allImages.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedImage(idx === 0 ? null : allImages[idx])}
+                            className={`w-2 h-2 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/50 hover:bg-white/70'}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             {product.images && product.images.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button

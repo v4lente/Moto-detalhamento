@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye, Phone } from "lucide-react";
+import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@shared/schema";
 import {
@@ -42,6 +42,7 @@ export default function Produtos() {
   });
 
   const [productVariations, setProductVariations] = useState<Record<number, ProductVariation[]>>({});
+  const [productImageIndex, setProductImageIndex] = useState<Record<number, number>>({});
 
   useEffect(() => {
     if (products) {
@@ -266,29 +267,79 @@ export default function Produtos() {
                 className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-colors"
                 data-testid={`product-card-${product.id}`}
               >
-                <Link href={`/produto/${product.id}`}>
-                  <div className="aspect-square overflow-hidden relative">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {(() => {
-                      const variations = productVariations[product.id];
-                      const hasVariations = variations && variations.length > 0;
-                      const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
-                      const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
-                      
-                      return isOutOfStock ? (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-                            Sem Estoque
-                          </span>
-                        </div>
-                      ) : null;
-                    })()}
-                  </div>
-                </Link>
+                <div className="aspect-square overflow-hidden relative group/card">
+                  {(() => {
+                    const allImages = [product.image, ...(product.images || [])];
+                    const currentIndex = productImageIndex[product.id] || 0;
+                    const handlePrev = (e: React.MouseEvent) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const newIndex = currentIndex <= 0 ? allImages.length - 1 : currentIndex - 1;
+                      setProductImageIndex(prev => ({ ...prev, [product.id]: newIndex }));
+                    };
+                    const handleNext = (e: React.MouseEvent) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const newIndex = currentIndex >= allImages.length - 1 ? 0 : currentIndex + 1;
+                      setProductImageIndex(prev => ({ ...prev, [product.id]: newIndex }));
+                    };
+
+                    return (
+                      <>
+                        <Link href={`/produto/${product.id}`}>
+                          <img
+                            src={allImages[currentIndex]}
+                            alt={product.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </Link>
+                        {allImages.length > 1 && (
+                          <>
+                            <button
+                              onClick={handlePrev}
+                              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleNext}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                              {allImages.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setProductImageIndex(prev => ({ ...prev, [product.id]: idx }));
+                                  }}
+                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/50 hover:bg-white/70'}`}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()}
+                  {(() => {
+                    const variations = productVariations[product.id];
+                    const hasVariations = variations && variations.length > 0;
+                    const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
+                    const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
+                    
+                    return isOutOfStock ? (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
+                        <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                          Sem Estoque
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
                 <CardContent className="p-4">
                   <Link href={`/produto/${product.id}`}>
                     <h3 className="font-bold text-lg mb-1 hover:text-primary transition-colors">

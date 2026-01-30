@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Product } from "@shared/schema";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Plus, Star } from "lucide-react";
+import { Plus, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface ProductCardProps {
@@ -11,6 +12,21 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const allImages = [product.image, ...(product.images || [])];
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(prev => prev <= 0 ? allImages.length - 1 : prev - 1);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCurrentIndex(prev => prev >= allImages.length - 1 ? 0 : prev + 1);
+  };
 
   const renderStars = (rating: number) => {
     return (
@@ -30,17 +46,46 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="group overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-300" data-testid={`card-product-${product.id}`}>
-      <Link href={`/produto/${product.id}`}>
-        <div className="aspect-square overflow-hidden bg-background relative cursor-pointer">
+      <div className="aspect-square overflow-hidden bg-background relative group/image">
+        <Link href={`/produto/${product.id}`}>
           <img 
-            src={product.image} 
+            src={allImages[currentIndex]} 
             alt={product.name} 
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer"
             data-testid={`img-product-${product.id}`}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </div>
-      </Link>
+        </Link>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        {allImages.length > 1 && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+              {allImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCurrentIndex(idx);
+                  }}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/50 hover:bg-white/70'}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       <CardHeader className="p-4 pb-2">
         <div className="text-xs text-primary font-bold uppercase tracking-wider mb-1" data-testid={`text-category-${product.id}`}>
           {product.category}
