@@ -43,6 +43,7 @@ export default function Admin() {
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [productImage, setProductImage] = useState("");
   const [productCategory, setProductCategory] = useState("");
+  const [productInStock, setProductInStock] = useState(true);
   const [logoImage, setLogoImage] = useState("");
   const [backgroundImage, setBackgroundImage] = useState("");
   const [editingServicePost, setEditingServicePost] = useState<ServicePost | null>(null);
@@ -503,6 +504,7 @@ export default function Admin() {
       price: parseFloat(formData.get("price") as string),
       image: productImage,
       category: productCategory.trim(),
+      inStock: productInStock,
     };
 
     if (editingProduct) {
@@ -918,6 +920,7 @@ export default function Admin() {
                   setEditingProduct(null);
                   setProductImage("");
                   setProductCategory("");
+                  setProductInStock(true);
                 }
               }}>
                 <DialogTrigger asChild>
@@ -928,6 +931,7 @@ export default function Admin() {
                       setEditingProduct(null);
                       setProductImage("");
                       setProductCategory("");
+                      setProductInStock(true);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" /> Novo Produto
@@ -968,6 +972,17 @@ export default function Admin() {
                     <div className="space-y-2">
                       <Label>Imagem do Produto</Label>
                       <ImageUpload value={productImage} onChange={setProductImage} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="productInStock"
+                        checked={productInStock}
+                        onCheckedChange={(checked) => setProductInStock(checked === true)}
+                        data-testid="checkbox-product-in-stock"
+                      />
+                      <Label htmlFor="productInStock" className="cursor-pointer">
+                        Produto em estoque
+                      </Label>
                     </div>
                     <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90" data-testid="button-save-product">
                       {editingProduct ? "Atualizar" : "Criar"} Produto
@@ -1010,6 +1025,7 @@ export default function Admin() {
                             setEditingProduct(product);
                             setProductImage(product.image);
                             setProductCategory(product.category);
+                            setProductInStock(product.inStock);
                             setIsProductDialogOpen(true);
                           }}
                           data-testid={`button-edit-${product.id}`}
