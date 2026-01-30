@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Star, Search, ArrowLeft, Plus } from "lucide-react";
+import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@shared/schema";
 
@@ -244,15 +244,45 @@ export default function Produtos() {
                         R$ {product.price.toFixed(2)}
                       </span>
                     )}
-                    <Link href={`/produto/${product.id}`}>
-                      <Button 
-                        size="sm" 
-                        className="bg-primary text-black hover:bg-primary/90"
-                        data-testid={`view-product-${product.id}`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="flex gap-1">
+                      <Link href={`/produto/${product.id}`}>
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          data-testid={`view-product-${product.id}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {(() => {
+                        const variations = productVariations[product.id];
+                        const hasVariations = variations && variations.length > 0;
+                        const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
+                        const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
+                        
+                        return (
+                          <Button 
+                            size="sm" 
+                            className={isOutOfStock 
+                              ? "bg-gray-500 text-white cursor-not-allowed" 
+                              : "bg-primary text-black hover:bg-primary/90"
+                            }
+                            disabled={isOutOfStock}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (!isOutOfStock && !hasVariations) {
+                                handleAddToCart(product);
+                              } else if (!isOutOfStock) {
+                                window.location.href = `/produto/${product.id}`;
+                              }
+                            }}
+                            data-testid={`add-product-${product.id}`}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

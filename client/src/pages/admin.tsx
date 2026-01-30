@@ -1172,7 +1172,26 @@ export default function Admin() {
                                 </div>
                                 <p className="text-sm text-primary">R$ {variation.price.toFixed(2)}</p>
                               </div>
-                              <div className="flex gap-1">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant={variation.inStock ? "outline" : "secondary"}
+                                  size="sm"
+                                  className={`text-xs ${variation.inStock ? "text-green-500 border-green-500" : "text-red-400"}`}
+                                  onClick={() => {
+                                    updateVariationMutation.mutate({
+                                      id: variation.id,
+                                      data: { label: variation.label, price: variation.price, inStock: !variation.inStock }
+                                    });
+                                  }}
+                                  disabled={updateVariationMutation.isPending}
+                                  data-testid={`button-toggle-stock-${variation.id}`}
+                                >
+                                  {variation.inStock ? (
+                                    <><ToggleRight className="h-3 w-3 mr-1" /> Em estoque</>
+                                  ) : (
+                                    <><ToggleLeft className="h-3 w-3 mr-1" /> Sem estoque</>
+                                  )}
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="icon"
