@@ -40,6 +40,7 @@ export const products = pgTable("products", {
   price: real("price").notNull(),
   image: text("image").notNull(),
   category: text("category").notNull(),
+  inStock: boolean("in_stock").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -56,6 +57,7 @@ export const productVariations = pgTable("product_variations", {
   productId: integer("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   price: real("price").notNull(),
+  inStock: boolean("in_stock").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
