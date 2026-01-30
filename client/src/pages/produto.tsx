@@ -33,6 +33,7 @@ export default function Produto() {
   const [comment, setComment] = useState("");
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const { data: product, isLoading: productLoading } = useQuery({
     queryKey: ["product", productId],
@@ -241,12 +242,37 @@ export default function Produto() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12">
-          <div className="aspect-square rounded-lg overflow-hidden border border-border">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+          <div className="space-y-3">
+            <div className="aspect-square rounded-lg overflow-hidden border border-border">
+              <img
+                src={selectedImage || product.image}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {product.images && product.images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
+                    !selectedImage ? "border-primary" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <img src={product.image} alt="Principal" className="w-full h-full object-cover" />
+                </button>
+                {product.images.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(img)}
+                    className={`flex-shrink-0 w-16 h-16 rounded border-2 overflow-hidden ${
+                      selectedImage === img ? "border-primary" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <img src={img} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">

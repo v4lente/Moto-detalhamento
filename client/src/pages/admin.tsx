@@ -1033,8 +1033,13 @@ export default function Admin() {
                 {products?.map((product) => (
                   <Card key={product.id} className="bg-card border-border" data-testid={`admin-product-${product.id}`}>
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="h-16 w-16 bg-background rounded overflow-hidden border border-border">
+                      <div className="h-16 w-16 bg-background rounded overflow-hidden border border-border relative">
                         <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                        {product.images && product.images.length > 0 && (
+                          <span className="absolute bottom-0 right-0 bg-primary text-black text-[10px] font-bold px-1 rounded-tl">
+                            +{product.images.length}
+                          </span>
+                        )}
                       </div>
                       <div className="flex-1">
                         <h3 className="font-bold">{product.name}</h3>
