@@ -7,15 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye } from "lucide-react";
+import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ProductVariation } from "@shared/schema";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { CheckoutDialog } from "@/components/checkout-dialog";
 
 type SortOption = "rating" | "price_asc" | "price_desc" | "name";
 
 export default function Produtos() {
   const { toast } = useToast();
-  const { addToCart, cartCount } = useCart();
+  const { addToCart, cartCount, items, updateQuantity, cartTotal } = useCart();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -112,16 +123,87 @@ export default function Produtos() {
             <h1 className="text-base sm:text-xl font-display font-bold text-primary truncate max-w-[120px] sm:max-w-none">
               {settings?.siteName || "Produtos"}
             </h1>
-            <Link href="/">
-              <Button variant="outline" size="icon" className="relative">
-                <ShoppingCart className="h-4 w-4" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartCount}
-                  </span>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="relative">
+                  <ShoppingCart className="h-4 w-4" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-primary text-black text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-md bg-card border-l border-primary/20">
+                <SheetHeader>
+                  <SheetTitle className="font-display uppercase tracking-widest text-primary">Seu Carrinho</SheetTitle>
+                </SheetHeader>
+                
+                {items.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[50vh] text-muted-foreground">
+                    <ShoppingCart className="h-12 w-12 mb-4 opacity-20" />
+                    <p>Seu carrinho está vazio</p>
+                  </div>
+                ) : (
+                  <>
+                    <ScrollArea className="h-[60vh] my-4 pr-4">
+                      <div className="space-y-4">
+                        {items.map((item) => {
+                          const itemKey = `${item.id}-${item.variationId || 'base'}`;
+                          return (
+                            <div key={itemKey} className="flex gap-4 items-start">
+                              <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
+                                <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-sm font-medium line-clamp-1">
+                                  {item.name}
+                                  {item.variationLabel && <span className="text-primary ml-1">({item.variationLabel})</span>}
+                                </h4>
+                                <p className="text-sm text-primary font-bold">R$ {item.price.toFixed(2)}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-[10px]"
+                                    onClick={() => updateQuantity(item.id, item.quantity - 1, item.variationId)}
+                                  >
+                                    -
+                                  </Button>
+                                  <span className="text-xs w-4 text-center">{item.quantity}</span>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-[10px]"
+                                    onClick={() => updateQuantity(item.id, item.quantity + 1, item.variationId)}
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                    <div className="space-y-4">
+                      <Separator />
+                      <div className="flex justify-between text-lg font-bold font-display">
+                        <span>Total</span>
+                        <span className="text-primary">R$ {cartTotal.toFixed(2)}</span>
+                      </div>
+                      <Button 
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold" 
+                        onClick={() => setCheckoutOpen(true)}
+                      >
+                        <Phone className="mr-2 h-4 w-4" /> Finalizar pelo WhatsApp
+                      </Button>
+                    </div>
+                  </>
                 )}
-              </Button>
-            </Link>
+              </SheetContent>
+            </Sheet>
+            <CheckoutDialog open={checkoutOpen} onOpenChange={setCheckoutOpen} />
           </div>
         </div>
       </header>
