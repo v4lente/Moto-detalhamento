@@ -46,7 +46,12 @@ Three main entities defined in `shared/schema.ts`:
 
 ### Database
 - **PostgreSQL** - Primary data store, connection via `DATABASE_URL` environment variable
-- **Drizzle Kit** - Schema migrations with `npm run db:push`
+- **Drizzle Kit** - Schema management with `npm run db:push` for quick changes
+- **Migrations** - Programmatic migrations via `drizzle-orm/node-postgres/migrator`
+  - Migrations stored in `migrations/` folder
+  - Run `npx drizzle-kit generate` to create new migrations
+  - Migrations run automatically on server startup
+  - Existing databases are detected and baseline migrations are marked as applied
 
 ### Third-Party Services
 - **WhatsApp Business API** - Checkout redirects customers to WhatsApp with pre-filled order message
