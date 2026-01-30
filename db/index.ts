@@ -17,8 +17,12 @@ export async function runMigrations() {
   try {
     await migrate(db, { migrationsFolder: "./migrations" });
     console.log("Migrations completed successfully!");
-  } catch (error) {
-    console.error("Migration failed:", error);
-    throw error;
+  } catch (error: any) {
+    if (error.code === '42P07') {
+      console.log("Tables already exist, skipping migration (existing database).");
+    } else {
+      console.error("Migration failed:", error);
+      throw error;
+    }
   }
 }
