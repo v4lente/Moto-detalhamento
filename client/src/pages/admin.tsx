@@ -43,6 +43,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [productImage, setProductImage] = useState("");
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [productCategory, setProductCategory] = useState("");
   const [productInStock, setProductInStock] = useState(true);
   const [logoImage, setLogoImage] = useState("");
@@ -506,6 +507,7 @@ export default function Admin() {
       description: formData.get("description") as string,
       price: parseFloat(formData.get("price") as string),
       image: productImage,
+      images: productImages,
       category: productCategory.trim(),
       inStock: productInStock,
     };
@@ -922,6 +924,7 @@ export default function Admin() {
                 if (!open) {
                   setEditingProduct(null);
                   setProductImage("");
+                  setProductImages([]);
                   setProductCategory("");
                   setProductInStock(true);
                 }
@@ -933,6 +936,7 @@ export default function Admin() {
                     onClick={() => {
                       setEditingProduct(null);
                       setProductImage("");
+                      setProductImages([]);
                       setProductCategory("");
                       setProductInStock(true);
                     }}
@@ -973,8 +977,33 @@ export default function Admin() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Imagem do Produto</Label>
+                      <Label>Imagem Principal</Label>
                       <ImageUpload value={productImage} onChange={setProductImage} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fotos Adicionais ({productImages.length})</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {productImages.map((img, index) => (
+                          <div key={index} className="relative group">
+                            <img src={img} alt={`Foto ${index + 1}`} className="w-full h-20 object-cover rounded border border-border" />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute -top-2 -right-2 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setProductImages(prev => prev.filter((_, i) => i !== index))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <ImageUpload 
+                        value="" 
+                        onChange={(url) => {
+                          if (url) setProductImages(prev => [...prev, url]);
+                        }} 
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -1027,6 +1056,7 @@ export default function Admin() {
                           onClick={() => {
                             setEditingProduct(product);
                             setProductImage(product.image);
+                            setProductImages(product.images || []);
                             setProductCategory(product.category);
                             setProductInStock(product.inStock);
                             setIsProductDialogOpen(true);
