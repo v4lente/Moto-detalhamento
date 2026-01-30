@@ -27,6 +27,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { CreatableSelect } from "@/components/ui/creatable-select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "wouter";
 
 export default function Admin() {
@@ -333,7 +334,7 @@ export default function Admin() {
 
   // Variation mutations
   const createVariationMutation = useMutation({
-    mutationFn: ({ productId, data }: { productId: number; data: { label: string; price: number } }) =>
+    mutationFn: ({ productId, data }: { productId: number; data: { label: string; price: number; inStock?: boolean } }) =>
       createProductVariation(productId, data),
     onSuccess: (newVariation) => {
       setVariations([...variations, newVariation]);
@@ -344,12 +345,13 @@ export default function Admin() {
       toast({ title: "Variação criada!" });
       setVariationLabel("");
       setVariationPrice("");
+      setVariationInStock(true);
     },
     onError: () => toast({ title: "Erro ao criar variação", variant: "destructive" }),
   });
 
   const updateVariationMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { label: string; price: number } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { label: string; price: number; inStock: boolean } }) =>
       updateProductVariation(id, data),
     onSuccess: (updatedVariation) => {
       setVariations(variations.map(v => v.id === updatedVariation.id ? updatedVariation : v));
@@ -357,6 +359,7 @@ export default function Admin() {
       setEditingVariation(null);
       setVariationLabel("");
       setVariationPrice("");
+      setVariationInStock(true);
     },
     onError: () => toast({ title: "Erro ao atualizar variação", variant: "destructive" }),
   });

@@ -41,6 +41,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = (product: Product, variation?: ProductVariation) => {
+    const isOutOfStock = variation ? !variation.inStock : !product.inStock;
+    if (isOutOfStock) {
+      toast({
+        title: "Produto sem estoque",
+        description: "Este item não está disponível no momento.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setItems((prev) => {
       const existing = prev.find((item) => 
         item.id === product.id && item.variationId === variation?.id

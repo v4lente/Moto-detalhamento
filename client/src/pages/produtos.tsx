@@ -180,12 +180,26 @@ export default function Produtos() {
                 data-testid={`product-card-${product.id}`}
               >
                 <Link href={`/produto/${product.id}`}>
-                  <div className="aspect-square overflow-hidden">
+                  <div className="aspect-square overflow-hidden relative">
                     <img
                       src={product.image}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                    {(() => {
+                      const variations = productVariations[product.id];
+                      const hasVariations = variations && variations.length > 0;
+                      const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
+                      const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
+                      
+                      return isOutOfStock ? (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                            Sem Estoque
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </Link>
                 <CardContent className="p-4">
@@ -202,7 +216,11 @@ export default function Produtos() {
                       {productVariations[product.id].map(v => (
                         <span 
                           key={v.id} 
-                          className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full"
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            v.inStock 
+                              ? "bg-primary/20 text-primary" 
+                              : "bg-red-500/20 text-red-400 line-through"
+                          }`}
                           data-testid={`variation-badge-${v.id}`}
                         >
                           {v.label}

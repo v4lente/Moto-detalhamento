@@ -61,7 +61,7 @@ export async function fetchProductVariations(productId: number): Promise<Product
   return response.json();
 }
 
-export async function createProductVariation(productId: number, data: { label: string; price: number }): Promise<ProductVariation> {
+export async function createProductVariation(productId: number, data: { label: string; price: number; inStock?: boolean }): Promise<ProductVariation> {
   const response = await fetch(`${API_BASE}/products/${productId}/variations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,7 +74,7 @@ export async function createProductVariation(productId: number, data: { label: s
   return response.json();
 }
 
-export async function updateProductVariation(id: number, data: Partial<{ label: string; price: number }>): Promise<ProductVariation> {
+export async function updateProductVariation(id: number, data: Partial<{ label: string; price: number; inStock: boolean }>): Promise<ProductVariation> {
   const response = await fetch(`${API_BASE}/variations/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

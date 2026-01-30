@@ -185,13 +185,16 @@ export default function Produto() {
                     <Button
                       key={v.id}
                       variant={selectedVariation?.id === v.id ? "default" : "outline"}
-                      className={selectedVariation?.id === v.id 
-                        ? "bg-primary text-black hover:bg-primary/90" 
-                        : "border-border hover:border-primary"}
+                      className={`${
+                        selectedVariation?.id === v.id 
+                          ? "bg-primary text-black hover:bg-primary/90" 
+                          : "border-border hover:border-primary"
+                      } ${!v.inStock ? "opacity-50 line-through" : ""}`}
                       onClick={() => setSelectedVariation(v)}
                       data-testid={`variation-${v.id}`}
                     >
                       {v.label} - R$ {v.price.toFixed(2)}
+                      {!v.inStock && " (Sem estoque)"}
                     </Button>
                   ))}
                 </div>
@@ -202,34 +205,51 @@ export default function Produto() {
               R$ {currentPrice.toFixed(2)}
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center border border-border rounded-lg">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-12 text-center font-bold">{quantity}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setQuantity(quantity + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button
-                className="flex-1 bg-primary text-black hover:bg-primary/90 font-bold"
-                onClick={handleAddToCart}
-                data-testid="button-add-to-cart"
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Adicionar ao Carrinho
-              </Button>
-            </div>
+            {(() => {
+              const hasVariations = variations && variations.length > 0;
+              const isSelectedOutOfStock = hasVariations 
+                ? (selectedVariation ? !selectedVariation.inStock : false)
+                : !product.inStock;
+              const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
+              const isOutOfStock = allVariationsOutOfStock || isSelectedOutOfStock;
+              
+              return (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border border-border rounded-lg">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1 || isOutOfStock}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-12 text-center font-bold">{quantity}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setQuantity(quantity + 1)}
+                      disabled={isOutOfStock}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    className={`flex-1 font-bold ${
+                      isOutOfStock 
+                        ? "bg-gray-500 text-white cursor-not-allowed" 
+                        : "bg-primary text-black hover:bg-primary/90"
+                    }`}
+                    onClick={handleAddToCart}
+                    disabled={isOutOfStock}
+                    data-testid="button-add-to-cart"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    {isOutOfStock ? "Sem Estoque" : "Adicionar ao Carrinho"}
+                  </Button>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
