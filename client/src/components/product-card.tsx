@@ -60,17 +60,17 @@ export function ProductCard({ product }: ProductCardProps) {
           <>
             <button
               onClick={handlePrev}
-              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10"
+              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white rounded-full p-1.5 z-20"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={handleNext}
-              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10"
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black text-white rounded-full p-1.5 z-20"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
               {allImages.map((_, idx) => (
                 <button
                   key={idx}
@@ -79,7 +79,7 @@ export function ProductCard({ product }: ProductCardProps) {
                     e.stopPropagation();
                     setCurrentIndex(idx);
                   }}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/50 hover:bg-white/70'}`}
+                  className={`w-2 h-2 rounded-full transition-colors ${idx === currentIndex ? 'bg-primary' : 'bg-white/60 hover:bg-white'}`}
                 />
               ))}
             </div>
