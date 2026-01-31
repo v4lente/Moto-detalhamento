@@ -79,35 +79,25 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const imgAspect = width / height;
-    const cropAspect = aspectRatio || 1;
     
-    let cropWidth = 100;
-    let cropHeight = 100;
-    
-    if (imgAspect > cropAspect) {
-      cropWidth = (cropAspect / imgAspect) * 100;
-    } else {
-      cropHeight = (imgAspect / cropAspect) * 100;
-    }
-    
-    const newCrop = centerCrop(
-      makeAspectCrop(
-        {
-          unit: "%",
-          width: cropWidth,
-          height: cropHeight,
-        },
-        cropAspect,
-        width,
-        height
-      ),
-      width,
-      height
-    );
+    const newCrop: CropType = {
+      unit: "%",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    };
     
     setCrop(newCrop);
-  }, [aspectRatio]);
+    
+    setCompletedCrop({
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
+      unit: "px",
+    });
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -213,7 +203,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
           <img 
             src={preview} 
             alt="Preview" 
-            className={`w-full rounded-lg border border-border ${aspectRatio === 1 ? 'aspect-square object-cover' : 'h-32 object-contain'}`}
+            className="w-full h-32 object-cover rounded-lg border border-border"
           />
           <Button
             type="button"
@@ -229,7 +219,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
         <Button
           type="button"
           variant="outline"
-          className={`w-full border-dashed ${aspectRatio === 1 ? 'aspect-square' : 'h-32'}`}
+          className="w-full h-32 border-dashed"
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
         >
@@ -262,7 +252,6 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
                 crop={crop}
                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                 onComplete={(c) => setCompletedCrop(c)}
-                aspect={aspectRatio}
                 className="max-w-full"
               >
                 <img
