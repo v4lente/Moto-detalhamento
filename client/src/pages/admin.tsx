@@ -978,14 +978,14 @@ export default function Admin() {
                     </div>
                     <div className="space-y-2">
                       <Label>Imagem Principal</Label>
-                      <ImageUpload value={productImage} onChange={setProductImage} />
+                      <ImageUpload value={productImage} onChange={setProductImage} aspectRatio={1} />
                     </div>
                     <div className="space-y-2">
                       <Label>Fotos Adicionais ({productImages.length})</Label>
                       <div className="grid grid-cols-3 gap-2">
                         {productImages.map((img, index) => (
                           <div key={index} className="relative group">
-                            <img src={img} alt={`Foto ${index + 1}`} className="w-full h-20 object-cover rounded border border-border" />
+                            <img src={img} alt={`Foto ${index + 1}`} className="w-full aspect-square object-cover rounded border border-border" />
                             <Button
                               type="button"
                               variant="destructive"
@@ -1002,7 +1002,8 @@ export default function Admin() {
                         value="" 
                         onChange={(url) => {
                           if (url) setProductImages(prev => [...prev, url]);
-                        }} 
+                        }}
+                        aspectRatio={1}
                       />
                     </div>
                     <div className="flex items-center gap-2">

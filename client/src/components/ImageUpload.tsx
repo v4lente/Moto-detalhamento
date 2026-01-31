@@ -17,10 +17,10 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> 
   const scaleX = image.naturalWidth / image.width;
   const scaleY = image.naturalHeight / image.height;
   
-  const cropX = crop.x * scaleX;
-  const cropY = crop.y * scaleY;
-  const cropWidth = crop.width * scaleX;
-  const cropHeight = crop.height * scaleY;
+  const cropX = Math.round(crop.x * scaleX);
+  const cropY = Math.round(crop.y * scaleY);
+  const cropWidth = Math.round(crop.width * scaleX);
+  const cropHeight = Math.round(crop.height * scaleY);
   
   canvas.width = cropWidth;
   canvas.height = cropHeight;
@@ -30,6 +30,7 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> 
     throw new Error("No 2d context");
   }
 
+  ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
   ctx.drawImage(
@@ -54,7 +55,7 @@ function getCroppedImg(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> 
         resolve(blob);
       },
       "image/jpeg",
-      0.9
+      0.92
     );
   });
 }
@@ -200,7 +201,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
           <img 
             src={preview} 
             alt="Preview" 
-            className="w-full h-32 object-cover rounded-lg border border-border"
+            className={`w-full rounded-lg border border-border ${aspectRatio === 1 ? 'aspect-square object-cover' : 'h-32 object-contain'}`}
           />
           <Button
             type="button"
@@ -216,7 +217,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
         <Button
           type="button"
           variant="outline"
-          className="w-full h-32 border-dashed"
+          className={`w-full border-dashed ${aspectRatio === 1 ? 'aspect-square' : 'h-32'}`}
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
         >
