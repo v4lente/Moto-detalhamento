@@ -79,14 +79,26 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
+    const imgAspect = width / height;
+    const cropAspect = aspectRatio || 1;
+    
+    let cropWidth = 100;
+    let cropHeight = 100;
+    
+    if (imgAspect > cropAspect) {
+      cropWidth = (cropAspect / imgAspect) * 100;
+    } else {
+      cropHeight = (imgAspect / cropAspect) * 100;
+    }
     
     const newCrop = centerCrop(
       makeAspectCrop(
         {
           unit: "%",
-          width: 90,
+          width: cropWidth,
+          height: cropHeight,
         },
-        aspectRatio || 1,
+        cropAspect,
         width,
         height
       ),
