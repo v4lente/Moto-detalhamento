@@ -46,12 +46,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Card className="group overflow-hidden bg-card border-border hover:border-primary/50 transition-all duration-300" data-testid={`card-product-${product.id}`}>
-      <div className="aspect-square overflow-hidden bg-background relative group/image">
+      <div className="overflow-hidden bg-black/20 relative group/image" style={{ minHeight: '200px' }}>
         <Link href={`/produto/${product.id}`}>
           <img 
             src={allImages[currentIndex]} 
             alt={product.name} 
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer"
+            className="w-full h-auto max-h-[280px] object-contain transition-transform duration-500 group-hover:scale-110 cursor-pointer"
             data-testid={`img-product-${product.id}`}
           />
         </Link>

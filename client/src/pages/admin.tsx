@@ -985,7 +985,7 @@ export default function Admin() {
                       <div className="grid grid-cols-3 gap-2">
                         {productImages.map((img, index) => (
                           <div key={index} className="relative group">
-                            <img src={img} alt={`Foto ${index + 1}`} className="w-full h-20 object-cover rounded border border-border" />
+                            <img src={img} alt={`Foto ${index + 1}`} className="w-full h-20 object-contain rounded border border-border bg-black/20" />
                             <Button
                               type="button"
                               variant="destructive"
@@ -1033,8 +1033,8 @@ export default function Admin() {
                 {products?.map((product) => (
                   <Card key={product.id} className="bg-card border-border" data-testid={`admin-product-${product.id}`}>
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="h-16 w-16 bg-background rounded overflow-hidden border border-border relative">
-                        <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                      <div className="h-16 w-16 bg-black/20 rounded overflow-hidden border border-border relative flex items-center justify-center">
+                        <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain" />
                         {product.images && product.images.length > 0 && (
                           <span className="absolute bottom-0 right-0 bg-primary text-black text-[10px] font-bold px-1 rounded-tl">
                             +{product.images.length}

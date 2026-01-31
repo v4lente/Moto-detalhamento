@@ -153,8 +153,8 @@ export default function Produtos() {
                           const itemKey = `${item.id}-${item.variationId || 'base'}`;
                           return (
                             <div key={itemKey} className="flex gap-4 items-start">
-                              <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
-                                <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                              <div className="h-16 w-16 bg-black/20 rounded-md overflow-hidden border border-border flex items-center justify-center">
+                                <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain" />
                               </div>
                               <div className="flex-1">
                                 <h4 className="text-sm font-medium line-clamp-1">
@@ -267,7 +267,7 @@ export default function Produtos() {
                 className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-colors"
                 data-testid={`product-card-${product.id}`}
               >
-                <div className="aspect-square overflow-hidden relative group/card">
+                <div className="overflow-hidden relative group/card bg-black/20" style={{ minHeight: '200px' }}>
                   {(() => {
                     const allImages = [product.image, ...(product.images || [])];
                     const currentIndex = productImageIndex[product.id] || 0;
@@ -290,7 +290,7 @@ export default function Produtos() {
                           <img
                             src={allImages[currentIndex]}
                             alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="w-full h-auto max-h-[300px] object-contain group-hover:scale-105 transition-transform duration-300"
                           />
                         </Link>
                         {allImages.length > 1 && (

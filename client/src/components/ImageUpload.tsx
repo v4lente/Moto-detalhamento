@@ -203,7 +203,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
           <img 
             src={preview} 
             alt="Preview" 
-            className="w-full h-32 object-cover rounded-lg border border-border"
+            className="w-full h-32 object-contain rounded-lg border border-border bg-black/20"
           />
           <Button
             type="button"

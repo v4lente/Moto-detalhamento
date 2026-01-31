@@ -501,7 +501,7 @@ export default function Home() {
                         <img 
                           src={review.productImage} 
                           alt={review.productName}
-                          className="w-16 h-16 rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          className="w-16 h-16 rounded-lg object-contain cursor-pointer hover:opacity-80 transition-opacity bg-black/20"
                         />
                       </Link>
                       <div className="flex-1 min-w-0">

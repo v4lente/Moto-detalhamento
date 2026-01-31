@@ -112,8 +112,8 @@ export function Navbar() {
                       const itemKey = `${item.id}-${item.variationId || 'base'}`;
                       return (
                         <div key={itemKey} className="flex gap-4 items-start" data-testid={`cart-item-${itemKey}`}>
-                          <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
-                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" data-testid={`img-cart-${itemKey}`} />
+                          <div className="h-16 w-16 bg-black/20 rounded-md overflow-hidden border border-border flex items-center justify-center">
+                            <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain" data-testid={`img-cart-${itemKey}`} />
                           </div>
                           <div className="flex-1">
                             <h4 className="text-sm font-medium line-clamp-1" data-testid={`text-cart-name-${itemKey}`}>

@@ -184,8 +184,8 @@ export default function Produto() {
                           const itemKey = `${item.id}-${item.variationId || 'base'}`;
                           return (
                             <div key={itemKey} className="flex gap-4 items-start">
-                              <div className="h-16 w-16 bg-background rounded-md overflow-hidden border border-border">
-                                <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                              <div className="h-16 w-16 bg-black/20 rounded-md overflow-hidden border border-border flex items-center justify-center">
+                                <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain" />
                               </div>
                               <div className="flex-1">
                                 <h4 className="text-sm font-medium line-clamp-1">
@@ -256,11 +256,11 @@ export default function Produto() {
               };
               
               return (
-                <div className="relative group/gallery aspect-square rounded-lg overflow-hidden border border-border">
+                <div className="relative group/gallery rounded-lg overflow-hidden border border-border bg-black/20" style={{ minHeight: '300px' }}>
                   <img
                     src={selectedImage || product.image}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto object-contain"
                   />
                   {allImages.length > 1 && (
                     <>
@@ -298,7 +298,7 @@ export default function Produto() {
                     !selectedImage ? "border-primary" : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <img src={product.image} alt="Principal" className="w-full h-full object-cover" />
+                  <img src={product.image} alt="Principal" className="w-full h-full object-contain" />
                 </button>
                 {product.images.map((img, index) => (
                   <button
@@ -308,7 +308,7 @@ export default function Produto() {
                       selectedImage === img ? "border-primary" : "border-border hover:border-primary/50"
                     }`}
                   >
-                    <img src={img} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
+                    <img src={img} alt={`Foto ${index + 1}`} className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
