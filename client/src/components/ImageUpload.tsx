@@ -125,36 +125,22 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
 
     try {
       const croppedBlob = await getCroppedImg(imgRef.current, completedCrop);
-      const croppedFile = new File([croppedBlob], originalFile.name, { type: "image/jpeg" });
+      const formData = new FormData();
+      formData.append("file", croppedBlob, originalFile.name);
 
-      const response = await fetch("/api/uploads/request-url", {
+      const response = await fetch("/api/uploads/local", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: croppedFile.name,
-          size: croppedFile.size,
-          contentType: croppedFile.type,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Falha ao obter URL de upload");
-      }
-
-      const { uploadURL, objectPath } = await response.json();
-
-      const uploadResponse = await fetch(uploadURL, {
-        method: "PUT",
-        body: croppedFile,
-        headers: { "Content-Type": croppedFile.type },
-      });
-
-      if (!uploadResponse.ok) {
         throw new Error("Falha ao enviar arquivo");
       }
 
-      setPreview(objectPath);
-      onChange(objectPath);
+      const { filePath } = await response.json();
+
+      setPreview(filePath);
+      onChange(filePath);
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
       alert("Erro ao fazer upload da imagem");

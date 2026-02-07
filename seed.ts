@@ -9,7 +9,7 @@
  *   - Este script insere dados nas tabelas do banco conectado via DATABASE_URL
  *   - Tabelas com dados existentes serão ignoradas (ON CONFLICT DO NOTHING)
  *   - Senhas de usuários precisam ser definidas manualmente após o seed
- *   - As URLs de imagens apontam para o Object Storage original
+ *   - As URLs de imagens apontam para public/uploads/ (pasta local)
  */
 
 import pg from "pg";
@@ -52,8 +52,8 @@ async function main() {
     heroSubtitle: "Cuidado profissional para seu carro ou moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.",
     footerText: "Daniel Valente Moto Detalhamento\nLoja especializada na venda de produtos automotivos para estética automotiva e lavagens, trabalhando com as melhores marcas e produtos do mercado. Além disso, oferecemos serviço de detalhamento premium em motocicletas, unindo qualidade, técnica e alto padrão de acabamento.",
     copyrightText: "© 2026 Daniel Valente Moto Detalhamento. Todos os direitos reservados.",
-    logoImage: "/objects/uploads/8b045942-99e9-4967-96a0-12f986c903cb",
-    backgroundImage: "/objects/uploads/9797a2e7-1b7d-42ba-8140-217a7a87c187",
+    logoImage: "/uploads/8b045942-99e9-4967-96a0-12f986c903cb",
+    backgroundImage: "/uploads/9797a2e7-1b7d-42ba-8140-217a7a87c187",
     businessAddress: "Daniel Valente Moto Detalhamento, R. Dr. Amarante, 1289 - Centro, Pelotas - RS, 96020-720",
     instagramUrl: "https://www.instagram.com/danielvalenteprodutos/",
     facebookUrl: "",
@@ -76,7 +76,7 @@ async function main() {
       name: "Teste",
       description: "produto teste que resolve tudo",
       price: 145,
-      image: "/objects/uploads/96407282-d835-43cc-a199-1b6a56d3de0f",
+      image: "/uploads/96407282-d835-43cc-a199-1b6a56d3de0f",
       category: "Proteção",
       inStock: true,
       images: [] as string[],
@@ -87,12 +87,12 @@ async function main() {
       name: "Lava Auto V Floc  Vonixx",
       description: "V-Floc é um lava autos de alta performance e de pH neutro. Sua fórmula contém agentes condicionadores e tensoativos especiais que proporcionam uma lavagem suave e eficiente. V-Floc tem alto grau de lubrificação, promovendo redução significativa do coeficiente de atrito, proporcionando um melhor deslize da luva microfibra e reduzindo de forma efetiva as chances de microrriscos na pintura. V-Floc também promove brilho e aspecto de renovação da pintura.",
       price: 25,
-      image: "/objects/uploads/49ac1dc8-3ce7-4fae-984d-b4f9a74fd0d7",
+      image: "/uploads/49ac1dc8-3ce7-4fae-984d-b4f9a74fd0d7",
       category: "Lava Autos",
       inStock: true,
       images: [
-        "/objects/uploads/99367266-428c-4e41-8cd9-91fabb6ba441",
-        "/objects/uploads/9deb0d35-1af9-4628-bc9a-3c2e443f36a5",
+        "/uploads/99367266-428c-4e41-8cd9-91fabb6ba441",
+        "/uploads/9deb0d35-1af9-4628-bc9a-3c2e443f36a5",
       ],
       createdAt: new Date("2026-01-27T15:33:41.022Z"),
     },
@@ -109,7 +109,7 @@ Remoção de barro e lama - Até 1:50
 -Remove barro e lama
 -Poder desengraxante`,
       price: 65,
-      image: "/objects/uploads/ca6da495-1518-4cdb-9afa-215a63590199",
+      image: "/uploads/ca6da495-1518-4cdb-9afa-215a63590199",
       category: "Lava Autos",
       inStock: true,
       images: [] as string[],
@@ -129,12 +129,12 @@ Modo de usar
 2. Enxágue em seguida até remover toda a espuma
 3. Para melhor resultado, seque o veículo com a toalha de secagem`,
       price: 21,
-      image: "/objects/uploads/ab003d14-2139-4c40-b107-01ec9ed4b83d",
+      image: "/uploads/ab003d14-2139-4c40-b107-01ec9ed4b83d",
       category: "Lava Autos",
       inStock: true,
       images: [
-        "/objects/uploads/2cc05a7b-58f8-4a72-993f-7f82641a7cfe",
-        "/objects/uploads/0251cd0c-2527-47e1-847e-8bc69ab252eb",
+        "/uploads/2cc05a7b-58f8-4a72-993f-7f82641a7cfe",
+        "/uploads/0251cd0c-2527-47e1-847e-8bc69ab252eb",
       ],
       createdAt: new Date("2026-01-27T19:31:43.454Z"),
     },
@@ -143,10 +143,10 @@ Modo de usar
       name: "LAVA AUTO V MOL VONIXX",
       description: `V-Mol é um lava autos biodegradável com pH levemente básico que não agride a superfície. Ideal para  lavagem de automóveis, em especial para remoção de sujeiras mais difíceis, como remoção de barro e óleo. Agora com aroma cereja intensa!`,
       price: 20,
-      image: "/objects/uploads/faf1d77b-1d07-4f5f-9239-4afe39af7d61",
+      image: "/uploads/faf1d77b-1d07-4f5f-9239-4afe39af7d61",
       category: "Lava Autos",
       inStock: true,
-      images: ["/objects/uploads/2f0b871d-d58d-4295-8bff-340b9522b9be"],
+      images: ["/uploads/2f0b871d-d58d-4295-8bff-340b9522b9be"],
       createdAt: new Date("2026-02-05T19:15:16.018Z"),
     },
     {
@@ -160,7 +160,7 @@ Sua fórmula inovadora remove sujeiras difíceis como graxa, óleo, lama e outra
 
 Com alta capacidade de diluição, o Det Mol garante um excelente rendimento, tornando a limpeza mais econômica e eficiente.`,
       price: 30,
-      image: "/objects/uploads/eddc0ff3-a4f9-48df-b426-634cd00aa7e4",
+      image: "/uploads/eddc0ff3-a4f9-48df-b426-634cd00aa7e4",
       category: "Lava Autos",
       inStock: true,
       images: [] as string[],
@@ -171,10 +171,10 @@ Com alta capacidade de diluição, o Det Mol garante um excelente rendimento, to
       name: "LAVA AUTO CITRON 1,5 VONIXX",
       description: `Sua poderosa fórmula combina tensoativos especiais e solventes naturais extraídos cuidadosamente de cascas de laranja. Com uma ação de lavagem pesada, Citron é a escolha ideal para eliminar graxa, matéria orgânica e ceras, proporcionando uma limpeza profunda e impecável à pintura do seu automóvel.`,
       price: 45.9,
-      image: "/objects/uploads/64d3a465-4925-4684-bed1-a59762d84913",
+      image: "/uploads/64d3a465-4925-4684-bed1-a59762d84913",
       category: "Lava Autos",
       inStock: true,
-      images: ["/objects/uploads/853c9daa-4c52-4d11-9c78-c721c201bd79"],
+      images: ["/uploads/853c9daa-4c52-4d11-9c78-c721c201bd79"],
       createdAt: new Date("2026-02-05T19:23:07.983Z"),
     },
   ];
