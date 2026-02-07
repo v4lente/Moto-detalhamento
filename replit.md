@@ -32,10 +32,17 @@ The server follows a modular pattern:
 - `server/static.ts` - Static file serving for production builds
 
 ### Data Models
-Three main entities defined in `shared/schema.ts`:
-1. **Users** - Admin authentication (id, username, password)
-2. **Products** - Product catalog (name, description, price, image, category)
-3. **SiteSettings** - Configurable site content (WhatsApp number, hero text, branding)
+Entities defined in `shared/schema.ts`:
+1. **Users** - Admin authentication (id, username, password, role)
+2. **Products** - Product catalog (name, description, price, image, images, category)
+3. **ProductVariations** - Size/volume variants with individual prices
+4. **SiteSettings** - Configurable site content (WhatsApp number, hero text, branding)
+5. **Customers** - Customer accounts (email, phone, name, address)
+6. **Orders** / **OrderItems** - Order tracking with WhatsApp message
+7. **Reviews** - Product reviews with ratings
+8. **ServicePosts** - Gallery of completed services
+9. **OfferedServices** - Services available for hiring
+10. **Appointments** - Service scheduling system
 
 ### Key Design Patterns
 - **Shared Schema**: Drizzle schemas in `shared/` are used by both frontend (via Zod validation) and backend
@@ -46,12 +53,31 @@ Three main entities defined in `shared/schema.ts`:
 
 ### Database
 - **PostgreSQL** - Primary data store, connection via `DATABASE_URL` environment variable
-- **Drizzle Kit** - Schema management with `npm run db:push` for quick changes
+- **Drizzle Kit** - Schema management
 - **Migrations** - Programmatic migrations via `drizzle-orm/node-postgres/migrator`
   - Migrations stored in `migrations/` folder
-  - Run `npx drizzle-kit generate` to create new migrations
   - Migrations run automatically on server startup
   - Existing databases are detected and baseline migrations are marked as applied
+
+### Database Commands
+- `npm run db:push` — Sync schema to database (fast, for development)
+- `npm run db:generate` — Generate SQL migration file from schema changes
+- `npm run db:migrate` — Apply pending migrations
+- `npm run db:seed` — Insert production data (preserves existing)
+- `npm run db:seed:fresh` — Clean all tables + insert production data
+- `npm run db:setup` — Full setup: migrate + seed fresh
+
+### Image Storage
+- Images stored locally in `public/uploads/` (portable, no external dependency)
+- Upload endpoint: `POST /api/uploads/local` (multer, FormData)
+- Served via Express static: `/uploads/filename`
+- Seed includes all production image references
+
+### Data Portability
+To migrate to a new environment:
+1. Copy `public/uploads/` folder (all images)
+2. Set `DATABASE_URL` environment variable
+3. Run `npm run db:setup` (creates tables + seeds data)
 
 ### Third-Party Services
 - **WhatsApp Business API** - Checkout redirects customers to WhatsApp with pre-filled order message
