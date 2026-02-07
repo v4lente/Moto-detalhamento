@@ -27,6 +27,9 @@ app.use(express.urlencoded({ extended: false }));
 import path from "path";
 app.use("/assets", express.static(path.resolve(process.cwd(), "attached_assets")));
 
+// Serve uploaded images from public/uploads/
+app.use("/uploads", express.static(path.resolve(process.cwd(), "public/uploads")));
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",

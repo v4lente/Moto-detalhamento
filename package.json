@@ -9,7 +9,12 @@
     "build": "tsx script/build.ts",
     "start": "cross-env NODE_ENV=production node --env-file=.env dist/index.cjs",
     "check": "tsc",
-    "db:push": "tsx --env-file=.env node_modules/.bin/drizzle-kit push"
+    "db:push": "tsx --env-file=.env node_modules/.bin/drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx db/migrate.ts",
+    "db:seed": "tsx seed.ts",
+    "db:seed:fresh": "tsx seed.ts --fresh",
+    "db:setup": "npm run db:migrate && npm run db:seed:fresh"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
@@ -43,6 +48,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.60.5",
+    "@types/multer": "^2.0.0",
     "@uppy/aws-s3": "^5.1.0",
     "@uppy/core": "^5.2.0",
     "@uppy/dashboard": "^5.1.0",
@@ -62,6 +68,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.545.0",
     "memorystore": "^1.6.7",
+    "multer": "^2.0.2",
     "next-themes": "^0.4.6",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",

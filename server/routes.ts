@@ -2,11 +2,13 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProductSchema, insertProductVariationSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
-import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { sendNewCustomerNotification, sendAppointmentRequestNotification, sendAppointmentStatusUpdateNotification } from "./email";
 
@@ -1205,7 +1207,33 @@ export async function registerRoutes(
     }
   });
 
-  registerObjectStorageRoutes(app);
+  const uploadsDir = path.resolve(process.cwd(), "public/uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, uploadsDir),
+      filename: (_req, _file, cb) => cb(null, `${randomUUID()}.jpg`),
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith("image/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Apenas imagens são permitidas"));
+      }
+    },
+  });
+
+  app.post("/api/uploads/local", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
+    const filePath = `/uploads/${req.file.filename}`;
+    res.json({ filePath });
+  });
 
   return httpServer;
 }
