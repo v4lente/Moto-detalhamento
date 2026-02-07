@@ -1,0 +1,1574 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-02-06T23:41:32.002Z",
+  "stack": {
+    "primaryLanguage": "typescript",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [],
+    "buildTools": [
+      "vite"
+    ],
+    "testFrameworks": [],
+    "packageManager": "npm",
+    "isMonorepo": false,
+    "hasDocker": false,
+    "hasCI": false
+  },
+  "structure": {
+    "totalFiles": 130,
+    "topDirectories": [
+      {
+        "name": "AGENTS.md",
+        "fileCount": 1
+      },
+      {
+        "name": "attached_assets",
+        "fileCount": 17
+      },
+      {
+        "name": "client",
+        "fileCount": 85
+      },
+      {
+        "name": "components.json",
+        "fileCount": 1
+      },
+      {
+        "name": "db",
+        "fileCount": 2
+      },
+      {
+        "name": "drizzle.config.ts",
+        "fileCount": 1
+      },
+      {
+        "name": "migrations",
+        "fileCount": 3
+      },
+      {
+        "name": "package-lock.json",
+        "fileCount": 1
+      },
+      {
+        "name": "package.json",
+        "fileCount": 1
+      },
+      {
+        "name": "postcss.config.js",
+        "fileCount": 1
+      },
+      {
+        "name": "README.md",
+        "fileCount": 1
+      },
+      {
+        "name": "replit.md",
+        "fileCount": 1
+      },
+      {
+        "name": "script",
+        "fileCount": 1
+      },
+      {
+        "name": "server",
+        "fileCount": 10
+      },
+      {
+        "name": "shared",
+        "fileCount": 1
+      },
+      {
+        "name": "tsconfig.json",
+        "fileCount": 1
+      },
+      {
+        "name": "vite-plugin-meta-images.ts",
+        "fileCount": 1
+      },
+      {
+        "name": "vite.config.ts",
+        "fileCount": 1
+      }
+    ],
+    "languageDistribution": [
+      {
+        "extension": ".tsx",
+        "count": 76
+      },
+      {
+        "extension": ".ts",
+        "count": 22
+      },
+      {
+        "extension": ".png",
+        "count": 16
+      },
+      {
+        "extension": ".json",
+        "count": 6
+      },
+      {
+        "extension": ".md",
+        "count": 3
+      },
+      {
+        "extension": ".js",
+        "count": 1
+      },
+      {
+        "extension": ".sql",
+        "count": 1
+      },
+      {
+        "extension": ".html",
+        "count": 1
+      },
+      {
+        "extension": ".jpeg",
+        "count": 1
+      },
+      {
+        "extension": ".txt",
+        "count": 1
+      }
+    ]
+  },
+  "architecture": {
+    "layers": [
+      {
+        "name": "Models",
+        "description": "Data structures and domain objects",
+        "directories": [
+          "shared"
+        ],
+        "symbolCount": 26,
+        "dependsOn": []
+      },
+      {
+        "name": "Controllers",
+        "description": "Request handling and routing",
+        "directories": [
+          "server",
+          "server\\replit_integrations\\object_storage",
+          "client\\src\\lib"
+        ],
+        "symbolCount": 72,
+        "dependsOn": []
+      },
+      {
+        "name": "Utils",
+        "description": "Shared utilities and helpers",
+        "directories": [
+          "client\\src\\lib"
+        ],
+        "symbolCount": 13,
+        "dependsOn": []
+      },
+      {
+        "name": "Components",
+        "description": "UI components and views",
+        "directories": [
+          "client\\src\\pages",
+          "client\\src\\components",
+          "client\\src\\components\\ui"
+        ],
+        "symbolCount": 206,
+        "dependsOn": []
+      }
+    ],
+    "patterns": [
+      {
+        "name": "Service Layer",
+        "confidence": 0.85,
+        "description": "Encapsulates business logic in service classes",
+        "occurrences": 1
+      }
+    ],
+    "entryPoints": [
+      "server\\index.ts",
+      "db\\index.ts",
+      "server\\replit_integrations\\object_storage\\index.ts",
+      "client\\src\\main.tsx"
+    ]
+  },
+  "symbols": {
+    "classes": [
+      {
+        "name": "DatabaseStorage",
+        "kind": "class",
+        "file": "server\\storage.ts",
+        "line": 85,
+        "exported": true
+      },
+      {
+        "name": "ObjectNotFoundError",
+        "kind": "class",
+        "file": "server\\replit_integrations\\object_storage\\objectStorage.ts",
+        "line": 33,
+        "exported": true
+      },
+      {
+        "name": "ObjectStorageService",
+        "kind": "class",
+        "file": "server\\replit_integrations\\object_storage\\objectStorage.ts",
+        "line": 42,
+        "exported": true
+      },
+      {
+        "name": "BaseObjectAccessGroup",
+        "kind": "class",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 75,
+        "exported": false
+      }
+    ],
+    "interfaces": [
+      {
+        "name": "BadgeProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\badge.tsx",
+        "line": 33,
+        "exported": true
+      },
+      {
+        "name": "ButtonProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\button.tsx",
+        "line": 45,
+        "exported": true
+      },
+      {
+        "name": "CheckoutResult",
+        "kind": "interface",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 254,
+        "exported": true
+      },
+      {
+        "name": "CustomerData",
+        "kind": "interface",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 175,
+        "exported": true
+      },
+      {
+        "name": "IStorage",
+        "kind": "interface",
+        "file": "server\\storage.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "ObjectAccessGroup",
+        "kind": "interface",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 18,
+        "exported": true
+      },
+      {
+        "name": "ObjectAclPolicy",
+        "kind": "interface",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 52,
+        "exported": true
+      },
+      {
+        "name": "ObjectAclRule",
+        "kind": "interface",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 43,
+        "exported": true
+      },
+      {
+        "name": "ProductWithStats",
+        "kind": "interface",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 463,
+        "exported": true
+      },
+      {
+        "name": "RecentReview",
+        "kind": "interface",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 505,
+        "exported": true
+      },
+      {
+        "name": "ReviewsResponse",
+        "kind": "interface",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 478,
+        "exported": true
+      },
+      {
+        "name": "AdminNavItem",
+        "kind": "interface",
+        "file": "client\\src\\components\\admin-navbar.tsx",
+        "line": 22,
+        "exported": false
+      },
+      {
+        "name": "AdminTabProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\admin-navbar.tsx",
+        "line": 41,
+        "exported": false
+      },
+      {
+        "name": "CartContextType",
+        "kind": "interface",
+        "file": "client\\src\\lib\\cart.tsx",
+        "line": 12,
+        "exported": false
+      },
+      {
+        "name": "CartItem",
+        "kind": "interface",
+        "file": "client\\src\\lib\\cart.tsx",
+        "line": 5,
+        "exported": false
+      },
+      {
+        "name": "CheckoutDialogProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\checkout-dialog.tsx",
+        "line": 19,
+        "exported": false
+      },
+      {
+        "name": "CreatableSelectProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\creatable-select.tsx",
+        "line": 15,
+        "exported": false
+      },
+      {
+        "name": "DatePickerProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\date-picker.tsx",
+        "line": 17,
+        "exported": false
+      },
+      {
+        "name": "DateTimePickerProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\datetime-picker.tsx",
+        "line": 19,
+        "exported": false
+      },
+      {
+        "name": "FooterProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\layout.tsx",
+        "line": 177,
+        "exported": false
+      },
+      {
+        "name": "ImageUploadProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ImageUpload.tsx",
+        "line": 8,
+        "exported": false
+      },
+      {
+        "name": "IncomingMessage",
+        "kind": "interface",
+        "file": "server\\index.ts",
+        "line": 11,
+        "exported": false
+      },
+      {
+        "name": "ObjectUploaderProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ObjectUploader.tsx",
+        "line": 11,
+        "exported": false
+      },
+      {
+        "name": "ProductCardProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\product-card.tsx",
+        "line": 9,
+        "exported": false
+      },
+      {
+        "name": "SessionData",
+        "kind": "interface",
+        "file": "server\\routes.ts",
+        "line": 28,
+        "exported": false
+      },
+      {
+        "name": "SheetContentProps",
+        "kind": "interface",
+        "file": "client\\src\\components\\ui\\sheet.tsx",
+        "line": 52,
+        "exported": false
+      },
+      {
+        "name": "State",
+        "kind": "interface",
+        "file": "client\\src\\hooks\\use-toast.ts",
+        "line": 52,
+        "exported": false
+      },
+      {
+        "name": "UploadMetadata",
+        "kind": "interface",
+        "file": "client\\src\\hooks\\use-upload.ts",
+        "line": 4,
+        "exported": false
+      },
+      {
+        "name": "UploadResponse",
+        "kind": "interface",
+        "file": "client\\src\\hooks\\use-upload.ts",
+        "line": 10,
+        "exported": false
+      },
+      {
+        "name": "UseUploadOptions",
+        "kind": "interface",
+        "file": "client\\src\\hooks\\use-upload.ts",
+        "line": 16,
+        "exported": false
+      }
+    ],
+    "functions": [
+      {
+        "name": "AdminNavbar",
+        "kind": "function",
+        "file": "client\\src\\components\\admin-navbar.tsx",
+        "line": 101,
+        "exported": true
+      },
+      {
+        "name": "apiRequest",
+        "kind": "function",
+        "file": "client\\src\\lib\\queryClient.ts",
+        "line": 10,
+        "exported": true
+      },
+      {
+        "name": "canAccessObject",
+        "kind": "function",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 135,
+        "exported": true
+      },
+      {
+        "name": "CartProvider",
+        "kind": "function",
+        "file": "client\\src\\lib\\cart.tsx",
+        "line": 24,
+        "exported": true
+      },
+      {
+        "name": "CheckoutDialog",
+        "kind": "function",
+        "file": "client\\src\\components\\checkout-dialog.tsx",
+        "line": 24,
+        "exported": true
+      },
+      {
+        "name": "cn",
+        "kind": "function",
+        "file": "client\\src\\lib\\utils.ts",
+        "line": 4,
+        "exported": true
+      },
+      {
+        "name": "CreatableSelect",
+        "kind": "function",
+        "file": "client\\src\\components\\ui\\creatable-select.tsx",
+        "line": 26,
+        "exported": true
+      },
+      {
+        "name": "createAdminCustomer",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 352,
+        "exported": true
+      },
+      {
+        "name": "createAdminUser",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 415,
+        "exported": true
+      },
+      {
+        "name": "createAppointment",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 593,
+        "exported": true
+      },
+      {
+        "name": "createOfferedService",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 667,
+        "exported": true
+      },
+      {
+        "name": "createProduct",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 22,
+        "exported": true
+      },
+      {
+        "name": "createProductVariation",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 64,
+        "exported": true
+      },
+      {
+        "name": "createReview",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 491,
+        "exported": true
+      },
+      {
+        "name": "createServicePost",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 536,
+        "exported": true
+      },
+      {
+        "name": "customerLogin",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 184,
+        "exported": true
+      },
+      {
+        "name": "customerLogout",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 219,
+        "exported": true
+      },
+      {
+        "name": "customerRegister",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 198,
+        "exported": true
+      },
+      {
+        "name": "DatePicker",
+        "kind": "function",
+        "file": "client\\src\\components\\ui\\date-picker.tsx",
+        "line": 27,
+        "exported": true
+      },
+      {
+        "name": "DateTimePicker",
+        "kind": "function",
+        "file": "client\\src\\components\\ui\\datetime-picker.tsx",
+        "line": 29,
+        "exported": true
+      },
+      {
+        "name": "deleteAdminCustomer",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 392,
+        "exported": true
+      },
+      {
+        "name": "deleteAdminUser",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 451,
+        "exported": true
+      },
+      {
+        "name": "deleteAppointment",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 620,
+        "exported": true
+      },
+      {
+        "name": "deleteOfferedService",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 693,
+        "exported": true
+      },
+      {
+        "name": "deleteProduct",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 46,
+        "exported": true
+      },
+      {
+        "name": "deleteProductVariation",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 90,
+        "exported": true
+      },
+      {
+        "name": "deleteServicePost",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 562,
+        "exported": true
+      },
+      {
+        "name": "fetchAllCustomers",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 332,
+        "exported": true
+      },
+      {
+        "name": "fetchAllOfferedServices",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 649,
+        "exported": true
+      },
+      {
+        "name": "fetchAllOrders",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 296,
+        "exported": true
+      },
+      {
+        "name": "fetchAllUsers",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 405,
+        "exported": true
+      },
+      {
+        "name": "fetchAppointment",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 583,
+        "exported": true
+      },
+      {
+        "name": "fetchAppointments",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 573,
+        "exported": true
+      },
+      {
+        "name": "fetchCustomer",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 342,
+        "exported": true
+      },
+      {
+        "name": "fetchCustomerAppointments",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 630,
+        "exported": true
+      },
+      {
+        "name": "fetchCustomerOrder",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 285,
+        "exported": true
+      },
+      {
+        "name": "fetchCustomerOrders",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 275,
+        "exported": true
+      },
+      {
+        "name": "fetchFeaturedServicePosts",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 528,
+        "exported": true
+      },
+      {
+        "name": "fetchOfferedService",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 659,
+        "exported": true
+      },
+      {
+        "name": "fetchOfferedServices",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 641,
+        "exported": true
+      },
+      {
+        "name": "fetchOrderDetails",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 306,
+        "exported": true
+      },
+      {
+        "name": "fetchProduct",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 14,
+        "exported": true
+      },
+      {
+        "name": "fetchProductReviews",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 483,
+        "exported": true
+      },
+      {
+        "name": "fetchProducts",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 6,
+        "exported": true
+      },
+      {
+        "name": "fetchProductsWithStats",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 469,
+        "exported": true
+      },
+      {
+        "name": "fetchProductVariations",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 56,
+        "exported": true
+      },
+      {
+        "name": "fetchRecentReviews",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 510,
+        "exported": true
+      },
+      {
+        "name": "fetchServicePosts",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 520,
+        "exported": true
+      },
+      {
+        "name": "fetchSettings",
+        "kind": "function",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 101,
+        "exported": true
+      },
+      {
+        "name": "Footer",
+        "kind": "function",
+        "file": "client\\src\\components\\layout.tsx",
+        "line": 189,
+        "exported": true
+      }
+    ],
+    "types": [
+      {
+        "name": "Appointment",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 318,
+        "exported": true
+      },
+      {
+        "name": "ChartConfig",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\chart.tsx",
+        "line": 9,
+        "exported": true
+      },
+      {
+        "name": "CheckoutData",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 203,
+        "exported": true
+      },
+      {
+        "name": "CreateAppointment",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 319,
+        "exported": true
+      },
+      {
+        "name": "Customer",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 147,
+        "exported": true
+      },
+      {
+        "name": "InsertAppointment",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 317,
+        "exported": true
+      },
+      {
+        "name": "InsertCustomer",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 146,
+        "exported": true
+      },
+      {
+        "name": "InsertOfferedService",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 273,
+        "exported": true
+      },
+      {
+        "name": "InsertOrder",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 167,
+        "exported": true
+      },
+      {
+        "name": "InsertOrderItem",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 183,
+        "exported": true
+      },
+      {
+        "name": "InsertProduct",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 53,
+        "exported": true
+      },
+      {
+        "name": "InsertProductVariation",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 70,
+        "exported": true
+      },
+      {
+        "name": "InsertReview",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 226,
+        "exported": true
+      },
+      {
+        "name": "InsertServicePost",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 246,
+        "exported": true
+      },
+      {
+        "name": "InsertUser",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 33,
+        "exported": true
+      },
+      {
+        "name": "OfferedService",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 274,
+        "exported": true
+      },
+      {
+        "name": "Order",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 168,
+        "exported": true
+      },
+      {
+        "name": "OrderItem",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 184,
+        "exported": true
+      },
+      {
+        "name": "Product",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 54,
+        "exported": true
+      },
+      {
+        "name": "ProductVariation",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 71,
+        "exported": true
+      },
+      {
+        "name": "Review",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 227,
+        "exported": true
+      },
+      {
+        "name": "SafeUser",
+        "kind": "type",
+        "file": "client\\src\\lib\\api.ts",
+        "line": 403,
+        "exported": true
+      },
+      {
+        "name": "ServicePost",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 247,
+        "exported": true
+      },
+      {
+        "name": "SiteSettings",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 95,
+        "exported": true
+      },
+      {
+        "name": "UpdateAppointment",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 320,
+        "exported": true
+      },
+      {
+        "name": "UpdateOfferedService",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 275,
+        "exported": true
+      },
+      {
+        "name": "UpdateSiteSettings",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 96,
+        "exported": true
+      },
+      {
+        "name": "User",
+        "kind": "type",
+        "file": "shared\\schema.ts",
+        "line": 34,
+        "exported": true
+      },
+      {
+        "name": "Action",
+        "kind": "type",
+        "file": "client\\src\\hooks\\use-toast.ts",
+        "line": 34,
+        "exported": false
+      },
+      {
+        "name": "ActionType",
+        "kind": "type",
+        "file": "client\\src\\hooks\\use-toast.ts",
+        "line": 32,
+        "exported": false
+      },
+      {
+        "name": "Appointment",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 11,
+        "exported": false
+      },
+      {
+        "name": "CarouselApi",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 10,
+        "exported": false
+      },
+      {
+        "name": "CarouselApi",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 254,
+        "exported": false
+      },
+      {
+        "name": "CarouselContextProps",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 22,
+        "exported": false
+      },
+      {
+        "name": "CarouselOptions",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 12,
+        "exported": false
+      },
+      {
+        "name": "CarouselPlugin",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 13,
+        "exported": false
+      },
+      {
+        "name": "CarouselProps",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\carousel.tsx",
+        "line": 15,
+        "exported": false
+      },
+      {
+        "name": "ChartContextProps",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\chart.tsx",
+        "line": 19,
+        "exported": false
+      },
+      {
+        "name": "ControllerProps",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\form.tsx",
+        "line": 8,
+        "exported": false
+      },
+      {
+        "name": "Customer",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 6,
+        "exported": false
+      },
+      {
+        "name": "FieldPath",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\form.tsx",
+        "line": 9,
+        "exported": false
+      },
+      {
+        "name": "FieldValues",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\form.tsx",
+        "line": 10,
+        "exported": false
+      },
+      {
+        "name": "FormFieldContextValue",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\form.tsx",
+        "line": 18,
+        "exported": false
+      },
+      {
+        "name": "FormItemContextValue",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\form.tsx",
+        "line": 67,
+        "exported": false
+      },
+      {
+        "name": "OfferedService",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 12,
+        "exported": false
+      },
+      {
+        "name": "Order",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 7,
+        "exported": false
+      },
+      {
+        "name": "OrderItem",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 8,
+        "exported": false
+      },
+      {
+        "name": "PaginationLinkProps",
+        "kind": "type",
+        "file": "client\\src\\components\\ui\\pagination.tsx",
+        "line": 37,
+        "exported": false
+      },
+      {
+        "name": "Product",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 3,
+        "exported": false
+      },
+      {
+        "name": "ProductVariation",
+        "kind": "type",
+        "file": "server\\storage.ts",
+        "line": 4,
+        "exported": false
+      }
+    ],
+    "enums": [
+      {
+        "name": "ObjectAccessGroupType",
+        "kind": "enum",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 15,
+        "exported": true
+      },
+      {
+        "name": "ObjectPermission",
+        "kind": "enum",
+        "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+        "line": 38,
+        "exported": true
+      }
+    ]
+  },
+  "publicAPI": [
+    {
+      "name": "AdminNavbar",
+      "kind": "function",
+      "file": "client\\src\\components\\admin-navbar.tsx",
+      "line": 101,
+      "exported": true
+    },
+    {
+      "name": "apiRequest",
+      "kind": "function",
+      "file": "client\\src\\lib\\queryClient.ts",
+      "line": 10,
+      "exported": true
+    },
+    {
+      "name": "Appointment",
+      "kind": "type",
+      "file": "shared\\schema.ts",
+      "line": 318,
+      "exported": true
+    },
+    {
+      "name": "BadgeProps",
+      "kind": "interface",
+      "file": "client\\src\\components\\ui\\badge.tsx",
+      "line": 33,
+      "exported": true
+    },
+    {
+      "name": "ButtonProps",
+      "kind": "interface",
+      "file": "client\\src\\components\\ui\\button.tsx",
+      "line": 45,
+      "exported": true
+    },
+    {
+      "name": "canAccessObject",
+      "kind": "function",
+      "file": "server\\replit_integrations\\object_storage\\objectAcl.ts",
+      "line": 135,
+      "exported": true
+    },
+    {
+      "name": "CartProvider",
+      "kind": "function",
+      "file": "client\\src\\lib\\cart.tsx",
+      "line": 24,
+      "exported": true
+    },
+    {
+      "name": "ChartConfig",
+      "kind": "type",
+      "file": "client\\src\\components\\ui\\chart.tsx",
+      "line": 9,
+      "exported": true
+    },
+    {
+      "name": "CheckoutData",
+      "kind": "type",
+      "file": "shared\\schema.ts",
+      "line": 203,
+      "exported": true
+    },
+    {
+      "name": "CheckoutDialog",
+      "kind": "function",
+      "file": "client\\src\\components\\checkout-dialog.tsx",
+      "line": 24,
+      "exported": true
+    },
+    {
+      "name": "CheckoutResult",
+      "kind": "interface",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 254,
+      "exported": true
+    },
+    {
+      "name": "cn",
+      "kind": "function",
+      "file": "client\\src\\lib\\utils.ts",
+      "line": 4,
+      "exported": true
+    },
+    {
+      "name": "CreatableSelect",
+      "kind": "function",
+      "file": "client\\src\\components\\ui\\creatable-select.tsx",
+      "line": 26,
+      "exported": true
+    },
+    {
+      "name": "createAdminCustomer",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 352,
+      "exported": true
+    },
+    {
+      "name": "createAdminUser",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 415,
+      "exported": true
+    },
+    {
+      "name": "createAppointment",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 593,
+      "exported": true
+    },
+    {
+      "name": "CreateAppointment",
+      "kind": "type",
+      "file": "shared\\schema.ts",
+      "line": 319,
+      "exported": true
+    },
+    {
+      "name": "createOfferedService",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 667,
+      "exported": true
+    },
+    {
+      "name": "createProduct",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 22,
+      "exported": true
+    },
+    {
+      "name": "createProductVariation",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 64,
+      "exported": true
+    },
+    {
+      "name": "createReview",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 491,
+      "exported": true
+    },
+    {
+      "name": "createServicePost",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 536,
+      "exported": true
+    },
+    {
+      "name": "Customer",
+      "kind": "type",
+      "file": "shared\\schema.ts",
+      "line": 147,
+      "exported": true
+    },
+    {
+      "name": "CustomerData",
+      "kind": "interface",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 175,
+      "exported": true
+    },
+    {
+      "name": "customerLogin",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 184,
+      "exported": true
+    },
+    {
+      "name": "customerLogout",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 219,
+      "exported": true
+    },
+    {
+      "name": "customerRegister",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 198,
+      "exported": true
+    },
+    {
+      "name": "DatabaseStorage",
+      "kind": "class",
+      "file": "server\\storage.ts",
+      "line": 85,
+      "exported": true
+    },
+    {
+      "name": "DatePicker",
+      "kind": "function",
+      "file": "client\\src\\components\\ui\\date-picker.tsx",
+      "line": 27,
+      "exported": true
+    },
+    {
+      "name": "DateTimePicker",
+      "kind": "function",
+      "file": "client\\src\\components\\ui\\datetime-picker.tsx",
+      "line": 29,
+      "exported": true
+    },
+    {
+      "name": "deleteAdminCustomer",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 392,
+      "exported": true
+    },
+    {
+      "name": "deleteAdminUser",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 451,
+      "exported": true
+    },
+    {
+      "name": "deleteAppointment",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 620,
+      "exported": true
+    },
+    {
+      "name": "deleteOfferedService",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 693,
+      "exported": true
+    },
+    {
+      "name": "deleteProduct",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 46,
+      "exported": true
+    },
+    {
+      "name": "deleteProductVariation",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 90,
+      "exported": true
+    },
+    {
+      "name": "deleteServicePost",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 562,
+      "exported": true
+    },
+    {
+      "name": "fetchAllCustomers",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 332,
+      "exported": true
+    },
+    {
+      "name": "fetchAllOfferedServices",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 649,
+      "exported": true
+    },
+    {
+      "name": "fetchAllOrders",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 296,
+      "exported": true
+    },
+    {
+      "name": "fetchAllUsers",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 405,
+      "exported": true
+    },
+    {
+      "name": "fetchAppointment",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 583,
+      "exported": true
+    },
+    {
+      "name": "fetchAppointments",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 573,
+      "exported": true
+    },
+    {
+      "name": "fetchCustomer",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 342,
+      "exported": true
+    },
+    {
+      "name": "fetchCustomerAppointments",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 630,
+      "exported": true
+    },
+    {
+      "name": "fetchCustomerOrder",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 285,
+      "exported": true
+    },
+    {
+      "name": "fetchCustomerOrders",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 275,
+      "exported": true
+    },
+    {
+      "name": "fetchFeaturedServicePosts",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 528,
+      "exported": true
+    },
+    {
+      "name": "fetchOfferedService",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 659,
+      "exported": true
+    },
+    {
+      "name": "fetchOfferedServices",
+      "kind": "function",
+      "file": "client\\src\\lib\\api.ts",
+      "line": 641,
+      "exported": true
+    }
+  ],
+  "dependencies": {
+    "mostImported": [
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\db/index.ts",
+        "importedBy": 2
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\vite-plugin-meta-images.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\vite.config.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\storage.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\replit_integrations\\object_storage/index.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\email.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\routes.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\static.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\db\\index.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\server\\replit_integrations\\object_storage\\objectStorage.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\client\\src\\App.tsx",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\client\\src\\lib\\queryClient.ts",
+        "importedBy": 1
+      },
+      {
+        "file": "E:\\Projects\\Moto-detalhamento\\client\\src\\components\\checkout-dialog.tsx",
+        "importedBy": 1
+      }
+    ]
+  },
+  "stats": {
+    "totalSymbols": 385,
+    "exportedSymbols": 132,
+    "analysisTimeMs": 72
+  }
+}
