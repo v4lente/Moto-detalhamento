@@ -1,9 +1,9 @@
-import { Product, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService } from "@shared/schema";
+import { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, StripeCheckoutData as SchemaStripeCheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia } from "@shared/schema";
 
 const API_BASE = "/api";
 
 // Products
-export async function fetchProducts(): Promise<Product[]> {
+export async function fetchProducts(): Promise<ProductWithImages[]> {
   const response = await fetch(`${API_BASE}/products`);
   if (!response.ok) {
     throw new Error("Failed to fetch products");
@@ -11,7 +11,7 @@ export async function fetchProducts(): Promise<Product[]> {
   return response.json();
 }
 
-export async function fetchProduct(id: number): Promise<Product> {
+export async function fetchProduct(id: number): Promise<ProductWithImages> {
   const response = await fetch(`${API_BASE}/products/${id}`);
   if (!response.ok) {
     throw new Error("Failed to fetch product");
@@ -19,7 +19,7 @@ export async function fetchProduct(id: number): Promise<Product> {
   return response.json();
 }
 
-export async function createProduct(product: Omit<Product, "id" | "createdAt">): Promise<Product> {
+export async function createProduct(product: Omit<ProductWithImages, "id" | "createdAt">): Promise<ProductWithImages> {
   const response = await fetch(`${API_BASE}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -31,7 +31,7 @@ export async function createProduct(product: Omit<Product, "id" | "createdAt">):
   return response.json();
 }
 
-export async function updateProduct(id: number, product: Partial<Product>): Promise<Product> {
+export async function updateProduct(id: number, product: Partial<ProductWithImages>): Promise<ProductWithImages> {
   const response = await fetch(`${API_BASE}/products/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -271,6 +271,63 @@ export async function processCheckout(data: CheckoutData): Promise<CheckoutResul
   return response.json();
 }
 
+// Stripe Checkout
+export interface StripeCheckoutResult {
+  orderId: number;
+  sessionId: string;
+  checkoutUrl: string;
+  customerId: string;
+}
+
+export interface StripeCheckoutData {
+  customer: {
+    name: string;
+    phone: string;
+    email?: string;
+    nickname?: string;
+    deliveryAddress?: string;
+  };
+  items: Array<{
+    productId: number;
+    productName: string;
+    productPrice: number;
+    quantity: number;
+  }>;
+  total: number;
+  paymentMethod: "card" | "pix";
+}
+
+export async function createStripeCheckoutSession(data: StripeCheckoutData): Promise<StripeCheckoutResult> {
+  const response = await fetch(`${API_BASE}/checkout/create-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to create checkout session");
+  }
+  return response.json();
+}
+
+export interface PaymentStatusResult {
+  orderId: number;
+  status: string;
+  paymentStatus: string | null;
+  stripeStatus?: string;
+}
+
+export async function getOrderPaymentStatus(orderId: number): Promise<PaymentStatusResult> {
+  const response = await fetch(`${API_BASE}/orders/${orderId}/payment-status`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch payment status");
+  }
+  return response.json();
+}
+
 // Customer Orders
 export async function fetchCustomerOrders(): Promise<Order[]> {
   const response = await fetch(`${API_BASE}/customer/orders`, {
@@ -460,7 +517,7 @@ export async function deleteAdminUser(id: string): Promise<void> {
 }
 
 // Products with stats
-export interface ProductWithStats extends Product {
+export interface ProductWithStats extends ProductWithImages {
   avgRating: number;
   reviewCount: number;
   purchaseCount: number;
@@ -515,9 +572,7 @@ export async function fetchRecentReviews(limit: number = 6): Promise<RecentRevie
   return response.json();
 }
 
-import { ServicePost } from "@shared/schema";
-
-export async function fetchServicePosts(): Promise<ServicePost[]> {
+export async function fetchServicePosts(): Promise<ServicePostWithMedia[]> {
   const response = await fetch(`${API_BASE}/service-posts`);
   if (!response.ok) {
     throw new Error("Failed to fetch service posts");
@@ -525,7 +580,7 @@ export async function fetchServicePosts(): Promise<ServicePost[]> {
   return response.json();
 }
 
-export async function fetchFeaturedServicePosts(limit: number = 8): Promise<ServicePost[]> {
+export async function fetchFeaturedServicePosts(limit: number = 8): Promise<ServicePostWithMedia[]> {
   const response = await fetch(`${API_BASE}/service-posts/featured?limit=${limit}`);
   if (!response.ok) {
     throw new Error("Failed to fetch featured service posts");
@@ -533,7 +588,7 @@ export async function fetchFeaturedServicePosts(limit: number = 8): Promise<Serv
   return response.json();
 }
 
-export async function createServicePost(post: Omit<ServicePost, "id" | "createdAt">): Promise<ServicePost> {
+export async function createServicePost(post: Omit<ServicePostWithMedia, "id" | "createdAt">): Promise<ServicePostWithMedia> {
   const response = await fetch(`${API_BASE}/service-posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -546,7 +601,7 @@ export async function createServicePost(post: Omit<ServicePost, "id" | "createdA
   return response.json();
 }
 
-export async function updateServicePost(id: number, post: Partial<ServicePost>): Promise<ServicePost> {
+export async function updateServicePost(id: number, post: Partial<ServicePostWithMedia>): Promise<ServicePostWithMedia> {
   const response = await fetch(`${API_BASE}/service-posts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

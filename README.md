@@ -60,7 +60,7 @@ A aplicação segue uma arquitetura monolítica moderna com separação clara en
 ┌───────────────────────────┼─────────────────────────────────┐
 │                      Backend (Express)                       │
 │  ┌─────────┐  ┌─────────┐  ┌─────────────┐  ┌────────────┐  │
-│  │ Routes  │──│ Storage │──│ Drizzle ORM │──│ PostgreSQL │  │
+│  │ Routes  │──│ Storage │──│ Drizzle ORM │──│   MySQL    │  │
 │  └─────────┘  └─────────┘  └─────────────┘  └────────────┘  │
 │                                                              │
 │  ┌─────────────────┐  ┌──────────────────┐                  │
@@ -103,7 +103,7 @@ A aplicação segue uma arquitetura monolítica moderna com separação clara en
 | Express.js | 5.x | Framework HTTP |
 | TypeScript | 5.6 | Tipagem estática |
 | Drizzle ORM | 0.39 | Object-Relational Mapping |
-| PostgreSQL | - | Banco de dados relacional |
+| MySQL | 8.x | Banco de dados relacional |
 | express-session | 1.x | Gerenciamento de sessões |
 | Passport.js | 0.7 | Autenticação |
 | Resend | 4.x | Envio de emails |
@@ -229,9 +229,19 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
   description: string
   price: number
   image: string (URL principal)
-  images: string[] (URLs adicionais)
   category: string
   inStock: boolean
+  createdAt: timestamp
+}
+```
+
+### ProductImages (Imagens de Produtos - Tabela Normalizada)
+```typescript
+{
+  id: serial
+  productId: number (FK)
+  imageUrl: string
+  sortOrder: number
   createdAt: timestamp
 }
 ```
@@ -312,9 +322,19 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
   description: string?
   clientName: string?
   vehicleInfo: string?
-  mediaUrls: string[]
-  mediaTypes: string[]
-  isHighlight: boolean
+  featured: boolean
+  createdAt: timestamp
+}
+```
+
+### ServicePostMedia (Mídia de Posts - Tabela Normalizada)
+```typescript
+{
+  id: serial
+  servicePostId: number (FK)
+  mediaUrl: string
+  mediaType: string ('image' | 'video')
+  sortOrder: number
   createdAt: timestamp
 }
 ```
@@ -440,8 +460,39 @@ Isso criará um novo arquivo SQL em `/migrations/` com as alterações.
 ### Aplicar Migrações Manualmente
 
 ```bash
-npx drizzle-kit migrate
+npm run db:migrate
 ```
+
+Ou via Drizzle Kit: `npx drizzle-kit migrate`
+
+### Rodar a aplicação com dados de seed
+
+Para popular o banco com dados iniciais (configurações do site, usuários, produtos, clientes, pedidos):
+
+1. **Configurar** `DATABASE_URL` no `.env`.
+2. **Setup completo** (aplica migrações + limpa tabelas + insere seed):
+
+```bash
+npm run db:setup
+```
+
+3. **Subir a aplicação**:
+
+```bash
+npm run dev
+```
+
+O servidor sobe na porta 5000; as migrações rodam na subida. O seed já terá inserido configurações, usuários, produtos, variações, clientes e pedidos de exemplo.
+
+**Comandos de seed:**
+
+| Comando | Descrição |
+|--------|-----------|
+| `npm run db:seed` | Insere dados sem apagar os existentes (ON CONFLICT DO NOTHING) |
+| `npm run db:seed:fresh` | **Apaga** todas as tabelas na ordem correta e insere do zero |
+| `npm run db:setup` | `db:migrate` + `db:seed:fresh` (recomendado para ambiente limpo) |
+
+As imagens referenciadas pelo seed estão em `public/uploads/`. Senhas dos usuários no seed são hashes reais (logins preservados).
 
 ### Desenvolvimento Rápido (Push Direto)
 
@@ -470,10 +521,13 @@ npm run build         # Compila frontend e backend
 npm run start         # Inicia servidor de produção
 
 # Banco de Dados
-npm run db:push       # Aplica schema diretamente (dev rápido)
-npx drizzle-kit generate  # Gera nova migração SQL
-npx drizzle-kit migrate   # Aplica migrações pendentes
-npx drizzle-kit studio    # Interface visual do banco
+npm run db:push         # Aplica schema diretamente (dev rápido)
+npm run db:generate     # Gera nova migração SQL
+npm run db:migrate      # Aplica migrações pendentes
+npm run db:seed         # Insere dados de seed (preserva existentes)
+npm run db:seed:fresh   # Limpa tabelas e insere seed do zero
+npm run db:setup        # db:migrate + db:seed:fresh (setup completo)
+npx drizzle-kit studio  # Interface visual do banco
 
 # Qualidade
 npm run check         # Verifica tipos TypeScript
@@ -485,7 +539,7 @@ npm run check         # Verifica tipos TypeScript
 
 | Variável | Obrigatória | Descrição |
 |----------|-------------|-----------|
-| `DATABASE_URL` | Sim | URL de conexão PostgreSQL |
+| `DATABASE_URL` | Sim | URL de conexão MySQL |
 | `SESSION_SECRET` | Não | Chave para sessões (gerada automaticamente) |
 | `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Não | ID do bucket para uploads |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | Não | Caminhos públicos do storage |

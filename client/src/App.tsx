@@ -11,6 +11,8 @@ import Conta from "@/pages/conta";
 import Produtos from "@/pages/produtos";
 import Produto from "@/pages/produto";
 import Agendar from "@/pages/agendar";
+import CheckoutSuccess from "@/pages/checkout-success";
+import CheckoutCancel from "@/pages/checkout-cancel";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/produtos" component={Produtos} />
       <Route path="/produto/:id" component={Produto} />
       <Route path="/agendar" component={Agendar} />
+      <Route path="/pedido/sucesso" component={CheckoutSuccess} />
+      <Route path="/pedido/cancelado" component={CheckoutCancel} />
       <Route component={NotFound} />
     </Switch>
   );

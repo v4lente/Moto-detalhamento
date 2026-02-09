@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { processCheckout, getCurrentCustomer, fetchSettings } from "@/lib/api";
+import { processCheckout, createStripeCheckoutSession, getCurrentCustomer, fetchSettings } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { useToast } from "@/hooks/use-toast";
+import { isStripeAvailable, redirectToCheckout } from "@/lib/stripe";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, User, Mail, MapPin, Loader2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Phone, User, Mail, MapPin, Loader2, CreditCard, QrCode } from "lucide-react";
 import { Link } from "wouter";
+
+type PaymentMethod = "whatsapp" | "card" | "pix";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -25,6 +29,9 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const { items, cartTotal, clearCart } = useCart();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("whatsapp");
 
   const { data: customer } = useQuery({
     queryKey: ["customer"],
@@ -44,7 +51,13 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     deliveryAddress: "",
   });
 
-  const checkoutMutation = useMutation({
+  // Check if Stripe is available on mount
+  useEffect(() => {
+    isStripeAvailable().then(setStripeEnabled);
+  }, []);
+
+  // WhatsApp checkout mutation
+  const whatsappCheckoutMutation = useMutation({
     mutationFn: processCheckout,
     onSuccess: (result) => {
       const phoneNumber = settings?.whatsappNumber || "5511999999999";
@@ -55,6 +68,30 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       onOpenChange(false);
       toast({ title: "Pedido enviado com sucesso!" });
       queryClient.invalidateQueries({ queryKey: ["customer"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Stripe checkout mutation
+  const stripeCheckoutMutation = useMutation({
+    mutationFn: createStripeCheckoutSession,
+    onSuccess: async (result) => {
+      try {
+        // Redirect to Stripe Checkout using the checkout URL
+        if (result.checkoutUrl) {
+          await redirectToCheckout(result.checkoutUrl);
+        } else {
+          throw new Error("No checkout URL received");
+        }
+      } catch (error) {
+        toast({ 
+          title: "Erro", 
+          description: "Falha ao redirecionar para o pagamento", 
+          variant: "destructive" 
+        });
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -78,23 +115,37 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       deliveryAddress: formData.deliveryAddress || undefined,
     };
 
-    checkoutMutation.mutate({
-      customer: customerData,
-      items: items.map(item => ({
-        productId: item.id,
-        productName: item.variationLabel ? `${item.name} (${item.variationLabel})` : item.name,
-        productPrice: item.price,
-        quantity: item.quantity,
-      })),
-      total: cartTotal,
-    });
+    const orderItems = items.map(item => ({
+      productId: item.id,
+      productName: item.variationLabel ? `${item.name} (${item.variationLabel})` : item.name,
+      productPrice: item.price,
+      quantity: item.quantity,
+    }));
+
+    if (paymentMethod === "whatsapp") {
+      whatsappCheckoutMutation.mutate({
+        customer: customerData,
+        items: orderItems,
+        total: cartTotal,
+        paymentMethod: "whatsapp",
+      });
+    } else {
+      // For card or pix, use Stripe
+      stripeCheckoutMutation.mutate({
+        customer: customerData,
+        items: orderItems,
+        total: cartTotal,
+        paymentMethod: paymentMethod as "card" | "pix",
+      });
+    }
   };
 
   const isFormValid = customer || (formData.name.length >= 2 && formData.phone.length >= 10);
+  const isPending = whatsappCheckoutMutation.isPending || stripeCheckoutMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-card border-primary/20">
+      <DialogContent className="sm:max-w-md bg-card border-primary/20 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display uppercase tracking-widest text-primary">
             Finalizar Pedido
@@ -156,7 +207,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email (opcional)</Label>
+                <Label htmlFor="email">Email {paymentMethod !== "whatsapp" ? "*" : "(opcional)"}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -166,6 +217,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="seu@email.com"
                     className="pl-10"
+                    required={paymentMethod !== "whatsapp"}
                     data-testid="input-email"
                   />
                 </div>
@@ -195,6 +247,53 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             </>
           )}
 
+          {/* Payment Method Selection */}
+          <div className="space-y-3">
+            <Label>Forma de Pagamento</Label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+              className="grid gap-2"
+            >
+              <div className="flex items-center space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                <RadioGroupItem value="whatsapp" id="whatsapp" />
+                <Label htmlFor="whatsapp" className="flex items-center gap-2 cursor-pointer flex-1">
+                  <Phone className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="font-medium">WhatsApp</p>
+                    <p className="text-xs text-muted-foreground">Combinar pagamento via mensagem</p>
+                  </div>
+                </Label>
+              </div>
+
+              {stripeEnabled && (
+                <>
+                  <div className="flex items-center space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <RadioGroupItem value="card" id="card" />
+                    <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium">Cartão de Crédito/Débito</p>
+                        <p className="text-xs text-muted-foreground">Visa, Mastercard, Elo, Hipercard</p>
+                      </div>
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
+                    <RadioGroupItem value="pix" id="pix" />
+                    <Label htmlFor="pix" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <QrCode className="h-4 w-4 text-teal-600" />
+                      <div>
+                        <p className="font-medium">PIX</p>
+                        <p className="text-xs text-muted-foreground">Pagamento instantâneo</p>
+                      </div>
+                    </Label>
+                  </div>
+                </>
+              )}
+            </RadioGroup>
+          </div>
+
           <div className="bg-background/50 rounded-lg p-4">
             <div className="flex justify-between font-bold">
               <span>Total do Pedido</span>
@@ -204,17 +303,36 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
           <Button
             type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
-            disabled={!isFormValid || checkoutMutation.isPending}
+            className={`w-full font-bold ${
+              paymentMethod === "whatsapp" 
+                ? "bg-green-600 hover:bg-green-700" 
+                : "bg-primary hover:bg-primary/90"
+            } text-white`}
+            disabled={!isFormValid || isPending || (paymentMethod !== "whatsapp" && !formData.email && !customer?.email)}
             data-testid="button-confirm-checkout"
           >
-            {checkoutMutation.isPending ? (
+            {isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
+            ) : paymentMethod === "whatsapp" ? (
               <Phone className="mr-2 h-4 w-4" />
+            ) : paymentMethod === "card" ? (
+              <CreditCard className="mr-2 h-4 w-4" />
+            ) : (
+              <QrCode className="mr-2 h-4 w-4" />
             )}
-            Enviar Pedido pelo WhatsApp
+            {paymentMethod === "whatsapp" 
+              ? "Enviar Pedido pelo WhatsApp" 
+              : paymentMethod === "card"
+              ? "Pagar com Cartão"
+              : "Pagar com PIX"
+            }
           </Button>
+
+          {paymentMethod !== "whatsapp" && (
+            <p className="text-xs text-center text-muted-foreground">
+              Você será redirecionado para uma página segura de pagamento
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

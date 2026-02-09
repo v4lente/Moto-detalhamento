@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProductsWithStats, fetchSettings, fetchRecentReviews, fetchFeaturedServicePosts, fetchOfferedServices, fetchServicePosts } from "@/lib/api";
 import { Loader2, Settings, Star, Quote, Play, X, ChevronLeft, ChevronRight, Camera, Wrench, ExternalLink, ImageIcon } from "lucide-react";
 import { Link } from "wouter";
-import { ServicePost, OfferedService } from "@shared/schema";
+import { ServicePostWithMedia, OfferedService } from "@shared/schema";
 
 function getYouTubeId(url: string): string | null {
   const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/);
@@ -19,7 +19,7 @@ function ServiceMediaCarousel({
   servicePost, 
   onOpenModal 
 }: { 
-  servicePost: ServicePost; 
+  servicePost: ServicePostWithMedia; 
   onOpenModal: () => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -82,7 +82,7 @@ function ServiceMediaCarousel({
             <ChevronRight className="h-4 w-4" />
           </button>
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-            {mediaUrls.map((_, idx) => (
+            {mediaUrls.map((_: string, idx: number) => (
               <button
                 key={idx}
                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
@@ -127,10 +127,10 @@ export default function Home() {
     queryFn: fetchServicePosts,
   });
 
-  const [selectedService, setSelectedService] = useState<ServicePost | null>(null);
+  const [selectedService, setSelectedService] = useState<ServicePostWithMedia | null>(null);
   const [mediaIndex, setMediaIndex] = useState(0);
 
-  const openServiceModal = (service: ServicePost) => {
+  const openServiceModal = (service: ServicePostWithMedia) => {
     setSelectedService(service);
     setMediaIndex(0);
   };
@@ -452,7 +452,7 @@ export default function Home() {
                       <ChevronRight className="h-6 w-6" />
                     </Button>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                      {selectedService.mediaUrls.map((_, idx) => (
+                      {selectedService.mediaUrls.map((_: string, idx: number) => (
                         <button
                           key={idx}
                           className={`w-2 h-2 rounded-full transition-colors ${idx === mediaIndex ? 'bg-primary' : 'bg-white/50'}`}

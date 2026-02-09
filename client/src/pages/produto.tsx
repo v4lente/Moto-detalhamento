@@ -277,7 +277,7 @@ export default function Produto() {
                         <ChevronRight className="h-5 w-5" />
                       </button>
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                        {allImages.map((_, idx) => (
+                        {allImages.map((_: string, idx: number) => (
                           <button
                             key={idx}
                             onClick={() => setSelectedImage(idx === 0 ? null : allImages[idx])}
@@ -300,7 +300,7 @@ export default function Produto() {
                 >
                   <img src={product.image} alt="Principal" className="w-full h-full object-contain" />
                 </button>
-                {product.images.map((img, index) => (
+                {product.images.map((img: string, index: number) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImage(img)}

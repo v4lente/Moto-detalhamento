@@ -21,7 +21,7 @@ import {
   fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService,
   fetchProductVariations, createProductVariation, updateProductVariation, deleteProductVariation
 } from "@/lib/api";
-import { Product, ProductVariation, UpdateSiteSettings, Order, OrderItem, Customer, ServicePost, Appointment, OfferedService } from "@shared/schema";
+import { ProductWithImages, ProductVariation, UpdateSiteSettings, Order, OrderItem, Customer, ServicePostWithMedia, Appointment, OfferedService } from "@shared/schema";
 import { Plus, Pencil, Trash2, LogOut, Settings, Package, Loader2, Home, ShoppingBag, Eye, Check, X, Clock, Users, User, Phone, Mail, MapPin, Shield, Key, Camera, Play, Image, Calendar, AlertTriangle, CheckCircle, XCircle, MessageCircle, LayoutDashboard, Search, ChevronLeft, ChevronRight, Wrench, Link as LinkIcon, ToggleLeft, ToggleRight } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +34,7 @@ export default function Admin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductWithImages | null>(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
@@ -48,7 +48,7 @@ export default function Admin() {
   const [productInStock, setProductInStock] = useState(true);
   const [logoImage, setLogoImage] = useState("");
   const [backgroundImage, setBackgroundImage] = useState("");
-  const [editingServicePost, setEditingServicePost] = useState<ServicePost | null>(null);
+  const [editingServicePost, setEditingServicePost] = useState<ServicePostWithMedia | null>(null);
   const [isServicePostDialogOpen, setIsServicePostDialogOpen] = useState(false);
   const [serviceMediaUrls, setServiceMediaUrls] = useState<string[]>([]);
   const [serviceMediaTypes, setServiceMediaTypes] = useState<string[]>([]);
@@ -142,7 +142,7 @@ export default function Admin() {
   });
 
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Product> }) => updateProduct(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<ProductWithImages> }) => updateProduct(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({ title: "Produto atualizado!" });
@@ -254,7 +254,7 @@ export default function Admin() {
   });
 
   const updateServicePostMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<ServicePost> }) => updateServicePost(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<ServicePostWithMedia> }) => updateServicePost(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["servicePosts"] });
       queryClient.invalidateQueries({ queryKey: ["featuredServicePosts"] });
@@ -401,7 +401,7 @@ export default function Admin() {
     loadVariationCounts();
   }, [products]);
 
-  const handleOpenVariationsDialog = async (product: Product) => {
+  const handleOpenVariationsDialog = async (product: ProductWithImages) => {
     setVariationsProductId(product.id);
     setVariationsProductName(product.name);
     setVariationsLoading(true);
@@ -1292,6 +1292,45 @@ export default function Admin() {
                               <p className="text-sm text-muted-foreground">Cliente:</p>
                               <p className="font-medium">{order.customerName}</p>
                             </div>
+                            {/* Payment Method Badge */}
+                            <div className="flex items-center gap-2">
+                              {order.paymentMethod === "card" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                  💳 Cartão
+                                </span>
+                              )}
+                              {order.paymentMethod === "pix" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
+                                  📱 PIX
+                                </span>
+                              )}
+                              {(order.paymentMethod === "whatsapp" || !order.paymentMethod) && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                  📞 WhatsApp
+                                </span>
+                              )}
+                              {/* Payment Status Badge */}
+                              {order.paymentStatus === "paid" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                  ✓ Pago
+                                </span>
+                              )}
+                              {order.paymentStatus === "awaiting_payment" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                  ⏳ Aguardando
+                                </span>
+                              )}
+                              {order.paymentStatus === "failed" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                  ✗ Falhou
+                                </span>
+                              )}
+                              {order.paymentStatus === "refunded" && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                                  ↩ Reembolsado
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
@@ -1309,6 +1348,31 @@ export default function Admin() {
                               <SelectItem value="pending">
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-yellow-500" /> Pendente
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="awaiting_payment">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-orange-500" /> Aguard. Pgto
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="paid">
+                                <div className="flex items-center gap-2">
+                                  <Check className="h-4 w-4 text-green-500" /> Pago
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="confirmed">
+                                <div className="flex items-center gap-2">
+                                  <Check className="h-4 w-4 text-blue-500" /> Confirmado
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="shipped">
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-purple-500" /> Enviado
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="delivered">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-green-600" /> Entregue
                                 </div>
                               </SelectItem>
                               <SelectItem value="completed">

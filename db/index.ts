@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
 
@@ -8,31 +8,48 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+// Parse DATABASE_URL and configure SSL for TiDB/cloud MySQL
+const dbUrl = new URL(process.env.DATABASE_URL);
+const isTiDB = dbUrl.hostname.includes('tidbcloud.com');
+const isCloudMySQL = dbUrl.hostname.includes('railway.app') || 
+                     dbUrl.hostname.includes('planetscale.com') ||
+                     dbUrl.hostname.includes('aiven.io') ||
+                     isTiDB;
+
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  // Enable SSL for cloud MySQL providers
+  ...(isCloudMySQL && {
+    ssl: {
+      rejectUnauthorized: true,
+    },
+  }),
 });
 
 export const db = drizzle(pool);
 
 async function getAppliedMigrations(): Promise<Set<string>> {
-  const client = await pool.connect();
+  const connection = await pool.getConnection();
   try {
-    const tableExists = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = '__drizzle_migrations'
-      )
+    const [tables] = await connection.query(`
+      SELECT COUNT(*) as count FROM information_schema.tables 
+      WHERE table_schema = DATABASE() 
+      AND table_name = '__drizzle_migrations'
     `);
     
-    if (!tableExists.rows[0].exists) {
+    const tableExists = (tables as any)[0].count > 0;
+    
+    if (!tableExists) {
       return new Set();
     }
     
-    const result = await client.query('SELECT hash FROM "__drizzle_migrations"');
-    return new Set(result.rows.map(row => row.hash));
+    const [rows] = await connection.query('SELECT hash FROM `__drizzle_migrations`');
+    return new Set((rows as any[]).map(row => row.hash));
   } finally {
-    client.release();
+    connection.release();
   }
 }
 
@@ -48,35 +65,35 @@ function getPendingMigrations(): string[] {
 }
 
 async function checkCoreTablesExist(): Promise<boolean> {
-  const client = await pool.connect();
+  const connection = await pool.getConnection();
   try {
-    const result = await client.query(`
+    const [rows] = await connection.query(`
       SELECT COUNT(*) as count FROM information_schema.tables 
-      WHERE table_schema = 'public' 
+      WHERE table_schema = DATABASE() 
       AND table_name IN ('products', 'users', 'customers', 'orders')
     `);
-    return parseInt(result.rows[0].count, 10) >= 4;
+    return (rows as any)[0].count >= 4;
   } finally {
-    client.release();
+    connection.release();
   }
 }
 
 async function markMigrationAsApplied(hash: string): Promise<void> {
-  const client = await pool.connect();
+  const connection = await pool.getConnection();
   try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
-        id SERIAL PRIMARY KEY,
-        hash text NOT NULL,
-        created_at bigint
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`__drizzle_migrations\` (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        hash VARCHAR(255) NOT NULL,
+        created_at BIGINT
       )
     `);
-    await client.query(
-      'INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    await connection.query(
+      'INSERT IGNORE INTO `__drizzle_migrations` (hash, created_at) VALUES (?, ?)',
       [hash, Date.now()]
     );
   } finally {
-    client.release();
+    connection.release();
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Product } from "@shared/schema";
+import { ProductWithImages } from "@shared/schema";
 import { useCart } from "@/lib/cart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Plus, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface ProductCardProps {
-  product: Product & { avgRating?: number; reviewCount?: number };
+  product: ProductWithImages & { avgRating?: number; reviewCount?: number };
 }
 
 export function ProductCard({ product }: ProductCardProps) {

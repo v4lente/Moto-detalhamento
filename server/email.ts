@@ -1,5 +1,6 @@
 // Email service using Resend integration
 import { Resend } from 'resend';
+import { escape } from 'html-escaper';
 
 let connectionSettings: any;
 
@@ -59,9 +60,9 @@ export async function sendNewCustomerNotification(
           🏍️ Novo Cliente Cadastrado
         </h2>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 0 0 8px 8px;">
-          <p><strong>Nome:</strong> ${customerData.name}</p>
-          <p><strong>Email:</strong> ${customerData.email || 'Não informado'}</p>
-          <p><strong>Telefone:</strong> ${customerData.phone}</p>
+          <p><strong>Nome:</strong> ${escape(customerData.name)}</p>
+          <p><strong>Email:</strong> ${escape(customerData.email || 'Não informado')}</p>
+          <p><strong>Telefone:</strong> ${escape(customerData.phone)}</p>
           <p style="color: #666; font-size: 12px; margin-top: 20px;">
             Data do cadastro: ${new Date().toLocaleString('pt-BR')}
           </p>
@@ -112,12 +113,12 @@ export async function sendAppointmentRequestNotification(
           📅 Novo Pré-Agendamento de Serviço
         </h2>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 0 0 8px 8px;">
-          <p><strong>Cliente:</strong> ${appointmentData.customerName}</p>
-          <p><strong>Telefone:</strong> ${appointmentData.customerPhone}</p>
-          <p><strong>Email:</strong> ${appointmentData.customerEmail || 'Não informado'}</p>
+          <p><strong>Cliente:</strong> ${escape(appointmentData.customerName)}</p>
+          <p><strong>Telefone:</strong> ${escape(appointmentData.customerPhone)}</p>
+          <p><strong>Email:</strong> ${escape(appointmentData.customerEmail || 'Não informado')}</p>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
-          <p><strong>Veículo:</strong> ${appointmentData.vehicleInfo}</p>
-          <p><strong>Serviço Solicitado:</strong> ${appointmentData.serviceDescription}</p>
+          <p><strong>Veículo:</strong> ${escape(appointmentData.vehicleInfo)}</p>
+          <p><strong>Serviço Solicitado:</strong> ${escape(appointmentData.serviceDescription)}</p>
           <p><strong>Data Preferencial:</strong> ${formattedDate}</p>
           <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;">
           <p style="color: #e74c3c; font-weight: bold;">
@@ -176,15 +177,15 @@ export async function sendAppointmentStatusUpdateNotification(
           🏍️ Atualização do seu Agendamento
         </h2>
         <div style="background: #f5f5f5; padding: 20px; border-radius: 0 0 8px 8px;">
-          <p>Olá <strong>${appointmentData.customerName}</strong>,</p>
+          <p>Olá <strong>${escape(appointmentData.customerName)}</strong>,</p>
           <p>O status do seu agendamento foi atualizado:</p>
           <p style="font-size: 18px; color: #1a1a1a; background: #d4ff00; padding: 10px; border-radius: 4px; text-align: center;">
-            <strong>${statusLabel}</strong>
+            <strong>${escape(statusLabel)}</strong>
           </p>
-          <p><strong>Veículo:</strong> ${appointmentData.vehicleInfo}</p>
+          <p><strong>Veículo:</strong> ${escape(appointmentData.vehicleInfo)}</p>
           ${confirmedDateStr ? `<p><strong>Data Confirmada:</strong> ${confirmedDateStr}</p>` : ''}
           ${appointmentData.estimatedPrice ? `<p><strong>Valor Estimado:</strong> R$ ${appointmentData.estimatedPrice.toFixed(2)}</p>` : ''}
-          ${appointmentData.adminNotes ? `<p><strong>Observações:</strong> ${appointmentData.adminNotes}</p>` : ''}
+          ${appointmentData.adminNotes ? `<p><strong>Observações:</strong> ${escape(appointmentData.adminNotes)}</p>` : ''}
           <p style="color: #666; font-size: 12px; margin-top: 20px;">
             Daniel Valente Moto Detalhamento
           </p>

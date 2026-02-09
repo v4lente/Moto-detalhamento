@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1769792146197,
-      "tag": "0000_nebulous_lila_cheney",
+      "version": "5",
+      "when": 1770680433199,
+      "tag": "0000_perpetual_wendell_vaughn",
       "breakpoints": true
     }
   ]

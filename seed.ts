@@ -1,6 +1,6 @@
 /**
- * Seed file - Dados de produção para migração completa
- * Gerado em: 2026-02-07
+ * Seed file - Dados de produção para migração completa (MySQL)
+ * Gerado em: 2026-02-09
  * 
  * USO:
  *   npx tsx seed.ts          # Insere dados (não sobrescreve existentes)
@@ -11,10 +11,10 @@
  *   - As imagens estão em public/uploads/ (pasta local portátil)
  *   - Para migrar para outro ambiente: copie public/uploads/ + rode este seed
  *   - Ordem de inserção respeita foreign keys
- *   - Sequences são resetadas automaticamente
+ *   - AUTO_INCREMENT é resetado automaticamente
  */
 
-import pg from "pg";
+import mysql from "mysql2/promise";
 
 const FRESH_MODE = process.argv.includes("--fresh");
 
@@ -25,33 +25,44 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new pg.Pool({ connectionString: databaseUrl });
-  const client = await pool.connect();
+  const pool = mysql.createPool({
+    uri: databaseUrl,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
+
+  const connection = await pool.getConnection();
 
   console.log("╔═══════════════════════════════════════════════╗");
   console.log("║  SEED - Daniel Valente Moto Detalhamento      ║");
   console.log(`║  Modo: ${FRESH_MODE ? "FRESH (limpar e inserir)" : "INSERÇÃO (preservar existentes)"}       ║`);
+  console.log("║  Banco: MySQL                                  ║");
   console.log("╚═══════════════════════════════════════════════╝\n");
 
   try {
-    await client.query("BEGIN");
+    await connection.beginTransaction();
 
     // ============================================================
     // MODO FRESH: Limpar todas as tabelas na ordem correta (FK)
     // ============================================================
     if (FRESH_MODE) {
       console.log("🗑️  Limpando todas as tabelas...");
-      await client.query("DELETE FROM order_items");
-      await client.query("DELETE FROM orders");
-      await client.query("DELETE FROM reviews");
-      await client.query("DELETE FROM appointments");
-      await client.query("DELETE FROM offered_services");
-      await client.query("DELETE FROM service_posts");
-      await client.query("DELETE FROM product_variations");
-      await client.query("DELETE FROM products");
-      await client.query("DELETE FROM customers");
-      await client.query("DELETE FROM users");
-      await client.query("DELETE FROM site_settings");
+      await connection.query("SET FOREIGN_KEY_CHECKS = 0");
+      await connection.query("DELETE FROM order_items");
+      await connection.query("DELETE FROM orders");
+      await connection.query("DELETE FROM reviews");
+      await connection.query("DELETE FROM appointments");
+      await connection.query("DELETE FROM offered_services");
+      await connection.query("DELETE FROM service_post_media");
+      await connection.query("DELETE FROM service_posts");
+      await connection.query("DELETE FROM product_variations");
+      await connection.query("DELETE FROM product_images");
+      await connection.query("DELETE FROM products");
+      await connection.query("DELETE FROM customers");
+      await connection.query("DELETE FROM users");
+      await connection.query("DELETE FROM site_settings");
+      await connection.query("SET FOREIGN_KEY_CHECKS = 1");
       console.log("  ✓ Todas as tabelas limpas\n");
     }
 
@@ -59,24 +70,24 @@ async function main() {
     // 1. SITE SETTINGS
     // ============================================================
     console.log("→ Configurações do site...");
-    await client.query(`
+    await connection.query(`
       INSERT INTO site_settings (id, whatsapp_number, site_name, site_tagline, hero_title, hero_title_line2, hero_subtitle, footer_text, copyright_text, logo_image, background_image, business_address, instagram_url, facebook_url, youtube_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (id) DO UPDATE SET
-        whatsapp_number = EXCLUDED.whatsapp_number,
-        site_name = EXCLUDED.site_name,
-        site_tagline = EXCLUDED.site_tagline,
-        hero_title = EXCLUDED.hero_title,
-        hero_title_line2 = EXCLUDED.hero_title_line2,
-        hero_subtitle = EXCLUDED.hero_subtitle,
-        footer_text = EXCLUDED.footer_text,
-        copyright_text = EXCLUDED.copyright_text,
-        logo_image = EXCLUDED.logo_image,
-        background_image = EXCLUDED.background_image,
-        business_address = EXCLUDED.business_address,
-        instagram_url = EXCLUDED.instagram_url,
-        facebook_url = EXCLUDED.facebook_url,
-        youtube_url = EXCLUDED.youtube_url
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        whatsapp_number = VALUES(whatsapp_number),
+        site_name = VALUES(site_name),
+        site_tagline = VALUES(site_tagline),
+        hero_title = VALUES(hero_title),
+        hero_title_line2 = VALUES(hero_title_line2),
+        hero_subtitle = VALUES(hero_subtitle),
+        footer_text = VALUES(footer_text),
+        copyright_text = VALUES(copyright_text),
+        logo_image = VALUES(logo_image),
+        background_image = VALUES(background_image),
+        business_address = VALUES(business_address),
+        instagram_url = VALUES(instagram_url),
+        facebook_url = VALUES(facebook_url),
+        youtube_url = VALUES(youtube_url)
     `, [
       1,
       "+55 53 981047948",
@@ -87,8 +98,8 @@ async function main() {
       "Cuidado profissional para seu carro ou moto. Utilizamos e vendemos apenas os melhores produtos do mercado mundial.",
       "Daniel Valente Moto Detalhamento\nLoja especializada na venda de produtos automotivos para estética automotiva e lavagens, trabalhando com as melhores marcas e produtos do mercado. Além disso, oferecemos serviço de detalhamento premium em motocicletas, unindo qualidade, técnica e alto padrão de acabamento.",
       "© 2026 Daniel Valente Moto Detalhamento. Todos os direitos reservados.",
-      "/uploads/8b045942-99e9-4967-96a0-12f986c903cb",
-      "/uploads/9797a2e7-1b7d-42ba-8140-217a7a87c187",
+      "/uploads/8b045942-99e9-4967-96a0-12f986c903cb.jpg",
+      "/uploads/9797a2e7-1b7d-42ba-8140-217a7a87c187.jpg",
       "Daniel Valente Moto Detalhamento, R. Dr. Amarante, 1289 - Centro, Pelotas - RS, 96020-720",
       "https://www.instagram.com/danielvalenteprodutos/",
       "",
@@ -132,16 +143,15 @@ async function main() {
     ];
 
     for (const u of users) {
-      await client.query(`
-        INSERT INTO users (id, username, password, role, created_at)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (id) DO NOTHING
+      await connection.query(`
+        INSERT IGNORE INTO users (id, username, password, role, created_at)
+        VALUES (?, ?, ?, ?, ?)
       `, [u.id, u.username, u.password, u.role, u.created_at]);
     }
     console.log(`  ✓ ${users.length} usuários inseridos\n`);
 
     // ============================================================
-    // 3. PRODUCTS
+    // 3. PRODUCTS (sem o campo images - agora normalizado)
     // ============================================================
     console.log("→ Produtos...");
     const products = [
@@ -150,10 +160,10 @@ async function main() {
         name: "Teste",
         description: "produto teste que resolve tudo",
         price: 145,
-        image: "/uploads/96407282-d835-43cc-a199-1b6a56d3de0f",
+        image: "/uploads/96407282-d835-43cc-a199-1b6a56d3de0f.jpg",
         category: "Proteção",
         in_stock: true,
-        images: "{}",
+        images: [],
         created_at: "2026-01-26T12:16:38.356Z",
       },
       {
@@ -161,10 +171,10 @@ async function main() {
         name: "Lava Auto V Floc  Vonixx",
         description: "V-Floc é um lava autos de alta performance e de pH neutro. Sua fórmula contém agentes condicionadores e tensoativos especiais que proporcionam uma lavagem suave e eficiente. V-Floc tem alto grau de lubrificação, promovendo redução significativa do coeficiente de atrito, proporcionando um melhor deslize da luva microfibra e reduzindo de forma efetiva as chances de microrriscos na pintura. V-Floc também promove brilho e aspecto de renovação da pintura.",
         price: 25,
-        image: "/uploads/49ac1dc8-3ce7-4fae-984d-b4f9a74fd0d7",
+        image: "/uploads/49ac1dc8-3ce7-4fae-984d-b4f9a74fd0d7.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{/uploads/99367266-428c-4e41-8cd9-91fabb6ba441,/uploads/9deb0d35-1af9-4628-bc9a-3c2e443f36a5}",
+        images: ["/uploads/99367266-428c-4e41-8cd9-91fabb6ba441.jpg", "/uploads/9deb0d35-1af9-4628-bc9a-3c2e443f36a5.jpg"],
         created_at: "2026-01-27T15:33:41.022Z",
       },
       {
@@ -172,10 +182,10 @@ async function main() {
         name: "lava auto moto- V  Vonixx",
         description: "Moto-V é um lava-motos, desenvolvido para limpeza de alta eficiência. Sua formulação equilibrada permite uso, sem agredir, em todas as partes da motocicleta, seja motor, pintura, metais ou plásticos. As possíveis diluições do produto proporcionam ao mesmo a remoção dos mais diversos tipos de sujeira, como barro, lama, graxa e óleo.\n\nDiluição\nRemoção de graxa e óleo - Até 1:10\nLavagem diária da pintura - Até 1:20\nRemoção de barro e lama - Até 1:50\n\n-Remove barro e lama\n-Poder desengraxante",
         price: 65,
-        image: "/uploads/ca6da495-1518-4cdb-9afa-215a63590199",
+        image: "/uploads/ca6da495-1518-4cdb-9afa-215a63590199.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{}",
+        images: [],
         created_at: "2026-01-27T19:27:04.602Z",
       },
       {
@@ -183,10 +193,10 @@ async function main() {
         name: "Lava auto Vintex ",
         description: "O Lava Autos é um produto que foi desenvolvido para limpar, proteger e conservar a lataria do veículo. Por possuir pH neutro, pode ser aplicado em qualquer superfície sem correr o risco de danificá-la.\n\n-Limpa protege e dá brilho\n-pH neutro\n-Pode ser aplicado em qualquer superfície\n\nModo de usar\n1. Dilua o produto na concentração de 100ml para cada 5L de água e, com o auxílio de uma luva de microfibra, comece a lavar o veículo pelas partes mais altas e depois as mais baixas\n2. Enxágue em seguida até remover toda a espuma\n3. Para melhor resultado, seque o veículo com a toalha de secagem",
         price: 21,
-        image: "/uploads/ab003d14-2139-4c40-b107-01ec9ed4b83d",
+        image: "/uploads/ab003d14-2139-4c40-b107-01ec9ed4b83d.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{/uploads/2cc05a7b-58f8-4a72-993f-7f82641a7cfe,/uploads/0251cd0c-2527-47e1-847e-8bc69ab252eb}",
+        images: ["/uploads/2cc05a7b-58f8-4a72-993f-7f82641a7cfe.jpg", "/uploads/0251cd0c-2527-47e1-847e-8bc69ab252eb.jpg"],
         created_at: "2026-01-27T19:31:43.454Z",
       },
       {
@@ -194,10 +204,10 @@ async function main() {
         name: "LAVA AUTO V MOL VONIXX",
         description: "V-Mol é um lava autos biodegradável com pH levemente básico que não agride a superfície. Ideal para  lavagem de automóveis, em especial para remoção de sujeiras mais difíceis, como remoção de barro e óleo. Agora com aroma cereja intensa!",
         price: 20,
-        image: "/uploads/faf1d77b-1d07-4f5f-9239-4afe39af7d61",
+        image: "/uploads/faf1d77b-1d07-4f5f-9239-4afe39af7d61.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{/uploads/2f0b871d-d58d-4295-8bff-340b9522b9be}",
+        images: ["/uploads/2f0b871d-d58d-4295-8bff-340b9522b9be.jpg"],
         created_at: "2026-02-05T19:15:16.018Z",
       },
       {
@@ -205,10 +215,10 @@ async function main() {
         name: "LAVA AUTO DETMOL SANDET",
         description: "O Det Mol da Sandet é um detergente desengraxante desenvolvido para limpeza pesada em diversas superfícies.\n\nSua fórmula inovadora remove sujeiras difíceis como graxa, óleo, lama e outras sujidades incrustadas, sem danificar a pintura ou oxidar as peças.\n\nÉ ideal para limpeza de veículos pesados e de passeio, chassis, máquinas, pisos, paredes e equipamentos em geral.\n\nCom alta capacidade de diluição, o Det Mol garante um excelente rendimento, tornando a limpeza mais econômica e eficiente.",
         price: 30,
-        image: "/uploads/eddc0ff3-a4f9-48df-b426-634cd00aa7e4",
+        image: "/uploads/eddc0ff3-a4f9-48df-b426-634cd00aa7e4.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{}",
+        images: [],
         created_at: "2026-02-05T19:19:52.902Z",
       },
       {
@@ -216,22 +226,34 @@ async function main() {
         name: "LAVA AUTO CITRON 1,5 VONIXX",
         description: "Sua poderosa fórmula combina tensoativos especiais e solventes naturais extraídos cuidadosamente de cascas de laranja. Com uma ação de lavagem pesada, Citron é a escolha ideal para eliminar graxa, matéria orgânica e ceras, proporcionando uma limpeza profunda e impecável à pintura do seu automóvel.",
         price: 45.9,
-        image: "/uploads/64d3a465-4925-4684-bed1-a59762d84913",
+        image: "/uploads/64d3a465-4925-4684-bed1-a59762d84913.jpg",
         category: "Lava Autos",
         in_stock: true,
-        images: "{/uploads/853c9daa-4c52-4d11-9c78-c721c201bd79}",
+        images: ["/uploads/853c9daa-4c52-4d11-9c78-c721c201bd79.jpg"],
         created_at: "2026-02-05T19:23:07.983Z",
       },
     ];
 
     for (const p of products) {
-      await client.query(`
-        INSERT INTO products (id, name, description, price, image, category, in_stock, images, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::text[], $9)
-        ON CONFLICT (id) DO NOTHING
-      `, [p.id, p.name, p.description, p.price, p.image, p.category, p.in_stock, p.images, p.created_at]);
+      await connection.query(`
+        INSERT IGNORE INTO products (id, name, description, price, image, category, in_stock, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [p.id, p.name, p.description, p.price, p.image, p.category, p.in_stock, p.created_at]);
+      
+      // Inserir imagens na tabela normalizada
+      for (let i = 0; i < p.images.length; i++) {
+        await connection.query(`
+          INSERT INTO product_images (product_id, image_url, sort_order)
+          VALUES (?, ?, ?)
+        `, [p.id, p.images[i], i]);
+      }
     }
-    await client.query("SELECT setval('products_id_seq', (SELECT COALESCE(MAX(id), 1) FROM products))");
+    
+    // Ajustar AUTO_INCREMENT
+    const [maxProductId] = await connection.query("SELECT MAX(id) as max_id FROM products") as any;
+    if (maxProductId[0]?.max_id) {
+      await connection.query(`ALTER TABLE products AUTO_INCREMENT = ?`, [maxProductId[0].max_id + 1]);
+    }
     console.log(`  ✓ ${products.length} produtos inseridos\n`);
 
     // ============================================================
@@ -257,13 +279,16 @@ async function main() {
     ];
 
     for (const v of variations) {
-      await client.query(`
-        INSERT INTO product_variations (id, product_id, label, price, in_stock, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (id) DO NOTHING
+      await connection.query(`
+        INSERT IGNORE INTO product_variations (id, product_id, label, price, in_stock, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
       `, [v.id, v.product_id, v.label, v.price, v.in_stock, v.created_at]);
     }
-    await client.query("SELECT setval('product_variations_id_seq', (SELECT COALESCE(MAX(id), 1) FROM product_variations))");
+    
+    const [maxVariationId] = await connection.query("SELECT MAX(id) as max_id FROM product_variations") as any;
+    if (maxVariationId[0]?.max_id) {
+      await connection.query(`ALTER TABLE product_variations AUTO_INCREMENT = ?`, [maxVariationId[0].max_id + 1]);
+    }
     console.log(`  ✓ ${variations.length} variações inseridas\n`);
 
     // ============================================================
@@ -318,10 +343,9 @@ async function main() {
     ];
 
     for (const c of customers) {
-      await client.query(`
-        INSERT INTO customers (id, email, phone, name, nickname, delivery_address, password, is_registered, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (id) DO NOTHING
+      await connection.query(`
+        INSERT IGNORE INTO customers (id, email, phone, name, nickname, delivery_address, password, is_registered, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [c.id, c.email, c.phone, c.name, c.nickname, c.delivery_address, c.password, c.is_registered, c.created_at]);
     }
     console.log(`  ✓ ${customers.length} clientes inseridos\n`);
@@ -382,13 +406,16 @@ async function main() {
     ];
 
     for (const o of orders) {
-      await client.query(`
-        INSERT INTO orders (id, customer_id, status, total, customer_name, customer_phone, customer_email, delivery_address, whatsapp_message, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (id) DO NOTHING
+      await connection.query(`
+        INSERT IGNORE INTO orders (id, customer_id, status, total, customer_name, customer_phone, customer_email, delivery_address, whatsapp_message, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [o.id, o.customer_id, o.status, o.total, o.customer_name, o.customer_phone, o.customer_email, o.delivery_address, o.whatsapp_message, o.created_at]);
     }
-    await client.query("SELECT setval('orders_id_seq', (SELECT COALESCE(MAX(id), 1) FROM orders))");
+    
+    const [maxOrderId] = await connection.query("SELECT MAX(id) as max_id FROM orders") as any;
+    if (maxOrderId[0]?.max_id) {
+      await connection.query(`ALTER TABLE orders AUTO_INCREMENT = ?`, [maxOrderId[0].max_id + 1]);
+    }
     console.log(`  ✓ ${orders.length} pedidos inseridos\n`);
 
     // ============================================================
@@ -403,13 +430,16 @@ async function main() {
     ];
 
     for (const oi of orderItems) {
-      await client.query(`
-        INSERT INTO order_items (id, order_id, product_id, product_name, product_price, quantity)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (id) DO NOTHING
+      await connection.query(`
+        INSERT IGNORE INTO order_items (id, order_id, product_id, product_name, product_price, quantity)
+        VALUES (?, ?, ?, ?, ?, ?)
       `, [oi.id, oi.order_id, oi.product_id, oi.product_name, oi.product_price, oi.quantity]);
     }
-    await client.query("SELECT setval('order_items_id_seq', (SELECT COALESCE(MAX(id), 1) FROM order_items))");
+    
+    const [maxOrderItemId] = await connection.query("SELECT MAX(id) as max_id FROM order_items") as any;
+    if (maxOrderItemId[0]?.max_id) {
+      await connection.query(`ALTER TABLE order_items AUTO_INCREMENT = ?`, [maxOrderItemId[0].max_id + 1]);
+    }
     console.log(`  ✓ ${orderItems.length} itens de pedidos inseridos\n`);
 
     // ============================================================
@@ -436,7 +466,7 @@ async function main() {
     console.log("→ Agendamentos...");
     console.log("  - Nenhum agendamento em produção (tabela pronta para uso)\n");
 
-    await client.query("COMMIT");
+    await connection.commit();
 
     // ============================================================
     // RESUMO
@@ -453,19 +483,20 @@ async function main() {
     console.log(`║  • ${orderItems.length} itens de pedidos                      ║`);
     console.log("╠═══════════════════════════════════════════════╣");
     console.log("║  Tabelas vazias (prontas para uso):            ║");
-    console.log("║    reviews, service_posts,                     ║");
+    console.log("║    reviews, service_posts, service_post_media, ║");
     console.log("║    offered_services, appointments              ║");
     console.log("╠═══════════════════════════════════════════════╣");
     console.log("║  Imagens: public/uploads/ (portátil)           ║");
     console.log("║  Senhas: hashes reais de produção              ║");
+    console.log("║  Banco: MySQL                                  ║");
     console.log("╚═══════════════════════════════════════════════╝\n");
 
   } catch (error) {
-    await client.query("ROLLBACK");
+    await connection.rollback();
     console.error("❌ Erro durante o seed:", error);
     throw error;
   } finally {
-    client.release();
+    connection.release();
     await pool.end();
   }
 }

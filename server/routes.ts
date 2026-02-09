@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, insertProductVariationSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
+import { insertProductSchema, insertProductVariationSchema, updateSiteSettingsSchema, insertUserSchema, checkoutSchema, stripeCheckoutSchema, registerCustomerSchema, customerLoginSchema, adminCreateCustomerSchema, adminUpdateCustomerSchema, adminCreateUserSchema, adminUpdateUserSchema, createReviewSchema, createAppointmentSchema, updateAppointmentSchema, insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -11,6 +11,10 @@ import MemoryStore from "memorystore";
 import { scrypt, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { sendNewCustomerNotification, sendAppointmentRequestNotification, sendAppointmentStatusUpdateNotification } from "./email";
+import { stripe, isStripeConfigured, createCheckoutSession, constructWebhookEvent, getCheckoutSession } from "./stripe";
+import type Stripe from "stripe";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const scryptAsync = promisify(scrypt);
 
@@ -58,6 +62,23 @@ function requireCustomerAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Rate limiters for sensitive routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { error: "Muitas tentativas. Tente novamente em 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: { error: "Muitas requisições. Tente novamente em breve." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -68,10 +89,38 @@ export async function registerRoutes(
   if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
+
+  // Security headers with Helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        connectSrc: ["'self'", "https://api.stripe.com", "https://vitals.vercel-insights.com"],
+        frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }));
+
+  // General rate limiting for all API routes
+  app.use("/api", generalLimiter);
+
+  // Validate SESSION_SECRET in production
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production" && !sessionSecret) {
+    throw new Error("SESSION_SECRET environment variable is required in production");
+  }
   
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "moto-detalhamento-secret-key",
+      secret: sessionSecret || "dev-only-secret-not-for-production",
       resave: false,
       saveUninitialized: false,
       store: new MemStore({ checkPeriod: 86400000 }),
@@ -85,7 +134,8 @@ export async function registerRoutes(
   );
 
   // ===== AUTH ROUTES =====
-  app.post("/api/auth/register", async (req, res) => {
+  // Admin registration - protected route (only existing admins can create new admins)
+  app.post("/api/auth/register", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
       const existing = await storage.getUserByUsername(validatedData.username);
@@ -94,7 +144,7 @@ export async function registerRoutes(
       }
       const hashedPassword = await hashPassword(validatedData.password);
       const user = await storage.createUser({ ...validatedData, password: hashedPassword });
-      req.session.userId = user.id;
+      // Don't auto-login the new user - the admin who created them stays logged in
       res.status(201).json({ id: user.id, username: user.username });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -105,7 +155,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
@@ -721,7 +771,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/customer/login", async (req, res) => {
+  app.post("/api/customer/login", authLimiter, async (req, res) => {
     try {
       const validatedData = customerLoginSchema.parse(req.body);
       
@@ -861,6 +911,236 @@ export async function registerRoutes(
       }
       console.error("Error processing checkout:", error);
       res.status(500).json({ error: "Failed to process checkout" });
+    }
+  });
+
+  // ===== STRIPE CHECKOUT ROUTES =====
+  
+  // Get Stripe publishable key for frontend
+  app.get("/api/stripe/config", (req, res) => {
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      return res.status(500).json({ error: "Stripe not configured" });
+    }
+    res.json({ publishableKey });
+  });
+
+  // Create Stripe checkout session
+  app.post("/api/checkout/create-session", async (req, res) => {
+    try {
+      if (!isStripeConfigured()) {
+        return res.status(500).json({ error: "Stripe is not configured" });
+      }
+
+      const validatedData = stripeCheckoutSchema.parse(req.body);
+      const { customer: customerData, items, total, paymentMethod } = validatedData;
+
+      // Find or create customer
+      let customer = await storage.getCustomerByPhone(customerData.phone);
+      if (!customer && customerData.email) {
+        customer = await storage.getCustomerByEmail(customerData.email);
+      }
+
+      if (!customer) {
+        customer = await storage.createCustomer({
+          name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email || null,
+          nickname: customerData.nickname || null,
+          deliveryAddress: customerData.deliveryAddress || null,
+          isRegistered: false,
+        });
+      } else {
+        await storage.updateCustomer(customer.id, {
+          name: customerData.name,
+          deliveryAddress: customerData.deliveryAddress || customer.deliveryAddress,
+        });
+      }
+
+      // Create order with awaiting_payment status
+      const order = await storage.createOrder({
+        customerId: customer.id,
+        status: "awaiting_payment",
+        total,
+        customerName: customerData.name,
+        customerPhone: customerData.phone,
+        customerEmail: customerData.email || null,
+        deliveryAddress: customerData.deliveryAddress || null,
+        whatsappMessage: null,
+        paymentMethod,
+        paymentStatus: "awaiting_payment",
+      });
+
+      // Create order items
+      for (const item of items) {
+        await storage.createOrderItem({
+          orderId: order.id,
+          productId: item.productId,
+          productName: item.productName,
+          productPrice: item.productPrice,
+          quantity: item.quantity,
+        });
+      }
+
+      // Create Stripe checkout session
+      const session = await createCheckoutSession(
+        items,
+        customerData,
+        order.id,
+        paymentMethod
+      );
+
+      if (!session) {
+        // If session creation fails, update order status
+        await storage.updateOrderStatus(order.id, "payment_failed");
+        return res.status(500).json({ error: "Failed to create checkout session" });
+      }
+
+      // Update order with Stripe session ID
+      await storage.updateOrderPayment(order.id, {
+        stripeSessionId: session.id,
+      });
+
+      res.status(201).json({
+        orderId: order.id,
+        sessionId: session.id,
+        checkoutUrl: session.url,
+        customerId: customer.id,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating Stripe checkout session:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/webhooks/stripe", async (req, res) => {
+    const signature = req.headers["stripe-signature"] as string;
+
+    if (!signature) {
+      return res.status(400).json({ error: "Missing stripe-signature header" });
+    }
+
+    try {
+      // Get raw body for signature verification (set by express.json verify option)
+      const rawBody = (req as any).rawBody as Buffer;
+      if (!rawBody) {
+        return res.status(400).json({ error: "Missing raw body" });
+      }
+      const event = constructWebhookEvent(rawBody, signature);
+
+      if (!event) {
+        return res.status(400).json({ error: "Invalid webhook signature" });
+      }
+
+      // Handle the event
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const orderId = parseInt(session.metadata?.orderId || "0");
+
+          if (orderId) {
+            // Update order status to paid
+            await storage.updateOrderStatus(orderId, "paid");
+            await storage.updateOrderPayment(orderId, {
+              paymentStatus: "paid",
+              stripePaymentIntentId: session.payment_intent as string,
+              paidAt: new Date(),
+            });
+            console.log(`Order ${orderId} marked as paid`);
+          }
+          break;
+        }
+
+        case "checkout.session.expired": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const orderId = parseInt(session.metadata?.orderId || "0");
+
+          if (orderId) {
+            await storage.updateOrderStatus(orderId, "payment_failed");
+            await storage.updateOrderPayment(orderId, {
+              paymentStatus: "failed",
+            });
+            console.log(`Order ${orderId} payment expired`);
+          }
+          break;
+        }
+
+        case "payment_intent.payment_failed": {
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          // Find order by payment intent ID
+          const order = await storage.getOrderByStripePaymentIntent(paymentIntent.id);
+          if (order) {
+            await storage.updateOrderStatus(order.id, "payment_failed");
+            await storage.updateOrderPayment(order.id, {
+              paymentStatus: "failed",
+            });
+            console.log(`Order ${order.id} payment failed`);
+          }
+          break;
+        }
+
+        case "charge.refunded": {
+          const charge = event.data.object as Stripe.Charge;
+          const paymentIntentId = charge.payment_intent as string;
+          if (paymentIntentId) {
+            const order = await storage.getOrderByStripePaymentIntent(paymentIntentId);
+            if (order) {
+              await storage.updateOrderStatus(order.id, "refunded");
+              await storage.updateOrderPayment(order.id, {
+                paymentStatus: "refunded",
+              });
+              console.log(`Order ${order.id} refunded`);
+            }
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.status(400).json({ error: "Webhook handler failed" });
+    }
+  });
+
+  // Get order payment status (for polling after checkout)
+  app.get("/api/orders/:id/payment-status", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id as string);
+      const order = await storage.getOrder(orderId);
+
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // If there's a Stripe session, check its status
+      if (order.stripeSessionId && isStripeConfigured()) {
+        const session = await getCheckoutSession(order.stripeSessionId);
+        if (session) {
+          return res.json({
+            orderId: order.id,
+            status: order.status,
+            paymentStatus: order.paymentStatus,
+            stripeStatus: session.payment_status,
+          });
+        }
+      }
+
+      res.json({
+        orderId: order.id,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+      });
+    } catch (error) {
+      console.error("Error fetching payment status:", error);
+      res.status(500).json({ error: "Failed to fetch payment status" });
     }
   });
 
@@ -1227,7 +1507,8 @@ export async function registerRoutes(
     },
   });
 
-  app.post("/api/uploads/local", upload.single("file"), (req, res) => {
+  // Protected upload route - requires admin authentication
+  app.post("/api/uploads/local", requireAuth, upload.single("file"), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ error: "Nenhum arquivo enviado" });
     }
