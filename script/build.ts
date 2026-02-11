@@ -2,22 +2,16 @@ import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
 
-// server deps to bundle to reduce openat(2) syscalls
-// which helps cold start times
-// Heavy packages (stripe, drizzle-orm) externalized to reduce bundle size for Hostinger
+// Server deps to bundle - minimal allowlist for smaller bundle size
+// Heavy packages externalized to reduce bundle size for Hostinger deployment
+// All major deps externalized - they will be installed via npm on the server
+// This keeps the bundle small and relies on node_modules at runtime
 const allowlist = [
-  "date-fns",
-  "express",
   "express-rate-limit",
-  "express-session",
   "memorystore",
-  "multer",
   "passport",
   "passport-local",
-  "pg",
   "ws",
-  "zod",
-  "zod-validation-error",
 ];
 
 async function buildAll() {
