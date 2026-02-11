@@ -1,0 +1,19 @@
+{
+  "$schema": "https://api.hostinger.com/schemas/hostinger.json",
+  "version": 1,
+  "build": {
+    "nodeVersion": "20.19.0",
+    "packageManager": "npm",
+    "installCommand": "npm ci --include=dev",
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist"
+  },
+  "runtime": {
+    "startCommand": "npm start",
+    "healthCheckPath": "/api/settings",
+    "timeout": 30000
+  },
+  "environment": {
+    "NODE_ENV": "production"
+  }
+}
