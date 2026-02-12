@@ -14,6 +14,42 @@ import { execSync } from "child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
 
+/**
+ * Find all possible node_modules directories to search.
+ * This handles Hostinger Git Auto Deploy where:
+ * - Script runs from: .builds/source/repository/
+ * - node_modules is in: public_html/
+ */
+function findNodeModulesDirectories() {
+  const candidates = new Set();
+  
+  // 1. Current working directory (where npm actually runs - most important!)
+  candidates.add(join(process.cwd(), "node_modules"));
+  
+  // 2. Script's parent directory (original behavior as fallback)
+  candidates.add(join(rootDir, "node_modules"));
+  
+  // 3. Walk up from cwd looking for node_modules (handles nested structures)
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    candidates.add(join(dir, "node_modules"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  
+  // 4. Walk up from script location too
+  dir = rootDir;
+  for (let i = 0; i < 5; i++) {
+    candidates.add(join(dir, "node_modules"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  
+  return [...candidates];
+}
+
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
@@ -42,6 +78,9 @@ async function forceChmod(filePath) {
  * Fix esbuild binary permissions - FORCED mode.
  * Does not check if permissions are "already correct" because stat() 
  * can report incorrect values on some filesystems (like Hostinger).
+ * 
+ * Searches multiple node_modules locations to handle Hostinger Git Auto Deploy
+ * where node_modules may be in a different directory than the script.
  */
 async function fixEsbuildPermissions() {
   // Skip on Windows
@@ -49,10 +88,7 @@ async function fixEsbuildPermissions() {
     return;
   }
 
-  const nodeModules = join(rootDir, "node_modules");
-  let fixedCount = 0;
-
-  // Known paths that commonly need fixing
+  // Known paths that commonly need fixing (relative to node_modules)
   const knownPaths = [
     ".bin/esbuild",
     "esbuild/bin/esbuild",
@@ -66,33 +102,56 @@ async function fixEsbuildPermissions() {
   ];
 
   console.log("Fixing esbuild binary permissions (forced)...");
+  
+  // Find all possible node_modules directories
+  const nodeModulesDirs = findNodeModulesDirectories();
+  
+  console.log(`  Searching ${nodeModulesDirs.length} possible location(s):`);
+  console.log(`    cwd: ${process.cwd()}`);
+  console.log(`    script dir: ${rootDir}`);
+  
+  let totalFixed = 0;
+  let shellSuccessCount = 0;
 
-  // Fix all known paths
-  for (const relativePath of knownPaths) {
-    const fullPath = join(nodeModules, relativePath);
+  // Process each node_modules directory
+  for (const nodeModulesDir of nodeModulesDirs) {
+    // Check if directory exists before processing
     try {
-      await access(fullPath, constants.F_OK);
-      if (await forceChmod(fullPath)) {
-        console.log(`  Fixed: ${relativePath}`);
-        fixedCount++;
-      }
+      await access(nodeModulesDir, constants.F_OK);
     } catch {
-      // File doesn't exist
+      continue; // Skip non-existent directories
+    }
+    
+    console.log(`  Checking: ${nodeModulesDir}`);
+    
+    // Fix all known paths in this directory
+    for (const relativePath of knownPaths) {
+      const fullPath = join(nodeModulesDir, relativePath);
+      try {
+        await access(fullPath, constants.F_OK);
+        if (await forceChmod(fullPath)) {
+          console.log(`    Fixed: ${relativePath}`);
+          totalFixed++;
+        }
+      } catch {
+        // File doesn't exist
+      }
+    }
+
+    // Shell find as ultimate fallback for this directory
+    try {
+      execSync(
+        `find "${nodeModulesDir}" -type f -name "esbuild" -path "*/bin/*" -exec chmod +x {} \\;`,
+        { stdio: "pipe", timeout: 30000 }
+      );
+      shellSuccessCount++;
+    } catch {
+      // Ignore errors
     }
   }
 
-  // Shell find as ultimate fallback
-  try {
-    execSync(
-      `find "${nodeModules}" -type f -name "esbuild" -path "*/bin/*" -exec chmod +x {} \\;`,
-      { stdio: "pipe", timeout: 30000 }
-    );
-    console.log("  Shell find fallback completed");
-  } catch {
-    // Ignore errors
-  }
-
-  console.log(`✓ Forced chmod on ${fixedCount} known esbuild path(s)`);
+  console.log(`  Shell find fallback completed on ${shellSuccessCount} directory(ies)`);
+  console.log(`✓ Forced chmod on ${totalFixed} known esbuild path(s)`);
 }
 
 async function buildAll() {

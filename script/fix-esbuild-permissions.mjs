@@ -20,8 +20,43 @@ import { constants } from "fs";
 import { execSync } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(__dirname, "..");
-const nodeModules = join(rootDir, "node_modules");
+const scriptRootDir = join(__dirname, "..");
+
+/**
+ * Find all possible node_modules directories to search.
+ * This handles Hostinger Git Auto Deploy where:
+ * - Script runs from: .builds/source/repository/
+ * - node_modules is in: public_html/
+ */
+function findNodeModulesDirectories() {
+  const candidates = new Set();
+  
+  // 1. Current working directory (where npm actually runs - most important!)
+  candidates.add(join(process.cwd(), "node_modules"));
+  
+  // 2. Script's parent directory (original behavior as fallback)
+  candidates.add(join(scriptRootDir, "node_modules"));
+  
+  // 3. Walk up from cwd looking for node_modules (handles nested structures)
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    candidates.add(join(dir, "node_modules"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  
+  // 4. Walk up from script location too
+  dir = scriptRootDir;
+  for (let i = 0; i < 5; i++) {
+    candidates.add(join(dir, "node_modules"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  
+  return [...candidates];
+}
 
 /**
  * Force chmod using Node.js API, with shell fallback
@@ -69,8 +104,8 @@ async function fixFile(filePath) {
 /**
  * Fix all esbuild-related files in .bin directory
  */
-async function fixBinDirectory() {
-  const binDir = join(nodeModules, ".bin");
+async function fixBinDirectory(nodeModulesDir) {
+  const binDir = join(nodeModulesDir, ".bin");
   const results = [];
   
   try {
@@ -139,7 +174,7 @@ async function scanForEsbuildBinaries(dir, depth = 0, results = []) {
 /**
  * Also try the exact known paths that commonly fail
  */
-async function fixKnownPaths() {
+async function fixKnownPaths(nodeModulesDir) {
   const knownPaths = [
     // Root esbuild
     "esbuild/bin/esbuild",
@@ -160,7 +195,7 @@ async function fixKnownPaths() {
   const results = [];
   
   for (const relativePath of knownPaths) {
-    const fullPath = join(nodeModules, relativePath);
+    const fullPath = join(nodeModulesDir, relativePath);
     const result = await fixFile(fullPath);
     if (result.found) {
       results.push({ path: fullPath, ...result });
@@ -173,16 +208,16 @@ async function fixKnownPaths() {
 /**
  * Use shell find command as ultimate fallback
  */
-function fixWithShellFind() {
+function fixWithShellFind(nodeModulesDir) {
   try {
     // Find all esbuild binaries and chmod them
     execSync(
-      `find "${nodeModules}" -type f -name "esbuild" -path "*/bin/*" -exec chmod +x {} \\;`,
+      `find "${nodeModulesDir}" -type f -name "esbuild" -path "*/bin/*" -exec chmod +x {} \\;`,
       { stdio: "pipe", timeout: 30000 }
     );
-    return { success: true };
+    return { success: true, dir: nodeModulesDir };
   } catch (err) {
-    return { success: false, error: err.message };
+    return { success: false, dir: nodeModulesDir, error: err.message };
   }
 }
 
@@ -195,23 +230,46 @@ async function main() {
 
   console.log("Fixing esbuild binary permissions (forced mode)...");
   
+  // Find all possible node_modules directories
+  const nodeModulesDirs = findNodeModulesDirectories();
+  
+  console.log(`\nSearching ${nodeModulesDirs.length} possible node_modules location(s):`);
+  console.log(`  cwd: ${process.cwd()}`);
+  console.log(`  script dir: ${scriptRootDir}`);
+  for (const dir of nodeModulesDirs) {
+    console.log(`  - ${dir}`);
+  }
+  
   const allResults = [];
+  const shellResults = [];
   
-  // 1. Fix .bin directory
-  const binResults = await fixBinDirectory();
-  allResults.push(...binResults);
-  
-  // 2. Fix known paths explicitly
-  const knownResults = await fixKnownPaths();
-  allResults.push(...knownResults);
-  
-  // 3. Scan recursively for any we might have missed
-  const scanResults = await scanForEsbuildBinaries(nodeModules);
-  allResults.push(...scanResults);
-  
-  // 4. Shell find as ultimate fallback
-  console.log("Running shell find as fallback...");
-  const shellResult = fixWithShellFind();
+  // Process each node_modules directory
+  for (const nodeModulesDir of nodeModulesDirs) {
+    // Check if directory exists before processing
+    try {
+      await access(nodeModulesDir, constants.F_OK);
+    } catch {
+      continue; // Skip non-existent directories
+    }
+    
+    console.log(`\nProcessing: ${nodeModulesDir}`);
+    
+    // 1. Fix .bin directory
+    const binResults = await fixBinDirectory(nodeModulesDir);
+    allResults.push(...binResults);
+    
+    // 2. Fix known paths explicitly
+    const knownResults = await fixKnownPaths(nodeModulesDir);
+    allResults.push(...knownResults);
+    
+    // 3. Scan recursively for any we might have missed
+    const scanResults = await scanForEsbuildBinaries(nodeModulesDir);
+    allResults.push(...scanResults);
+    
+    // 4. Shell find as ultimate fallback for this directory
+    const shellResult = fixWithShellFind(nodeModulesDir);
+    shellResults.push(shellResult);
+  }
   
   // Report results
   const uniquePaths = [...new Set(allResults.map(r => r.path))];
@@ -234,10 +292,14 @@ async function main() {
     }
   }
   
-  if (shellResult.success) {
-    console.log("✓ Shell find fallback completed");
-  } else {
-    console.log(`⚠ Shell find fallback failed: ${shellResult.error}`);
+  const successfulShells = shellResults.filter(r => r.success);
+  const failedShells = shellResults.filter(r => !r.success);
+  
+  if (successfulShells.length > 0) {
+    console.log(`✓ Shell find completed on ${successfulShells.length} directory(ies)`);
+  }
+  if (failedShells.length > 0) {
+    console.log(`⚠ Shell find failed on ${failedShells.length} directory(ies)`);
   }
   
   console.log("\nPermission fix complete.");
