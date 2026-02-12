@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile, stat, chmod, access, readdir, constants } from "fs/promises";
+import { rm, readFile, stat, chmod, access, readdir, constants, cp } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
@@ -209,6 +209,19 @@ async function buildAll() {
     sourcemap: false,
     metafile: true,
   });
+
+  // Copy migrations folder to dist/ for production runtime
+  console.log("\nCopying migrations...");
+  try {
+    await cp(
+      join(rootDir, "migrations"),
+      join(rootDir, "dist", "migrations"),
+      { recursive: true }
+    );
+    console.log("✓ Migrations folder copied to dist/");
+  } catch (err) {
+    console.error("⚠ Warning: Could not copy migrations folder:", err.message);
+  }
 
   // Report bundle size
   try {

@@ -3,6 +3,14 @@ import { migrate } from "drizzle-orm/mysql2/migrator";
 import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Get directory of this file (works in ESM and bundled code)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Migrations path relative to this file (db/index.ts -> ../migrations)
+const migrationsPath = path.join(__dirname, "..", "migrations");
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -56,9 +64,14 @@ async function getAppliedMigrations(): Promise<Set<string>> {
 }
 
 function getPendingMigrations(): string[] {
-  const journalPath = path.join(process.cwd(), 'migrations', 'meta', '_journal.json');
+  const journalPath = path.join(migrationsPath, 'meta', '_journal.json');
+  
+  console.log(`Looking for migrations journal at: ${journalPath}`);
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`__dirname: ${__dirname}`);
   
   if (!fs.existsSync(journalPath)) {
+    console.log("Migration journal not found - no migrations to apply.");
     return [];
   }
   
@@ -133,7 +146,8 @@ export async function runMigrations() {
     }
     
     console.log(`Running ${pendingMigrations.length} pending migration(s)...`);
-    await migrate(db, { migrationsFolder: "./migrations" });
+    console.log(`Using migrations folder: ${migrationsPath}`);
+    await migrate(db, { migrationsFolder: migrationsPath });
     console.log("Migrations completed successfully!");
   } catch (error: any) {
     console.error("Migration failed:", error);
