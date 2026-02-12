@@ -185,8 +185,12 @@ async function buildAll() {
     platform: "node",
     target: "node20",
     bundle: true,
-    format: "cjs",
+    format: "esm",
     outfile: join(rootDir, "dist/index.js"),
+    // Define __dirname and __filename for ESM compatibility (required by server/static.ts)
+    banner: {
+      js: `import { fileURLToPath as __fileURLToPath } from 'url'; import { dirname as __pathDirname } from 'path'; const __filename = __fileURLToPath(import.meta.url); const __dirname = __pathDirname(__filename);`
+    },
     define: {
       "process.env.NODE_ENV": '"production"',
     },
