@@ -1,11 +1,17 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile, stat, chmod, access, constants } from "fs/promises";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 // All npm dependencies are externalized — they are installed via `npm install`
 // on the server and resolved from node_modules at runtime.
 // This keeps the server bundle small (only application code).
+
+// Calculate root directory based on script location (not process.cwd())
+// This ensures correct paths even when script is executed from different directories
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const rootDir = join(__dirname, "..");
 
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + " B";
@@ -15,7 +21,8 @@ function formatBytes(bytes) {
 
 async function fixEsbuildPermissions() {
   // Fix the exact path that fails on Hostinger
-  const esbuildBinPath = join(process.cwd(), "node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild");
+  // Use rootDir instead of process.cwd() to ensure correct path regardless of working directory
+  const esbuildBinPath = join(rootDir, "node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild");
   
   try {
     // Check if file exists
@@ -32,7 +39,7 @@ async function fixEsbuildPermissions() {
 }
 
 async function buildAll() {
-  await rm("dist", { recursive: true, force: true });
+  await rm(join(rootDir, "dist"), { recursive: true, force: true });
 
   // Fix esbuild permissions before building (critical for Hostinger Linux environment)
   await fixEsbuildPermissions();
@@ -41,7 +48,7 @@ async function buildAll() {
   await viteBuild();
 
   console.log("\nBuilding server...");
-  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
+  const pkg = JSON.parse(await readFile(join(rootDir, "package.json"), "utf-8"));
   
   // Externalize all npm dependencies to keep bundle small
   // This is critical for Hostinger deployment which has bundle size limits
@@ -58,12 +65,12 @@ async function buildAll() {
   ];
 
   await esbuild({
-    entryPoints: ["server/index.ts"],
+    entryPoints: [join(rootDir, "server/index.ts")],
     platform: "node",
     target: "node20",
     bundle: true,
     format: "cjs",
-    outfile: "dist/index.cjs",
+    outfile: join(rootDir, "dist/index.cjs"),
     define: {
       "process.env.NODE_ENV": '"production"',
     },
@@ -85,7 +92,7 @@ async function buildAll() {
 
   // Report bundle size
   try {
-    const bundleStat = await stat("dist/index.cjs");
+    const bundleStat = await stat(join(rootDir, "dist/index.cjs"));
     console.log(`\n✓ Server bundle size: ${formatBytes(bundleStat.size)}`);
     
     // Warn if bundle is getting large (Hostinger limit consideration)
