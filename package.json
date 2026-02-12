@@ -13,7 +13,7 @@
     "fix-esbuild": "node script/fix-esbuild-permissions.mjs",
     "prebuild": "node script/fix-esbuild-permissions.mjs",
     "build": "node script/build.mjs",
-    "postbuild": "node --env-file=.env script/run-migrations.mjs",
+    "postbuild": "node --env-file-if-exists=.env script/run-migrations.mjs",
     "start": "node dist/index.js",
     "postinstall": "node script/fix-esbuild-permissions.mjs",
     "check": "tsc",
