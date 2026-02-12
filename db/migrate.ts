@@ -8,8 +8,13 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Migrations path relative to this file (db/migrate.ts -> ../migrations)
-const migrationsPath = path.join(__dirname, "..", "migrations");
+// Migrations path differs between development and production:
+// - Development: db/migrate.ts -> ../migrations (relative to db/ folder)
+// - Production (bundled): dist/index.js -> dist/migrations (same folder as bundle)
+const isProduction = process.env.NODE_ENV === "production";
+const migrationsPath = isProduction 
+  ? path.join(__dirname, "migrations")       // dist/migrations/
+  : path.join(__dirname, "..", "migrations"); // ../migrations/
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL não definida. Configure a variável de ambiente.");
