@@ -3,8 +3,8 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 
 test.describe('Build e Servidor', () => {
-  test('deve ter gerado o arquivo dist/index.cjs', () => {
-    const indexPath = join(process.cwd(), 'dist', 'index.cjs');
+  test('deve ter gerado o arquivo dist/index.js', () => {
+    const indexPath = join(process.cwd(), 'dist', 'index.js');
     expect(existsSync(indexPath)).toBeTruthy();
   });
 

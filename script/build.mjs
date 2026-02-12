@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile, stat, chmod, access, constants } from "fs/promises";
+import { rm, readFile, stat, chmod, access, readdir, constants } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -19,22 +19,78 @@ function formatBytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(2) + " MB";
 }
 
+/**
+ * Recursively find and fix permissions for all esbuild binaries under node_modules.
+ * This handles different npm hoisting scenarios (nested in vite, tsx, or at root).
+ */
 async function fixEsbuildPermissions() {
-  // Fix the exact path that fails on Hostinger
-  // Use rootDir instead of process.cwd() to ensure correct path regardless of working directory
-  const esbuildBinPath = join(rootDir, "node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild");
-  
-  try {
-    // Check if file exists
-    await access(esbuildBinPath, constants.F_OK);
-    // Set execute permissions (0o755)
-    await chmod(esbuildBinPath, 0o755);
-    console.log("✓ Fixed esbuild binary permissions");
-  } catch (err) {
-    // Silently ignore if file doesn't exist (Windows, or different platform)
-    if (err.code !== "ENOENT") {
-      console.warn(`⚠ Could not fix esbuild permissions: ${err.message}`);
+  // Skip on Windows (no execute permission concept)
+  if (process.platform === "win32") {
+    return;
+  }
+
+  const nodeModules = join(rootDir, "node_modules");
+  let fixedCount = 0;
+
+  async function fixFile(filePath) {
+    try {
+      await access(filePath, constants.F_OK);
+      const fileStat = await stat(filePath);
+      const executePermission = constants.S_IXUSR | constants.S_IXGRP | constants.S_IXOTH;
+      
+      if ((fileStat.mode & executePermission) !== executePermission) {
+        await chmod(filePath, 0o755);
+        console.log(`  Fixed: ${filePath}`);
+        fixedCount++;
+      }
+    } catch {
+      // File doesn't exist or can't be accessed
     }
+  }
+
+  async function scanDir(dir, depth = 0) {
+    if (depth > 5) return; // Prevent infinite recursion
+    
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name);
+        
+        if (entry.isDirectory()) {
+          // Check for esbuild binary in bin subdirectory
+          if (entry.name === "bin") {
+            await fixFile(join(fullPath, "esbuild"));
+          }
+          // Recurse into @esbuild scope and node_modules
+          else if (entry.name === "@esbuild" || entry.name === "esbuild" || entry.name === "node_modules") {
+            await scanDir(fullPath, depth + 1);
+          }
+          // Check nested node_modules in common packages that bundle esbuild
+          else if (["vite", "tsx", "esbuild-kit"].includes(entry.name)) {
+            const nestedNodeModules = join(fullPath, "node_modules");
+            await scanDir(nestedNodeModules, depth + 1);
+          }
+        }
+      }
+    } catch {
+      // Directory doesn't exist or can't be read
+    }
+  }
+
+  console.log("Fixing esbuild binary permissions...");
+  
+  // Fix .bin directory symlinks
+  const binDir = join(nodeModules, ".bin");
+  await fixFile(join(binDir, "esbuild"));
+  
+  // Scan for all esbuild binaries
+  await scanDir(nodeModules);
+
+  if (fixedCount > 0) {
+    console.log(`✓ Fixed ${fixedCount} esbuild binary permission(s)`);
+  } else {
+    console.log("✓ All esbuild binaries already have correct permissions");
   }
 }
 
@@ -70,7 +126,7 @@ async function buildAll() {
     target: "node20",
     bundle: true,
     format: "cjs",
-    outfile: join(rootDir, "dist/index.cjs"),
+    outfile: join(rootDir, "dist/index.js"),
     define: {
       "process.env.NODE_ENV": '"production"',
     },
@@ -92,7 +148,7 @@ async function buildAll() {
 
   // Report bundle size
   try {
-    const bundleStat = await stat(join(rootDir, "dist/index.cjs"));
+    const bundleStat = await stat(join(rootDir, "dist/index.js"));
     console.log(`\n✓ Server bundle size: ${formatBytes(bundleStat.size)}`);
     
     // Warn if bundle is getting large (Hostinger limit consideration)

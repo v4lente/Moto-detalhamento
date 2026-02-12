@@ -8,13 +8,15 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-// Parse DATABASE_URL and configure SSL for TiDB/cloud MySQL
+// Parse DATABASE_URL and configure SSL for cloud MySQL providers
 const dbUrl = new URL(process.env.DATABASE_URL);
 const isTiDB = dbUrl.hostname.includes('tidbcloud.com');
+const isHostinger = dbUrl.hostname.includes('gateway') || dbUrl.hostname.includes('hostinger');
 const isCloudMySQL = dbUrl.hostname.includes('railway.app') || 
                      dbUrl.hostname.includes('planetscale.com') ||
                      dbUrl.hostname.includes('aiven.io') ||
-                     isTiDB;
+                     isTiDB ||
+                     isHostinger;
 
 const pool = mysql.createPool({
   uri: process.env.DATABASE_URL,
