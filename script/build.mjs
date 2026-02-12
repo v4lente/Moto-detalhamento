@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile, stat } from "fs/promises";
+import { rm, readFile, stat, chmod, access, constants } from "fs/promises";
+import { join } from "path";
 
 // All npm dependencies are externalized — they are installed via `npm install`
 // on the server and resolved from node_modules at runtime.
@@ -12,8 +13,29 @@ function formatBytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(2) + " MB";
 }
 
+async function fixEsbuildPermissions() {
+  // Fix the exact path that fails on Hostinger
+  const esbuildBinPath = join(process.cwd(), "node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild");
+  
+  try {
+    // Check if file exists
+    await access(esbuildBinPath, constants.F_OK);
+    // Set execute permissions (0o755)
+    await chmod(esbuildBinPath, 0o755);
+    console.log("✓ Fixed esbuild binary permissions");
+  } catch (err) {
+    // Silently ignore if file doesn't exist (Windows, or different platform)
+    if (err.code !== "ENOENT") {
+      console.warn(`⚠ Could not fix esbuild permissions: ${err.message}`);
+    }
+  }
+}
+
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
+
+  // Fix esbuild permissions before building (critical for Hostinger Linux environment)
+  await fixEsbuildPermissions();
 
   console.log("Building client...");
   await viteBuild();

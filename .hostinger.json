@@ -5,7 +5,7 @@
     "nodeVersion": "20.19.0",
     "packageManager": "npm",
     "installCommand": "npm ci --include=dev",
-    "buildCommand": "chmod +x node_modules/.bin/* node_modules/**/esbuild/bin/esbuild node_modules/**/@esbuild/*/bin/esbuild 2>/dev/null || true && npm run build",
+    "buildCommand": "chmod +x node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild 2>/dev/null || true && npm run build",
     "outputDirectory": "dist"
   },
   "runtime": {
