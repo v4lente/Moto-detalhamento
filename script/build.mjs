@@ -3,6 +3,7 @@ import { build as viteBuild } from "vite";
 import { rm, readFile, stat, chmod, access, readdir, constants } from "fs/promises";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 // All npm dependencies are externalized — they are installed via `npm install`
 // on the server and resolved from node_modules at runtime.
@@ -20,11 +21,30 @@ function formatBytes(bytes) {
 }
 
 /**
- * Recursively find and fix permissions for all esbuild binaries under node_modules.
- * This handles different npm hoisting scenarios (nested in vite, tsx, or at root).
+ * Force chmod using Node.js API, with shell fallback.
+ * ALWAYS forces chmod without checking current permissions.
+ */
+async function forceChmod(filePath) {
+  try {
+    await chmod(filePath, 0o755);
+    return true;
+  } catch {
+    try {
+      execSync(`chmod +x "${filePath}"`, { stdio: "pipe" });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Fix esbuild binary permissions - FORCED mode.
+ * Does not check if permissions are "already correct" because stat() 
+ * can report incorrect values on some filesystems (like Hostinger).
  */
 async function fixEsbuildPermissions() {
-  // Skip on Windows (no execute permission concept)
+  // Skip on Windows
   if (process.platform === "win32") {
     return;
   }
@@ -32,66 +52,47 @@ async function fixEsbuildPermissions() {
   const nodeModules = join(rootDir, "node_modules");
   let fixedCount = 0;
 
-  async function fixFile(filePath) {
+  // Known paths that commonly need fixing
+  const knownPaths = [
+    ".bin/esbuild",
+    "esbuild/bin/esbuild",
+    "@esbuild/linux-x64/bin/esbuild",
+    "@esbuild/linux-arm64/bin/esbuild",
+    "vite/node_modules/esbuild/bin/esbuild",
+    "vite/node_modules/@esbuild/linux-x64/bin/esbuild",
+    "vite/node_modules/@esbuild/linux-arm64/bin/esbuild",
+    "tsx/node_modules/esbuild/bin/esbuild",
+    "tsx/node_modules/@esbuild/linux-x64/bin/esbuild",
+  ];
+
+  console.log("Fixing esbuild binary permissions (forced)...");
+
+  // Fix all known paths
+  for (const relativePath of knownPaths) {
+    const fullPath = join(nodeModules, relativePath);
     try {
-      await access(filePath, constants.F_OK);
-      const fileStat = await stat(filePath);
-      const executePermission = constants.S_IXUSR | constants.S_IXGRP | constants.S_IXOTH;
-      
-      if ((fileStat.mode & executePermission) !== executePermission) {
-        await chmod(filePath, 0o755);
-        console.log(`  Fixed: ${filePath}`);
+      await access(fullPath, constants.F_OK);
+      if (await forceChmod(fullPath)) {
+        console.log(`  Fixed: ${relativePath}`);
         fixedCount++;
       }
     } catch {
-      // File doesn't exist or can't be accessed
+      // File doesn't exist
     }
   }
 
-  async function scanDir(dir, depth = 0) {
-    if (depth > 5) return; // Prevent infinite recursion
-    
-    try {
-      const entries = await readdir(dir, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const fullPath = join(dir, entry.name);
-        
-        if (entry.isDirectory()) {
-          // Check for esbuild binary in bin subdirectory
-          if (entry.name === "bin") {
-            await fixFile(join(fullPath, "esbuild"));
-          }
-          // Recurse into @esbuild scope and node_modules
-          else if (entry.name === "@esbuild" || entry.name === "esbuild" || entry.name === "node_modules") {
-            await scanDir(fullPath, depth + 1);
-          }
-          // Check nested node_modules in common packages that bundle esbuild
-          else if (["vite", "tsx", "esbuild-kit"].includes(entry.name)) {
-            const nestedNodeModules = join(fullPath, "node_modules");
-            await scanDir(nestedNodeModules, depth + 1);
-          }
-        }
-      }
-    } catch {
-      // Directory doesn't exist or can't be read
-    }
+  // Shell find as ultimate fallback
+  try {
+    execSync(
+      `find "${nodeModules}" -type f -name "esbuild" -path "*/bin/*" -exec chmod +x {} \\;`,
+      { stdio: "pipe", timeout: 30000 }
+    );
+    console.log("  Shell find fallback completed");
+  } catch {
+    // Ignore errors
   }
 
-  console.log("Fixing esbuild binary permissions...");
-  
-  // Fix .bin directory symlinks
-  const binDir = join(nodeModules, ".bin");
-  await fixFile(join(binDir, "esbuild"));
-  
-  // Scan for all esbuild binaries
-  await scanDir(nodeModules);
-
-  if (fixedCount > 0) {
-    console.log(`✓ Fixed ${fixedCount} esbuild binary permission(s)`);
-  } else {
-    console.log("✓ All esbuild binaries already have correct permissions");
-  }
+  console.log(`✓ Forced chmod on ${fixedCount} known esbuild path(s)`);
 }
 
 async function buildAll() {

@@ -5,7 +5,7 @@
     "nodeVersion": "20.19.0",
     "packageManager": "npm",
     "installCommand": "npm ci --include=dev",
-    "buildCommand": "find node_modules -name 'esbuild' -path '*/bin/esbuild' -exec chmod +x {} + 2>/dev/null; npm run build",
+    "buildCommand": "chmod -R +x node_modules/.bin 2>/dev/null || true; find node_modules -type f -name 'esbuild' -path '*/bin/*' -exec chmod +x {} \\; 2>/dev/null || true; npm run build",
     "outputDirectory": "."
   },
   "runtime": {
