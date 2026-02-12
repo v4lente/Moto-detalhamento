@@ -6,7 +6,7 @@ import { rm, readFile, stat } from "fs/promises";
 // on the server and resolved from node_modules at runtime.
 // This keeps the server bundle small (only application code).
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes) {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
   return (bytes / (1024 * 1024)).toFixed(2) + " MB";
