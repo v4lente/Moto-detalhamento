@@ -8,7 +8,7 @@ import fs from "fs";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { scrypt, randomBytes, randomUUID, timingSafeEqual } from "crypto";
+import { createHash, scrypt, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { sendNewCustomerNotification, sendAppointmentRequestNotification, sendAppointmentStatusUpdateNotification } from "./email";
 import { stripe, isStripeConfigured, createCheckoutSession, constructWebhookEvent, getCheckoutSession } from "./stripe";
@@ -25,9 +25,62 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
-  const [hashed, salt] = stored.split(".");
-  const buf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(Buffer.from(hashed, "hex"), buf);
+  if (!stored || typeof stored !== "string") {
+    return false;
+  }
+
+  const normalizedStored = stored.trim();
+  if (!normalizedStored) {
+    return false;
+  }
+
+  // Current format: "<scryptHex>.<saltHex>"
+  if (normalizedStored.includes(".")) {
+    const [hashed, salt, ...extraSegments] = normalizedStored.split(".");
+    if (!hashed || !salt || extraSegments.length > 0) {
+      return false;
+    }
+
+    try {
+      const expected = Buffer.from(hashed, "hex");
+      const derived = (await scryptAsync(supplied, salt, 64)) as Buffer;
+
+      // Prevent timingSafeEqual from throwing on malformed legacy values.
+      if (expected.length !== derived.length) {
+        return false;
+      }
+
+      return timingSafeEqual(expected, derived);
+    } catch {
+      return false;
+    }
+  }
+
+  // Backward compatibility for legacy SHA-512 and SHA-256 unsalted hashes.
+  if (/^[a-f0-9]+$/i.test(normalizedStored)) {
+    if (normalizedStored.length === 128) {
+      const suppliedSha512 = createHash("sha512").update(supplied).digest("hex");
+      return timingSafeEqual(Buffer.from(suppliedSha512, "hex"), Buffer.from(normalizedStored, "hex"));
+    }
+    if (normalizedStored.length === 64) {
+      const suppliedSha256 = createHash("sha256").update(supplied).digest("hex");
+      return timingSafeEqual(Buffer.from(suppliedSha256, "hex"), Buffer.from(normalizedStored, "hex"));
+    }
+  }
+
+  // Last-resort fallback for accidental plaintext data.
+  return supplied === normalizedStored;
+}
+
+function shouldRehashPassword(stored: string): boolean {
+  const normalizedStored = stored.trim();
+  const [hashed, salt, ...extraSegments] = normalizedStored.split(".");
+
+  if (!hashed || !salt || extraSegments.length > 0) {
+    return true;
+  }
+
+  return Buffer.from(hashed, "hex").length !== 64;
 }
 
 declare module "express-session" {
@@ -165,6 +218,13 @@ export async function registerRoutes(
       if (!user || !(await comparePasswords(password, user.password))) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
+
+      // Opportunistic migration for legacy or malformed stored hashes.
+      if (shouldRehashPassword(user.password)) {
+        const newHash = await hashPassword(password);
+        await storage.updateUser(user.id, { password: newHash });
+      }
+
       req.session.userId = user.id;
       res.json({ id: user.id, username: user.username });
     } catch (error) {
@@ -783,6 +843,12 @@ export async function registerRoutes(
       const isValid = await comparePasswords(validatedData.password, customer.password);
       if (!isValid) {
         return res.status(401).json({ error: "Email ou senha inválidos" });
+      }
+
+      // Opportunistic migration for legacy or malformed stored hashes.
+      if (shouldRehashPassword(customer.password)) {
+        const newHash = await hashPassword(validatedData.password);
+        await storage.updateCustomer(customer.id, { password: newHash });
       }
 
       req.session.customerId = customer.id;
