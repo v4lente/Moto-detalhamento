@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
-import { mysqlTable, text, varchar, serial, float, timestamp, int, boolean, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, varchar, float, timestamp, int, boolean, bigint } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Helper para criar ID auto-incremento compatível com MariaDB
+// Usa bigint unsigned com autoincrement em vez de serial (que gera SQL inválido no MariaDB)
+const autoIncrementId = () => bigint("id", { mode: "number", unsigned: true }).primaryKey().autoincrement();
 
 // Helper para gerar UUID na aplicação (MySQL não tem gen_random_uuid())
 // UUIDs serão gerados no código Node.js usando crypto.randomUUID()
@@ -37,7 +41,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export const products = mysqlTable("products", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   price: float("price").notNull(),
@@ -50,7 +54,7 @@ export const products = mysqlTable("products", {
 
 // Tabela normalizada para imagens de produtos (substitui o array images)
 export const productImages = mysqlTable("product_images", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   productId: bigint("product_id", { mode: "number", unsigned: true }).notNull().references(() => products.id, { onDelete: "cascade" }),
   imageUrl: text("image_url").notNull(),
   sortOrder: int("sort_order").notNull().$default(() => 0),
@@ -80,7 +84,7 @@ export type Product = typeof products.$inferSelect;
 export type ProductWithImages = Product & { images: string[] };
 
 export const productVariations = mysqlTable("product_variations", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   productId: bigint("product_id", { mode: "number", unsigned: true }).notNull().references(() => products.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   price: float("price").notNull(),
@@ -173,7 +177,7 @@ export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
 
 export const orders = mysqlTable("orders", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   customerId: varchar("customer_id", { length: 36 }).references(() => customers.id),
   status: text("status").notNull().$default(() => "pending"),
   total: float("total").notNull(),
@@ -200,7 +204,7 @@ export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 
 export const orderItems = mysqlTable("order_items", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   orderId: bigint("order_id", { mode: "number", unsigned: true }).references(() => orders.id).notNull(),
   productId: bigint("product_id", { mode: "number", unsigned: true }).references(() => products.id),
   productName: text("product_name").notNull(),
@@ -283,7 +287,7 @@ export const paymentStatusEnum = z.enum([
 export type PaymentStatus = z.infer<typeof paymentStatusEnum>;
 
 export const reviews = mysqlTable("reviews", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   productId: bigint("product_id", { mode: "number", unsigned: true }).references(() => products.id).notNull(),
   customerId: varchar("customer_id", { length: 36 }).references(() => customers.id),
   customerName: text("customer_name").notNull(),
@@ -307,7 +311,7 @@ export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Review = typeof reviews.$inferSelect;
 
 export const servicePosts = mysqlTable("service_posts", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   title: text("title").notNull(),
   description: text("description"),
   clientName: text("client_name"),
@@ -319,7 +323,7 @@ export const servicePosts = mysqlTable("service_posts", {
 
 // Tabela normalizada para mídia de service posts (substitui os arrays mediaUrls e mediaTypes)
 export const servicePostMedia = mysqlTable("service_post_media", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   servicePostId: bigint("service_post_id", { mode: "number", unsigned: true }).notNull().references(() => servicePosts.id, { onDelete: "cascade" }),
   mediaUrl: text("media_url").notNull(),
   mediaType: text("media_type").notNull(), // "image" ou "video"
@@ -352,7 +356,7 @@ export type ServicePostWithMedia = ServicePost & { mediaUrls: string[]; mediaTyp
 
 // Offered Services (Services that can be hired)
 export const offeredServices = mysqlTable("offered_services", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   name: text("name").notNull(),
   details: text("details").notNull(),
   approximatePrice: float("approximate_price"),
@@ -380,7 +384,7 @@ export type UpdateOfferedService = z.infer<typeof updateOfferedServiceSchema>;
 
 // Appointments / Service Scheduling
 export const appointments = mysqlTable("appointments", {
-  id: serial("id").primaryKey(),
+  id: autoIncrementId(),
   customerId: varchar("customer_id", { length: 36 }).references(() => customers.id),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
