@@ -1,5 +1,5 @@
 CREATE TABLE `appointments` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`customer_id` varchar(36),
 	`customer_name` text NOT NULL,
 	`customer_phone` text NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE `customers` (
 );
 --> statement-breakpoint
 CREATE TABLE `offered_services` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`details` text NOT NULL,
 	`approximate_price` float,
@@ -41,7 +41,7 @@ CREATE TABLE `offered_services` (
 );
 --> statement-breakpoint
 CREATE TABLE `order_items` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`order_id` bigint unsigned NOT NULL,
 	`product_id` bigint unsigned,
 	`product_name` text NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE `order_items` (
 );
 --> statement-breakpoint
 CREATE TABLE `orders` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`customer_id` varchar(36),
 	`status` text NOT NULL,
 	`total` float NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE `orders` (
 );
 --> statement-breakpoint
 CREATE TABLE `product_images` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`product_id` bigint unsigned NOT NULL,
 	`image_url` text NOT NULL,
 	`sort_order` int NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE `product_images` (
 );
 --> statement-breakpoint
 CREATE TABLE `product_variations` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`product_id` bigint unsigned NOT NULL,
 	`label` text NOT NULL,
 	`price` float NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE `product_variations` (
 );
 --> statement-breakpoint
 CREATE TABLE `products` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`description` text NOT NULL,
 	`price` float NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE `products` (
 );
 --> statement-breakpoint
 CREATE TABLE `reviews` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`product_id` bigint unsigned NOT NULL,
 	`customer_id` varchar(36),
 	`customer_name` text NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE `reviews` (
 );
 --> statement-breakpoint
 CREATE TABLE `service_post_media` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`service_post_id` bigint unsigned NOT NULL,
 	`media_url` text NOT NULL,
 	`media_type` text NOT NULL,
@@ -122,7 +122,7 @@ CREATE TABLE `service_post_media` (
 );
 --> statement-breakpoint
 CREATE TABLE `service_posts` (
-	`id` serial AUTO_INCREMENT NOT NULL,
+	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
 	`client_name` text,
