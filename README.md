@@ -520,7 +520,7 @@ npm run dev           # Inicia servidor de desenvolvimento (porta 5000)
 npm run build         # Compila frontend e backend
 npm run start         # Inicia servidor de produção
 
-# Banco de Dados
+# Banco de Dados (Desenvolvimento - requer tsx)
 npm run db:push         # Aplica schema diretamente (dev rápido)
 npm run db:generate     # Gera nova migração SQL
 npm run db:migrate      # Aplica migrações pendentes
@@ -528,6 +528,12 @@ npm run db:seed         # Insere dados de seed (preserva existentes)
 npm run db:seed:fresh   # Limpa tabelas e insere seed do zero
 npm run db:setup        # db:migrate + db:seed:fresh (setup completo)
 npx drizzle-kit studio  # Interface visual do banco
+
+# Banco de Dados (Produção - Node puro, sem tsx)
+npm run db:migrate:prod      # Aplica migrações (Node puro)
+npm run db:seed:prod         # Seed apenas se banco vazio
+npm run db:seed:prod:fresh   # Limpa e reinsere seed
+npm run db:setup:prod        # Migrations + seed completo
 
 # Qualidade
 npm run check         # Verifica tipos TypeScript
@@ -580,6 +586,157 @@ npm run check         # Verifica tipos TypeScript
 - Sombras: Mínimas, foco em bordas
 - Transições: 150-200ms ease
 - Estados: hover, focus, disabled com opacidade
+
+---
+
+## Deploy na Hostinger
+
+### Primeiro Deploy
+
+1. **Configurar Git Auto Deploy** no painel da Hostinger
+2. **Criar banco MySQL** no phpMyAdmin da Hostinger
+3. **Criar arquivo `.env`** no servidor via SSH:
+
+```bash
+ssh -p 65002 usuario@ip-do-servidor
+cd ~/domains/seu-dominio.com/public_html
+export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
+
+cat > .env << 'EOF'
+DATABASE_URL=mysql://usuario:senha@127.0.0.1:3306/nome_do_banco
+SESSION_SECRET=sua-chave-secreta-de-32-caracteres-ou-mais
+BASE_URL=https://seu-dominio.com
+EOF
+```
+
+4. **Executar setup do banco**:
+
+```bash
+node --env-file=.env script/postbuild-db.mjs
+```
+
+Isso aplica migrations e popula dados iniciais automaticamente.
+
+### Redeploy (Atualizações)
+
+O Git Auto Deploy executa automaticamente:
+1. `npm ci --include=dev` (instala dependências)
+2. `npm run build` (compila frontend + backend)
+3. `npm run postbuild` (aplica migrations + seed se banco vazio)
+
+O seed só é executado se o banco estiver vazio, então redeployments não duplicam dados.
+
+### Comandos Manuais no Servidor
+
+```bash
+# Conectar via SSH
+ssh -p 65002 usuario@ip-do-servidor
+cd ~/domains/seu-dominio.com/public_html
+export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
+
+# Aplicar migrations manualmente
+node --env-file=.env script/run-migrations.mjs
+
+# Aplicar seed (apenas se banco vazio)
+node --env-file=.env script/run-seed.mjs --if-empty
+
+# Aplicar seed forçado (limpa e reinsere)
+node --env-file=.env script/run-seed.mjs --fresh
+
+# Setup completo (migrations + seed)
+node --env-file=.env script/postbuild-db.mjs
+```
+
+### Scripts de Produção (sem tsx)
+
+| Comando | Descrição |
+|---------|-----------|
+| `npm run db:migrate:prod` | Aplica migrations (Node puro) |
+| `npm run db:seed:prod` | Seed apenas se banco vazio |
+| `npm run db:seed:prod:fresh` | Limpa e reinsere seed |
+| `npm run db:setup:prod` | Migrations + seed completo |
+
+---
+
+## Troubleshooting
+
+### `.env: not found`
+
+O arquivo `.env` não existe no servidor. Crie-o manualmente via SSH:
+
+```bash
+cat > .env << 'EOF'
+DATABASE_URL=mysql://usuario:senha@127.0.0.1:3306/nome_do_banco
+SESSION_SECRET=sua-chave-secreta
+BASE_URL=https://seu-dominio.com
+EOF
+```
+
+### `npm: command not found`
+
+O Node.js não está no PATH. Na Hostinger, adicione:
+
+```bash
+export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
+```
+
+Para tornar permanente:
+
+```bash
+echo 'export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"' >> ~/.bashrc
+```
+
+### `tsx: command not found`
+
+O `tsx` é uma dependência de desenvolvimento e não está disponível em produção. Use os scripts Node puros:
+
+```bash
+# Em vez de: npm run db:migrate
+node --env-file=.env script/run-migrations.mjs
+
+# Em vez de: npm run db:seed
+node --env-file=.env script/run-seed.mjs
+```
+
+### `Access denied for user ... @'::1'`
+
+O MySQL está tentando conectar via IPv6. Troque `localhost` por `127.0.0.1` na `DATABASE_URL`:
+
+```bash
+# Errado
+DATABASE_URL=mysql://user:pass@localhost:3306/db
+
+# Correto
+DATABASE_URL=mysql://user:pass@127.0.0.1:3306/db
+```
+
+### `serial AUTO_INCREMENT` (erro MariaDB)
+
+A migration contém SQL incompatível com MariaDB. Este erro foi corrigido no código, mas se aparecer:
+
+1. Verifique se o repositório está atualizado (`git pull`)
+2. O arquivo `migrations/0000_perpetual_wendell_vaughn.sql` deve usar `bigint unsigned AUTO_INCREMENT`, não `serial AUTO_INCREMENT`
+
+### Tabelas criadas mas sem dados
+
+O seed não foi executado. Execute manualmente:
+
+```bash
+cd ~/domains/seu-dominio.com/public_html
+export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
+node --env-file=.env script/run-seed.mjs
+```
+
+### Permissões do esbuild
+
+Se o build falhar com erros de permissão do esbuild:
+
+```bash
+chmod -R +x node_modules/.bin 2>/dev/null || true
+find node_modules -type f -name 'esbuild' -path '*/bin/*' -exec chmod +x {} \;
+```
+
+O script `prebuild` já faz isso automaticamente.
 
 ---
 

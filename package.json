@@ -11,9 +11,9 @@
     "dev:client": "vite dev --port 5000",
     "dev": "cross-env NODE_ENV=development tsx --env-file=.env server/index.ts",
     "fix-esbuild": "node script/fix-esbuild-permissions.mjs",
-    "prebuild": "node script/fix-esbuild-permissions.mjs",
+    "prebuild": "node script/check-migrations.mjs && node script/fix-esbuild-permissions.mjs",
     "build": "node script/build.mjs",
-    "postbuild": "node --env-file-if-exists=.env script/run-migrations.mjs",
+    "postbuild": "node --env-file-if-exists=.env script/postbuild-db.mjs",
     "start": "node dist/index.js",
     "postinstall": "node script/fix-esbuild-permissions.mjs",
     "check": "tsc",
@@ -22,9 +22,13 @@
     "db:push": "tsx --env-file=.env node_modules/.bin/drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file=.env db/migrate.ts",
+    "db:migrate:prod": "node --env-file=.env script/run-migrations.mjs",
     "db:seed": "tsx --env-file=.env seed.ts",
     "db:seed:fresh": "tsx --env-file=.env seed.ts --fresh",
-    "db:setup": "npm run db:migrate && npm run db:seed:fresh"
+    "db:seed:prod": "node --env-file=.env script/run-seed.mjs",
+    "db:seed:prod:fresh": "node --env-file=.env script/run-seed.mjs --fresh",
+    "db:setup": "npm run db:migrate && npm run db:seed:fresh",
+    "db:setup:prod": "node --env-file=.env script/postbuild-db.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
