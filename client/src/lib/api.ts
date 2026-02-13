@@ -2,6 +2,37 @@ import { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteS
 
 const API_BASE = "/api";
 
+/**
+ * Extrai mensagem de erro de uma Response HTTP de forma segura.
+ * Trata respostas JSON e não-JSON (ex: HTML 503 do proxy).
+ */
+async function extractErrorMessage(response: Response, fallback: string): Promise<string> {
+  const contentType = response.headers.get("content-type") || "";
+
+  // Mensagens amigáveis por status HTTP comum
+  const statusMessages: Record<number, string> = {
+    503: "Serviço temporariamente indisponível. Tente novamente em instantes.",
+    502: "Serviço temporariamente indisponível. Tente novamente em instantes.",
+    504: "O servidor demorou para responder. Tente novamente.",
+    500: "Erro interno do servidor. Tente novamente mais tarde.",
+    429: "Muitas requisições. Aguarde um momento e tente novamente.",
+  };
+
+  // Se não for JSON, retorna mensagem baseada no status
+  if (!contentType.includes("application/json")) {
+    return statusMessages[response.status] || fallback;
+  }
+
+  // Tenta parsear JSON; se falhar, usa fallback
+  try {
+    const data = await response.json();
+    // Suporta { error: "..." } ou { message: "..." }
+    return data.error || data.message || fallback;
+  } catch {
+    return statusMessages[response.status] || fallback;
+  }
+}
+
 // Products
 export async function fetchProducts(): Promise<ProductWithImages[]> {
   const response = await fetch(`${API_BASE}/products`);
@@ -127,8 +158,8 @@ export async function login(username: string, password: string): Promise<{ id: s
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to login");
+    const message = await extractErrorMessage(response, "Falha ao fazer login");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -141,8 +172,8 @@ export async function register(username: string, password: string): Promise<{ id
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to register");
+    const message = await extractErrorMessage(response, "Falha ao cadastrar");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -189,8 +220,8 @@ export async function customerLogin(email: string, password: string): Promise<Cu
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to login");
+    const message = await extractErrorMessage(response, "Falha ao fazer login");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -210,8 +241,8 @@ export async function customerRegister(data: {
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to register");
+    const message = await extractErrorMessage(response, "Falha ao cadastrar");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -265,8 +296,8 @@ export async function processCheckout(data: CheckoutData): Promise<CheckoutResul
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to process checkout");
+    const message = await extractErrorMessage(response, "Falha ao processar pedido");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -305,8 +336,8 @@ export async function createStripeCheckoutSession(data: StripeCheckoutData): Pro
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create checkout session");
+    const message = await extractErrorMessage(response, "Falha ao criar sessão de pagamento");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -421,8 +452,8 @@ export async function createAdminCustomer(data: {
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create customer");
+    const message = await extractErrorMessage(response, "Falha ao criar cliente");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -481,8 +512,8 @@ export async function createAdminUser(data: {
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create user");
+    const message = await extractErrorMessage(response, "Falha ao criar usuário");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -499,8 +530,8 @@ export async function updateAdminUser(id: string, data: {
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update user");
+    const message = await extractErrorMessage(response, "Falha ao atualizar usuário");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -511,8 +542,8 @@ export async function deleteAdminUser(id: string): Promise<void> {
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to delete user");
+    const message = await extractErrorMessage(response, "Falha ao excluir usuário");
+    throw new Error(message);
   }
 }
 
@@ -553,8 +584,8 @@ export async function createReview(productId: number, rating: number, comment?: 
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create review");
+    const message = await extractErrorMessage(response, "Falha ao criar avaliação");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -653,8 +684,8 @@ export async function createAppointment(data: CreateAppointment): Promise<{ appo
     credentials: "include",
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to create appointment");
+    const message = await extractErrorMessage(response, "Falha ao criar agendamento");
+    throw new Error(message);
   }
   return response.json();
 }
