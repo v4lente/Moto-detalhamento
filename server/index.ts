@@ -68,7 +68,37 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await runMigrations();
+  // Run migrations with error handling - don't crash the server if migrations fail
+  // Migrations also run during postbuild, so this is a safety net
+  try {
+    await runMigrations();
+  } catch (migrationError: any) {
+    console.error("=".repeat(60));
+    console.error("MIGRATION ERROR - Server will start but may be degraded");
+    console.error("=".repeat(60));
+    
+    // Identify the type of error for easier debugging
+    if (migrationError.code === 'ER_ACCESS_DENIED_ERROR') {
+      console.error("DATABASE AUTH ERROR: Check DATABASE_URL credentials");
+      console.error("- Verify user/password in Hostinger hPanel");
+      console.error("- Use 127.0.0.1 instead of localhost");
+      console.error("- URL-encode special characters in password");
+    } else if (migrationError.code === 'ECONNREFUSED') {
+      console.error("DATABASE CONNECTION ERROR: Cannot reach MySQL server");
+      console.error("- Check if MySQL is running");
+      console.error("- Verify host and port in DATABASE_URL");
+    } else if (migrationError.code === 'ER_BAD_DB_ERROR') {
+      console.error("DATABASE NOT FOUND: The specified database does not exist");
+      console.error("- Create the database in Hostinger hPanel");
+    } else {
+      console.error("Error details:", migrationError.message);
+    }
+    
+    console.error("=".repeat(60));
+    // Continue starting the server - it may work for cached/static content
+    // or the database issue may be transient
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
