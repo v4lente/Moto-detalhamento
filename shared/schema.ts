@@ -49,6 +49,7 @@ export const products = mysqlTable("products", {
   // Removido: images array - agora usa tabela product_images
   category: text("category").notNull(),
   inStock: boolean("in_stock").notNull().$default(() => true),
+  isActive: boolean("is_active").notNull().$default(() => true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

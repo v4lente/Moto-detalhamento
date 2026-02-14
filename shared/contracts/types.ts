@@ -27,6 +27,7 @@ export interface Product {
   image: string;
   category: string;
   inStock: boolean;
+  isActive: boolean;
   createdAt: Date;
 }
 
@@ -37,6 +38,7 @@ export interface InsertProduct {
   image: string;
   category: string;
   inStock?: boolean;
+  isActive?: boolean;
   images?: string[];
 }
 

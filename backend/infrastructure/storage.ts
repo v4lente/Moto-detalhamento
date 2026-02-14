@@ -25,7 +25,7 @@ export interface IStorage {
   updateUser(id: string, user: Partial<InsertUser & { role: string }>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   
-  getAllProducts(): Promise<ProductWithImages[]>;
+  getAllProducts(includeInactive?: boolean): Promise<ProductWithImages[]>;
   getProduct(id: number): Promise<ProductWithImages | undefined>;
   createProduct(product: InsertProduct): Promise<ProductWithImages>;
   updateProduct(id: number, product: Partial<InsertProduct>): Promise<ProductWithImages | undefined>;
@@ -222,58 +222,74 @@ export class DatabaseStorage implements IStorage {
     return this.extractAffectedRows(result) > 0;
   }
 
-  async getAllProducts(): Promise<ProductWithImages[]> {
-    const allProducts = await db.select().from(products);
-    const productsWithImages = await Promise.all(
-      allProducts.map(async (product: Product) => ({
-        ...product,
-        images: await this.getProductImages(product.id),
-      }))
-    );
-    return productsWithImages;
+  async getAllProducts(includeInactive: boolean = false): Promise<ProductWithImages[]> {
+    return this.withDbRetry(async () => {
+      const allProducts = includeInactive
+        ? await db.select().from(products)
+        : await db.select().from(products).where(eq(products.isActive, true));
+      const productsWithImages = await Promise.all(
+        allProducts.map(async (product: Product) => ({
+          ...product,
+          images: await this.getProductImages(product.id),
+        }))
+      );
+      return productsWithImages;
+    }, "getAllProducts");
   }
 
   async getProduct(id: number): Promise<ProductWithImages | undefined> {
-    const result = await db.select().from(products).where(eq(products.id, id));
-    if (!result[0]) return undefined;
-    return {
-      ...result[0],
-      images: await this.getProductImages(id),
-    };
+    return this.withDbRetry(async () => {
+      const result = await db.select().from(products).where(eq(products.id, id));
+      if (!result[0]) return undefined;
+      return {
+        ...result[0],
+        images: await this.getProductImages(id),
+      };
+    }, "getProduct");
   }
 
   async createProduct(product: InsertProduct): Promise<ProductWithImages> {
-    const { images, ...productData } = product;
-    const result = await db.insert(products).values(productData);
-    const insertId = (result as any).insertId;
-    
-    // Salva as imagens na tabela normalizada
-    if (images && images.length > 0) {
-      await this.saveProductImages(insertId, images);
-    }
-    
-    return (await this.getProduct(insertId))!;
+    return this.withDbRetry(async () => {
+      const { images, ...productData } = product;
+      const result = await db.insert(products).values(productData);
+      const insertId = (result as any).insertId;
+      
+      // Salva as imagens na tabela normalizada
+      if (images && images.length > 0) {
+        await this.saveProductImages(insertId, images);
+      }
+      
+      return (await this.getProduct(insertId))!;
+    }, "createProduct");
   }
 
   async updateProduct(id: number, product: Partial<InsertProduct>): Promise<ProductWithImages | undefined> {
-    const { images, ...productData } = product;
-    
-    if (Object.keys(productData).length > 0) {
-      await db.update(products).set(productData).where(eq(products.id, id));
-    }
-    
-    // Atualiza as imagens se fornecidas
-    if (images !== undefined) {
-      await this.saveProductImages(id, images);
-    }
-    
-    return await this.getProduct(id);
+    return this.withDbRetry(async () => {
+      const { images, ...productData } = product;
+      
+      if (Object.keys(productData).length > 0) {
+        await db.update(products).set(productData).where(eq(products.id, id));
+      }
+      
+      // Atualiza as imagens se fornecidas
+      if (images !== undefined) {
+        await this.saveProductImages(id, images);
+      }
+      
+      return await this.getProduct(id);
+    }, "updateProduct");
   }
 
   async deleteProduct(id: number): Promise<boolean> {
-    // As imagens são deletadas automaticamente pelo CASCADE
-    const result = await db.delete(products).where(eq(products.id, id));
-    return this.extractAffectedRows(result) > 0;
+    return this.withDbRetry(async () => {
+      const existing = await db.select().from(products).where(eq(products.id, id)).limit(1);
+      if (!existing[0]) {
+        return false;
+      }
+
+      await db.update(products).set({ isActive: false }).where(eq(products.id, id));
+      return true;
+    }, "deleteProduct");
   }
 
   async getVariationsByProduct(productId: number): Promise<ProductVariation[]> {
@@ -468,31 +484,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductsWithStats(): Promise<Array<ProductWithImages & { avgRating: number; reviewCount: number; purchaseCount: number }>> {
-    const allProducts = await this.getAllProducts();
-    
-    const productsWithStats = await Promise.all(allProducts.map(async (product) => {
-      const reviewStats = await db.select({
-        avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
-        reviewCount: sql<number>`COUNT(${reviews.id})`
-      }).from(reviews).where(eq(reviews.productId, product.id));
+    return this.withDbRetry(async () => {
+      const allProducts = await this.getAllProducts();
+      
+      const productsWithStats = await Promise.all(allProducts.map(async (product) => {
+        const reviewStats = await db.select({
+          avgRating: sql<number>`COALESCE(AVG(${reviews.rating}), 0)`,
+          reviewCount: sql<number>`COUNT(${reviews.id})`
+        }).from(reviews).where(eq(reviews.productId, product.id));
 
-      const purchaseStats = await db.select({
-        purchaseCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`
-      }).from(orderItems).where(eq(orderItems.productId, product.id));
+        const purchaseStats = await db.select({
+          purchaseCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`
+        }).from(orderItems).where(eq(orderItems.productId, product.id));
 
-      return {
-        ...product,
-        avgRating: Number(reviewStats[0]?.avgRating) || 0,
-        reviewCount: Number(reviewStats[0]?.reviewCount) || 0,
-        purchaseCount: Number(purchaseStats[0]?.purchaseCount) || 0,
-      };
-    }));
+        return {
+          ...product,
+          avgRating: Number(reviewStats[0]?.avgRating) || 0,
+          reviewCount: Number(reviewStats[0]?.reviewCount) || 0,
+          purchaseCount: Number(purchaseStats[0]?.purchaseCount) || 0,
+        };
+      }));
 
-    return productsWithStats.sort((a, b) => {
-      const scoreA = a.avgRating * 2 + a.purchaseCount;
-      const scoreB = b.avgRating * 2 + b.purchaseCount;
-      return scoreB - scoreA;
-    });
+      return productsWithStats.sort((a, b) => {
+        const scoreA = a.avgRating * 2 + a.purchaseCount;
+        const scoreB = b.avgRating * 2 + b.purchaseCount;
+        return scoreB - scoreA;
+      });
+    }, "getProductsWithStats");
   }
 
   async getRecentReviews(limit: number = 6): Promise<Array<Review & { productName: string; productImage: string }>> {

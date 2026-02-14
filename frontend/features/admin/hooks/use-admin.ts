@@ -24,8 +24,10 @@ export function useUser() {
 // Products queries and mutations
 export function useProducts() {
   return useQuery({
-    queryKey: ["products"],
-    queryFn: fetchProducts,
+    queryKey: ["adminProducts"],
+    queryFn: () => fetchProducts(true),
+    retry: 1,
+    refetchOnMount: "always",
   });
 }
 
@@ -36,7 +38,9 @@ export function useProductMutations() {
   const createProductMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto criado com sucesso!" });
     },
     onError: () => toast({ title: "Erro ao criar produto", variant: "destructive" }),
@@ -44,8 +48,13 @@ export function useProductMutations() {
 
   const updateProductMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<ProductWithImages> }) => updateProduct(id, data),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData<ProductWithImages[]>(["adminProducts"], (old) =>
+        old ? old.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto atualizado!" });
     },
     onError: () => toast({ title: "Erro ao atualizar produto", variant: "destructive" }),
@@ -53,11 +62,22 @@ export function useProductMutations() {
 
   const deleteProductMutation = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => {
+    onSuccess: (_, productId) => {
+      queryClient.setQueryData<ProductWithImages[]>(["adminProducts"], (old) =>
+        old ? old.map((p) => (p.id === productId ? { ...p, isActive: false } : p)) : old
+      );
+      queryClient.setQueryData<ProductWithImages[]>(["products"], (old) =>
+        old ? old.filter((p) => p.id !== productId) : old
+      );
+      queryClient.setQueryData<any[]>(["products-with-stats"], (old) =>
+        old ? old.filter((p) => p.id !== productId) : old
+      );
+      queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast({ title: "Produto removido!" });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
+      toast({ title: "Produto desativado!" });
     },
-    onError: () => toast({ title: "Erro ao remover produto", variant: "destructive" }),
+    onError: () => toast({ title: "Erro ao desativar produto", variant: "destructive" }),
   });
 
   return { createProductMutation, updateProductMutation, deleteProductMutation };

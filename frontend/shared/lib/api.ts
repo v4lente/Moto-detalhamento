@@ -1,4 +1,4 @@
-import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia } from "@shared/contracts";
+import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct } from "@shared/contracts";
 import { API_BASE } from "./api-config";
 
 /**
@@ -33,8 +33,9 @@ async function extractErrorMessage(response: Response, fallback: string): Promis
 }
 
 // Products
-export async function fetchProducts(): Promise<ProductWithImages[]> {
-  const response = await fetch(`${API_BASE}/products`);
+export async function fetchProducts(includeInactive: boolean = false): Promise<ProductWithImages[]> {
+  const endpoint = includeInactive ? `${API_BASE}/admin/products` : `${API_BASE}/products`;
+  const response = await fetch(endpoint, includeInactive ? { credentials: "include" } : undefined);
   if (!response.ok) {
     throw new Error("Failed to fetch products");
   }
@@ -49,7 +50,7 @@ export async function fetchProduct(id: number): Promise<ProductWithImages> {
   return response.json();
 }
 
-export async function createProduct(product: Omit<ProductWithImages, "id" | "createdAt">): Promise<ProductWithImages> {
+export async function createProduct(product: InsertProduct): Promise<ProductWithImages> {
   const response = await fetch(`${API_BASE}/products`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -9,6 +9,16 @@ import { requireAuth, requireCustomerAuth } from "../middleware/auth";
  */
 export function registerProductsRoutes(app: Express) {
   // ===== PRODUCTS CRUD =====
+
+  app.get("/api/admin/products", requireAuth, async (req, res) => {
+    try {
+      const products = await storage.getAllProducts(true);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching admin products:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
   
   app.get("/api/products", async (req, res) => {
     try {
@@ -48,7 +58,7 @@ export function registerProductsRoutes(app: Express) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
       const product = await storage.getProduct(id);
-      if (!product) {
+      if (!product || !product.isActive) {
         return res.status(404).json({ error: "Product not found" });
       }
       res.json(product);

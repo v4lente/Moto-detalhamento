@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { TabsContent } from "@/shared/ui/tabs";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
@@ -45,7 +45,7 @@ export function ProductsManagementPage() {
   const [productVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
 
   // Queries
-  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: products, isLoading: productsLoading, isError: productsError } = useProducts();
   
   // Mutations
   const { createProductMutation, updateProductMutation, deleteProductMutation } = useProductMutations();
@@ -95,7 +95,7 @@ export function ProductsManagementPage() {
       const productVariations = await fetchProductVariations(product.id);
       setVariations(productVariations);
     } catch {
-      toast({ title: "Erro ao carregar variações", variant: "destructive" });
+      toast({ title: "Erro ao carregar variacoes", variant: "destructive" });
       setVariations([]);
     } finally {
       setVariationsLoading(false);
@@ -108,7 +108,7 @@ export function ProductsManagementPage() {
     
     const price = parseFloat(variationPrice);
     if (isNaN(price) || price <= 0) {
-      toast({ title: "Preço inválido", variant: "destructive" });
+      toast({ title: "Preco invalido", variant: "destructive" });
       return;
     }
 
@@ -157,7 +157,7 @@ export function ProductsManagementPage() {
     
     if (!productCategory.trim()) {
       toast({
-        title: "Categoria obrigatória",
+        title: "Categoria obrigatoria",
         description: "Por favor, selecione ou crie uma categoria.",
         variant: "destructive",
       });
@@ -232,12 +232,12 @@ export function ProductsManagementPage() {
                 <Input id="name" name="name" defaultValue={editingProduct?.name} required data-testid="input-product-name" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">Descricao</Label>
                 <Textarea id="description" name="description" defaultValue={editingProduct?.description} required data-testid="input-product-description" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Preço (R$)</Label>
+                  <Label htmlFor="price">Preco (R$)</Label>
                   <Input id="price" name="price" type="number" step="0.01" defaultValue={editingProduct?.price} required data-testid="input-product-price" />
                 </div>
                 <div className="space-y-2">
@@ -304,10 +304,22 @@ export function ProductsManagementPage() {
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : productsError ? (
+        <div className="py-10 text-center text-sm text-red-400">
+          Erro ao carregar produtos do admin.
+        </div>
+      ) : products && products.length === 0 ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          Nenhum produto encontrado.
+        </div>
       ) : (
         <div className="grid gap-4">
           {products?.map((product) => (
-            <Card key={product.id} className="bg-card border-border" data-testid={`admin-product-${product.id}`}>
+            <Card
+              key={product.id}
+              className={`bg-card border-border ${!product.isActive ? "opacity-60" : ""}`}
+              data-testid={`admin-product-${product.id}`}
+            >
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="h-16 w-16 bg-black/20 rounded overflow-hidden border border-border relative flex items-center justify-center">
                   <img src={product.image} alt={product.name} className="max-h-full max-w-full object-contain" />
@@ -319,7 +331,10 @@ export function ProductsManagementPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground">{product.category} • R$ {product.price.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">{product.category} | R$ {product.price.toFixed(2)}</p>
+                  {!product.isActive && (
+                    <p className="text-xs text-amber-400 mt-1">Produto desativado (não aparece na loja)</p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -329,7 +344,7 @@ export function ProductsManagementPage() {
                     data-testid={`button-variations-${product.id}`}
                   >
                     <Package className="h-4 w-4 mr-1" />
-                    Variações{productVariationCounts[product.id] ? ` (${productVariationCounts[product.id]})` : ""}
+                    Variacoes{productVariationCounts[product.id] ? ` (${productVariationCounts[product.id]})` : ""}
                   </Button>
                   <Button
                     variant="outline"
@@ -346,14 +361,32 @@ export function ProductsManagementPage() {
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => deleteProductMutation.mutate(product.id)}
-                    data-testid={`button-delete-${product.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {product.isActive ? (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteProductMutation.mutate(product.id)}
+                      title="Desativar produto"
+                      data-testid={`button-delete-${product.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() =>
+                        updateProductMutation.mutate({
+                          id: product.id,
+                          data: { isActive: true },
+                        })
+                      }
+                      title="Reativar produto"
+                      data-testid={`button-reactivate-${product.id}`}
+                    >
+                      <ToggleRight className="h-4 w-4 text-green-500" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -376,7 +409,7 @@ export function ProductsManagementPage() {
         <DialogContent className="bg-card border-primary/20 w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle className="font-display">
-              Variações: {variationsProductName}
+              Variacoes: {variationsProductName}
             </DialogTitle>
           </DialogHeader>
           
@@ -389,11 +422,11 @@ export function ProductsManagementPage() {
               {/* Add/Edit Variation Form */}
               <form onSubmit={handleVariationSubmit} className="space-y-3 p-4 bg-background rounded-lg border border-border">
                 <h4 className="font-medium text-sm">
-                  {editingVariation ? "Editar Variação" : "Nova Variação"}
+                  {editingVariation ? "Editar Variacao" : "Nova Variacao"}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="variationLabel" className="text-xs">Rótulo (ex: 100ml, 500ml)</Label>
+                    <Label htmlFor="variationLabel" className="text-xs">Rotulo (ex: 100ml, 500ml)</Label>
                     <Input
                       id="variationLabel"
                       value={variationLabel}
@@ -404,7 +437,7 @@ export function ProductsManagementPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="variationPrice" className="text-xs">Preço (R$)</Label>
+                    <Label htmlFor="variationPrice" className="text-xs">Preco (R$)</Label>
                     <Input
                       id="variationPrice"
                       type="number"
@@ -458,11 +491,11 @@ export function ProductsManagementPage() {
               {/* Existing Variations List */}
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground">
-                  Variações existentes ({variations.length})
+                  Variacoes existentes ({variations.length})
                 </h4>
                 {variations.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhuma variação cadastrada.
+                    Nenhuma variacao cadastrada.
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -537,3 +570,5 @@ export function ProductsManagementPage() {
 }
 
 export default ProductsManagementPage;
+
+
