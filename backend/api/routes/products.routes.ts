@@ -136,8 +136,11 @@ export function registerProductsRoutes(app: Express) {
       const variation = await storage.createVariation(validatedData);
       res.status(201).json(variation);
     } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
       console.error("Error creating variation:", error);
-      res.status(400).json({ error: error.message || "Failed to create variation" });
+      res.status(500).json({ error: "Failed to create variation" });
     }
   });
 

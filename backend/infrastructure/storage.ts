@@ -15,7 +15,7 @@ import {
   users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, reviews, servicePosts, servicePostMedia, appointments, offeredServices
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, asc } from "drizzle-orm";
+import { eq, desc, sql, asc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -93,6 +93,51 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private extractInsertId(result: unknown): number | undefined {
+    const direct = (result as { insertId?: unknown })?.insertId;
+    if (typeof direct === "number") return direct;
+
+    if (Array.isArray(result) && result.length > 0) {
+      const first = result[0] as { insertId?: unknown };
+      if (typeof first?.insertId === "number") return first.insertId;
+    }
+
+    return undefined;
+  }
+
+  private extractAffectedRows(result: unknown): number {
+    const direct = (result as { affectedRows?: unknown })?.affectedRows;
+    if (typeof direct === "number") return direct;
+
+    if (Array.isArray(result) && result.length > 0) {
+      const first = result[0] as { affectedRows?: unknown };
+      if (typeof first?.affectedRows === "number") return first.affectedRows;
+    }
+
+    return 0;
+  }
+
+  private isTransientDbError(error: unknown): boolean {
+    const code = (error as { code?: string })?.code;
+    return code === "ECONNRESET" ||
+      code === "PROTOCOL_CONNECTION_LOST" ||
+      code === "PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR" ||
+      code === "ETIMEDOUT" ||
+      code === "EPIPE";
+  }
+
+  private async withDbRetry<T>(operation: () => Promise<T>, context: string): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!this.isTransientDbError(error)) {
+        throw error;
+      }
+      console.warn(`Transient DB error in ${context}. Retrying once...`, error);
+      return await operation();
+    }
+  }
+
   // Helper para buscar imagens de um produto
   private async getProductImages(productId: number): Promise<string[]> {
     const images = await db.select().from(productImages)
@@ -174,7 +219,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<boolean> {
     const result = await db.delete(users).where(eq(users.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 
   async getAllProducts(): Promise<ProductWithImages[]> {
@@ -228,29 +273,68 @@ export class DatabaseStorage implements IStorage {
   async deleteProduct(id: number): Promise<boolean> {
     // As imagens são deletadas automaticamente pelo CASCADE
     const result = await db.delete(products).where(eq(products.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 
   async getVariationsByProduct(productId: number): Promise<ProductVariation[]> {
-    return await db.select().from(productVariations).where(eq(productVariations.productId, productId)).orderBy(asc(productVariations.price));
+    return this.withDbRetry(
+      async () =>
+        await db
+          .select()
+          .from(productVariations)
+          .where(eq(productVariations.productId, productId))
+          .orderBy(asc(productVariations.price)),
+      "getVariationsByProduct"
+    );
   }
 
   async createVariation(variation: InsertProductVariation): Promise<ProductVariation> {
-    const result = await db.insert(productVariations).values(variation);
-    const insertId = (result as any).insertId;
-    const created = await db.select().from(productVariations).where(eq(productVariations.id, insertId));
-    return created[0];
+    return this.withDbRetry(async () => {
+      const result = await db.insert(productVariations).values(variation);
+      const insertId = this.extractInsertId(result);
+
+      if (typeof insertId === "number") {
+        const created = await db.select().from(productVariations).where(eq(productVariations.id, insertId));
+        if (created[0]) {
+          return created[0];
+        }
+      }
+
+      // Fallback for drivers/environments that don't expose insertId in the expected shape.
+      const fallback = await db
+        .select()
+        .from(productVariations)
+        .where(
+          and(
+            eq(productVariations.productId, variation.productId),
+            eq(productVariations.label, variation.label),
+            eq(productVariations.price, variation.price),
+          )
+        )
+        .orderBy(desc(productVariations.id))
+        .limit(1);
+
+      if (!fallback[0]) {
+        throw new Error("Failed to resolve created variation");
+      }
+
+      return fallback[0];
+    }, "createVariation");
   }
 
   async updateVariation(id: number, variation: Partial<InsertProductVariation>): Promise<ProductVariation | undefined> {
-    await db.update(productVariations).set(variation).where(eq(productVariations.id, id));
-    const result = await db.select().from(productVariations).where(eq(productVariations.id, id));
-    return result[0];
+    return this.withDbRetry(async () => {
+      await db.update(productVariations).set(variation).where(eq(productVariations.id, id));
+      const result = await db.select().from(productVariations).where(eq(productVariations.id, id));
+      return result[0];
+    }, "updateVariation");
   }
 
   async deleteVariation(id: number): Promise<boolean> {
-    const result = await db.delete(productVariations).where(eq(productVariations.id, id));
-    return (result as any).affectedRows > 0;
+    return this.withDbRetry(async () => {
+      const result = await db.delete(productVariations).where(eq(productVariations.id, id));
+      return this.extractAffectedRows(result) > 0;
+    }, "deleteVariation");
   }
 
   async getSiteSettings(): Promise<SiteSettings | undefined> {
@@ -304,7 +388,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomer(id: string): Promise<boolean> {
     const result = await db.delete(customers).where(eq(customers.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
@@ -493,7 +577,7 @@ export class DatabaseStorage implements IStorage {
   async deleteServicePost(id: number): Promise<boolean> {
     // A mídia é deletada automaticamente pelo CASCADE
     const result = await db.delete(servicePosts).where(eq(servicePosts.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 
   async getAllAppointments(): Promise<Appointment[]> {
@@ -524,7 +608,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAppointment(id: number): Promise<boolean> {
     const result = await db.delete(appointments).where(eq(appointments.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 
   async getAllOfferedServices(): Promise<OfferedService[]> {
@@ -555,8 +639,9 @@ export class DatabaseStorage implements IStorage {
 
   async deleteOfferedService(id: number): Promise<boolean> {
     const result = await db.delete(offeredServices).where(eq(offeredServices.id, id));
-    return (result as any).affectedRows > 0;
+    return this.extractAffectedRows(result) > 0;
   }
 }
 
 export const storage = new DatabaseStorage();
+

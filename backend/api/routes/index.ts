@@ -64,12 +64,14 @@ export async function registerAllRoutes(
       secret: sessionSecret || "dev-only-secret-not-for-production",
       resave: false,
       saveUninitialized: false,
+      proxy: true,
       store: new MemStore({ checkPeriod: 86400000 }),
       cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        // Same-site requests are enough for this app and more reliable behind shared hosting proxies.
+        sameSite: "lax",
       },
     })
   );
