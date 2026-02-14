@@ -1,0 +1,75 @@
+import React from "react";
+import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/shared/ui/button";
+import { Tabs } from "@/shared/ui/tabs";
+import { AdminNavbar } from "@/features/admin/components/admin-navbar";
+import { getCurrentUser, logout } from "@/shared/lib/api";
+import { Home, LogOut, Loader2 } from "lucide-react";
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+  defaultTab?: string;
+}
+
+export function AdminLayout({ children, defaultTab = "dashboard" }: AdminLayoutProps) {
+  const [, setLocation] = useLocation();
+  
+  const { data: user, isLoading: userLoading } = useQuery({
+    queryKey: ["user"],
+    queryFn: getCurrentUser,
+  });
+
+  React.useEffect(() => {
+    if (!userLoading && !user) {
+      setLocation("/login");
+    }
+  }, [user, userLoading, setLocation]);
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation("/login");
+  };
+
+  if (userLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <nav className="border-b border-border/40 bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <h1 className="font-display font-bold text-base sm:text-xl uppercase tracking-wider sm:tracking-widest">
+            <span className="text-primary">Admin</span> <span className="hidden sm:inline">Panel</span>
+          </h1>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Olá, {user.username}</span>
+            <Link href="/">
+              <Button variant="outline" size="sm" data-testid="link-home" className="px-2 sm:px-4">
+                <Home className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Loja</span>
+              </Button>
+            </Link>
+            <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout" className="px-2 sm:px-4">
+              <LogOut className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="container mx-auto px-4 py-8">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
+          <AdminNavbar />
+          {children}
+        </Tabs>
+      </main>
+    </div>
+  );
+}
+
+export { AdminLayout as default };

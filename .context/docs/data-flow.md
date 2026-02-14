@@ -1,37 +1,64 @@
 ## Data Flow & Integrations
-User actions in the React client call the API layer in `client/src/lib/api.ts`, which issues HTTP requests to Express routes. Routes validate input (Zod schemas from `shared/schema.ts`), execute storage operations through `DatabaseStorage`, and return JSON responses. External integrations (object storage and email) are invoked from the server for uploads and notifications.
+
+User actions in the React frontend call the API layer in `frontend/shared/lib/api.ts`, which issues HTTP requests to Express routes. Routes validate input (Zod schemas from `shared/contracts/`), execute service operations, and return JSON responses. External integrations (email and payments) are invoked from the server for notifications and transactions.
 
 ## Module Dependencies
-- **client/** -> `client/src/lib/api.ts` -> `/api/*` routes
-- **server/** -> `shared/schema.ts` for validation and types
-- **server/** -> `db/index.ts` (Drizzle + Postgres)
-- **server/** -> `server/replit_integrations/object_storage/`
-- **server/** -> `server/email.ts` (Resend)
+
+```
+frontend/features/*
+    → frontend/shared/lib/api.ts
+    → /api/* routes
+
+backend/api/routes/*
+    → backend/services/*
+    → backend/infrastructure/storage.ts
+    → shared/contracts/* (validation)
+    → shared/schema.ts (Drizzle)
+
+backend/infrastructure/*
+    → MySQL (Drizzle ORM)
+    → Resend (email)
+    → Stripe (payments)
+```
 
 ## Service Layer
-- `DatabaseStorage` (`server/storage.ts`) handles persistence and aggregate queries.
-- `ObjectStorageService` (`server/replit_integrations/object_storage/objectStorage.ts`) manages file uploads and access.
+
+- `DatabaseStorage` (`backend/infrastructure/storage.ts`) — Data access layer (Repository pattern)
+- `AuthService` (`backend/services/auth.service.ts`) — Autenticação
+- `CheckoutService` (`backend/services/checkout.service.ts`) — Processamento de pedidos
+- `AppointmentService` (`backend/services/appointment.service.ts`) — Agendamentos
 
 ## High-level Flow
-Client event -> API request -> Express route -> validation -> storage -> database -> response -> UI update.
+
+```
+Frontend Event → API Request → Express Route → Validation → Service → Storage → Database → Response → UI Update
+```
 
 ```mermaid
 flowchart LR
-  UI["React UI"] -->|"fetch /api/*"| API["Express Routes"]
-  API -->|"Zod validation"| Schema["shared/schema.ts"]
-  API --> Storage["DatabaseStorage"]
-  Storage --> DB["PostgreSQL"]
-  API --> Email["Resend"]
-  API --> ObjectStore["Object Storage"]
+  UI["React Frontend"] -->|"fetch /api/*"| Routes["API Routes"]
+  Routes -->|"Zod validation"| Contracts["shared/contracts"]
+  Routes --> Services["Services Layer"]
+  Services --> Storage["DatabaseStorage"]
+  Storage --> DB["MySQL"]
+  Services --> Email["Resend"]
+  Services --> Payments["Stripe"]
 ```
 
 ## Internal Movement
-All domain data is shared through `shared/schema.ts`, ensuring client and server agree on fields. Session state is kept server-side with `express-session`, and customer/admin identity is stored in session cookies.
+
+Domain types and validations are shared through `shared/contracts/`, ensuring frontend and backend agree on data shapes. Session state is kept server-side with `express-session`, and customer/admin identity is stored in session cookies.
 
 ## External Integrations
-- **Object Storage**: Used for uploads in admin flows; ACL enforced in `objectAcl.ts`.
-- **Resend Email**: Notifies admins about new customers and appointment changes.
-- **WhatsApp**: Checkout and appointment summaries are generated as messages for deep links.
+
+- **MySQL**: Banco de dados relacional via Drizzle ORM
+- **Resend Email**: Notifica admins sobre novos clientes e agendamentos (`backend/infrastructure/email/`)
+- **Stripe**: Processamento de pagamentos (`backend/infrastructure/payments/`)
+- **WhatsApp**: Checkout e agendamentos via deep links (client-side)
 
 ## Observability & Failure Modes
-API responses are logged in `server/index.ts`, including timing. Common failures include validation errors (Zod) and database connectivity (`DATABASE_URL`), both of which return structured error JSON.
+
+API responses are logged in `backend/api/index.ts`, including timing. Common failures include:
+- Validation errors (Zod) — Return structured error JSON
+- Database connectivity (`DATABASE_URL`) — Graceful degradation with error logging
+- Service errors — Caught and returned as appropriate HTTP status codes

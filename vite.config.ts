@@ -12,9 +12,11 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@/features": path.resolve(import.meta.dirname, "frontend", "features"),
+      "@/shared": path.resolve(import.meta.dirname, "frontend", "shared"),
+      "@/pages": path.resolve(import.meta.dirname, "frontend", "pages"),
+      "@": path.resolve(import.meta.dirname, "frontend"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
   css: {
@@ -22,7 +24,7 @@ export default defineConfig({
       plugins: [],
     },
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path.resolve(import.meta.dirname, "frontend"),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,

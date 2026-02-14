@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "include": ["**/*", "../shared/contracts/**/*"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/features/*": ["./features/*"],
+      "@/shared/*": ["./shared/*"],
+      "@/pages/*": ["./pages/*"],
+      "@/*": ["./*"],
+      "@shared/*": ["../shared/*"]
+    }
+  }
+}

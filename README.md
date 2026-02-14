@@ -44,35 +44,61 @@ E-commerce completo para negócio de detalhamento de motocicletas, com catálogo
 
 ## Arquitetura
 
-A aplicação segue uma arquitetura monolítica moderna com separação clara entre frontend e backend.
+A aplicação segue uma **arquitetura modular monolítica** com separação clara entre frontend, backend e código compartilhado.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                      │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────────┐ │
-│  │  Pages  │  │Components│  │  Hooks  │  │  React Query    │ │
-│  └────┬────┘  └────┬────┘  └────┬────┘  └────────┬────────┘ │
-│       └────────────┴────────────┴────────────────┘          │
-│                           │                                  │
-│                      API Client                              │
-└───────────────────────────┼─────────────────────────────────┘
-                            │ HTTP/JSON
-┌───────────────────────────┼─────────────────────────────────┐
-│                      Backend (Express)                       │
-│  ┌─────────┐  ┌─────────┐  ┌─────────────┐  ┌────────────┐  │
-│  │ Routes  │──│ Storage │──│ Drizzle ORM │──│   MySQL    │  │
-│  └─────────┘  └─────────┘  └─────────────┘  └────────────┘  │
-│                                                              │
-│  ┌─────────────────┐  ┌──────────────────┐                  │
-│  │ Object Storage  │  │ Session Manager  │                  │
-│  └─────────────────┘  └──────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     Frontend (React + Vite)                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    Features Modulares                     │   │
+│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │   │
+│  │  │ admin  │ │products│ │  cart  │ │  auth  │ │schedule│ │   │
+│  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    Shared (UI, Hooks, Lib)                │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│                         API Client                               │
+└──────────────────────────────┼──────────────────────────────────┘
+                               │ HTTP/JSON
+┌──────────────────────────────┼──────────────────────────────────┐
+│                      Backend (Express)                           │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    API Routes Layer                       │   │
+│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │   │
+│  │  │products│ │ orders │ │  auth  │ │services│ │settings│ │   │
+│  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    Services Layer                         │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │   │
+│  │  │ auth.service│  │checkout.svc │  │appointment.svc  │   │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                  Infrastructure Layer                     │   │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────┐   │   │
+│  │  │ Storage │  │   DB    │  │  Email  │  │  Payments  │   │   │
+│  │  └─────────┘  └─────────┘  └─────────┘  └────────────┘   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────────┐
+│                    Shared Contracts                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌────────────────┐   │
+│  │   types.ts      │  │  validation.ts  │  │   schema.ts    │   │
+│  │ (frontend-safe) │  │  (Zod schemas)  │  │ (backend only) │   │
+│  └─────────────────┘  └─────────────────┘  └────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Padrões Utilizados
 
+- **Feature-Based Architecture** - Frontend organizado por features/domínios
 - **Repository Pattern** - Camada de storage abstrai acesso ao banco
-- **Shared Schema** - Schemas Drizzle/Zod compartilhados entre frontend e backend
+- **Service Layer** - Lógica de negócio isolada em services no backend
+- **Shared Contracts** - Tipos e validações compartilhados entre frontend e backend
 - **Server State Management** - TanStack React Query para cache e sincronização
 - **Component Composition** - Componentes UI modulares com shadcn/ui
 
@@ -118,74 +144,116 @@ A aplicação segue uma arquitetura monolítica moderna com separação clara en
 
 ## Estrutura do Projeto
 
+O projeto segue uma **arquitetura modular** com separação clara entre frontend, backend e código compartilhado.
+
 ```
-├── client/                     # Frontend React
-│   ├── src/
-│   │   ├── components/         # Componentes da aplicação
-│   │   │   ├── ui/             # Componentes shadcn/ui (50+)
-│   │   │   ├── layout.tsx      # Layout principal com header/footer
-│   │   │   ├── product-card.tsx # Card de produto com carrossel
-│   │   │   ├── checkout-dialog.tsx # Modal de checkout
-│   │   │   ├── admin-navbar.tsx # Navegação do admin
-│   │   │   ├── ImageUpload.tsx  # Upload com crop de imagens
-│   │   │   └── ObjectUploader.tsx # Upload para Object Storage
-│   │   ├── pages/              # Páginas da aplicação
-│   │   │   ├── home.tsx        # Página inicial
-│   │   │   ├── produtos.tsx    # Listagem de produtos
-│   │   │   ├── produto.tsx     # Detalhe do produto
-│   │   │   ├── admin.tsx       # Painel administrativo
-│   │   │   ├── conta.tsx       # Área do cliente
-│   │   │   ├── agendar.tsx     # Agendamento de serviços
-│   │   │   └── login.tsx       # Login de clientes
-│   │   ├── lib/                # Utilitários
-│   │   │   ├── api.ts          # Cliente HTTP centralizado
-│   │   │   ├── cart.tsx        # Context do carrinho
-│   │   │   ├── queryClient.ts  # Configuração React Query
-│   │   │   └── utils.ts        # Funções auxiliares
-│   │   └── hooks/              # Custom React hooks
-│   │       └── use-mobile.tsx  # Detecção de dispositivo
-│   └── index.html              # Template HTML
+├── frontend/                   # Código do cliente React
+│   ├── app/                    # Bootstrap da aplicação
+│   │   ├── App.tsx             # Componente raiz com rotas
+│   │   ├── main.tsx            # Entry point React
+│   │   └── index.css           # Estilos globais
+│   ├── features/               # Features modulares por domínio
+│   │   ├── admin/              # Painel administrativo
+│   │   │   ├── components/     # Componentes do admin
+│   │   │   ├── hooks/          # Hooks específicos
+│   │   │   ├── pages/          # Páginas do admin
+│   │   │   └── index.tsx       # Entry point da feature
+│   │   ├── auth/               # Autenticação
+│   │   ├── cart/               # Carrinho de compras
+│   │   ├── checkout/           # Fluxo de checkout
+│   │   ├── products/           # Catálogo de produtos
+│   │   ├── account/            # Área do cliente
+│   │   ├── home/               # Página inicial
+│   │   └── scheduling/         # Agendamento de serviços
+│   ├── pages/                  # Páginas genéricas (404, etc)
+│   ├── shared/                 # Código compartilhado do frontend
+│   │   ├── ui/                 # Componentes shadcn/ui (50+)
+│   │   ├── components/         # Componentes reutilizáveis
+│   │   ├── hooks/              # Custom hooks
+│   │   ├── lib/                # Utilitários (api, queryClient)
+│   │   └── layout/             # Layout principal
+│   ├── index.html              # Template HTML
+│   └── tsconfig.json           # Config TS do frontend
 │
-├── server/                     # Backend Express
-│   ├── index.ts                # Setup do servidor e middlewares
-│   ├── routes.ts               # Definição de rotas da API
-│   ├── storage.ts              # Interface e implementação de storage
-│   ├── static.ts               # Serving de arquivos estáticos
-│   └── vite.ts                 # Integração com Vite em dev
+├── backend/                    # Código do servidor
+│   ├── api/                    # API Express
+│   │   ├── routes/             # Rotas por domínio
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── products.routes.ts
+│   │   │   ├── orders.routes.ts
+│   │   │   ├── customers.routes.ts
+│   │   │   ├── appointments.routes.ts
+│   │   │   ├── services.routes.ts
+│   │   │   ├── settings.routes.ts
+│   │   │   ├── uploads.routes.ts
+│   │   │   └── health.routes.ts
+│   │   ├── middleware/         # Middlewares (auth, etc)
+│   │   ├── index.ts            # Entry point do servidor
+│   │   ├── vite.ts             # Dev server integration
+│   │   └── static.ts           # Prod static serving
+│   ├── services/               # Serviços de negócio
+│   │   ├── auth.service.ts
+│   │   ├── checkout.service.ts
+│   │   └── appointment.service.ts
+│   ├── infrastructure/         # Infraestrutura
+│   │   ├── db/                 # Conexão e migrações
+│   │   ├── storage.ts          # Data access layer
+│   │   ├── email/              # Serviço de email (Resend)
+│   │   └── payments/           # Serviço de pagamentos (Stripe)
+│   └── tsconfig.json           # Config TS do backend
 │
-├── shared/                     # Código compartilhado
-│   └── schema.ts               # Schemas Drizzle + Zod
+├── shared/                     # Código compartilhado (full-stack)
+│   ├── contracts/              # Tipos e validações (frontend-safe)
+│   │   ├── types.ts            # Tipos TypeScript
+│   │   ├── validation.ts       # Schemas Zod
+│   │   └── index.ts            # Re-exports
+│   └── schema.ts               # Schema Drizzle (backend only)
+│
+├── server/                     # Infraestrutura do servidor (legacy)
+│   ├── vite.ts                 # Dev server
+│   ├── static.ts               # Prod static serving
+│   └── storage.ts              # Data access layer
+│
+├── scripts/                    # Scripts de build/dev
+│   ├── build.mjs               # Build script
+│   ├── run-migrations.mjs      # Executa migrações
+│   ├── run-seed.mjs            # Executa seed
+│   ├── postbuild-db.mjs        # Setup pós-build
+│   └── check-migrations.mjs    # Verifica migrações
 │
 ├── db/                         # Configuração do banco
-│   └── index.ts                # Pool de conexão + migrações
+│   └── index.ts                # Pool de conexão
 │
 ├── migrations/                 # Arquivos de migração SQL
 │   ├── *.sql                   # Migrations geradas
 │   └── meta/                   # Metadados das migrações
 │
 ├── drizzle.config.ts           # Configuração Drizzle Kit
-├── tailwind.config.ts          # Configuração Tailwind
 ├── vite.config.ts              # Configuração Vite
-└── tsconfig.json               # Configuração TypeScript
+├── tsconfig.json               # Config TS raiz
+└── tsconfig.base.json          # Config TS base compartilhada
 ```
 
 ---
 
 ## Componentes
 
-### Páginas (`client/src/pages/`)
+### Features Modulares (`frontend/features/`)
 
-| Página | Rota | Descrição |
-|--------|------|-----------|
-| `home.tsx` | `/` | Landing page com hero, produtos em destaque e informações |
-| `produtos.tsx` | `/produtos` | Catálogo com filtros por categoria e busca |
-| `produto.tsx` | `/produto/:id` | Detalhes do produto com carrossel, variações e avaliações |
-| `admin.tsx` | `/admin` | Painel administrativo com todas as gestões |
-| `conta.tsx` | `/conta` | Área do cliente com perfil e histórico |
-| `agendar.tsx` | `/agendar` | Formulário de pré-agendamento |
-| `login.tsx` | `/login` | Login de clientes |
+Cada feature é um módulo independente com sua própria estrutura:
 
-### Componentes de UI (`client/src/components/ui/`)
+| Feature | Caminho | Descrição |
+|---------|---------|-----------|
+| `admin` | `/admin` | Painel administrativo completo |
+| `auth` | `/login` | Autenticação de clientes |
+| `cart` | - | Carrinho de compras (context + dialog) |
+| `checkout` | `/pedido/*` | Fluxo de checkout e confirmação |
+| `products` | `/produtos`, `/produto/:id` | Catálogo e detalhes de produtos |
+| `account` | `/conta` | Área do cliente com perfil e histórico |
+| `home` | `/` | Landing page com hero e destaques |
+| `scheduling` | `/agendar` | Agendamento de serviços |
+
+### Componentes de UI (`frontend/shared/ui/`)
 
 A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 
@@ -195,16 +263,15 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 - **Feedback**: Alert, Toast, Progress, Skeleton, Spinner
 - **Data Display**: Table, Badge, Avatar, Carousel, Chart
 
-### Componentes Customizados
+### Componentes Compartilhados (`frontend/shared/`)
 
-| Componente | Descrição |
-|------------|-----------|
-| `layout.tsx` | Layout principal com header responsivo, navegação e footer |
-| `product-card.tsx` | Card de produto com carrossel de imagens e navegação |
-| `checkout-dialog.tsx` | Modal de finalização de compra com integração WhatsApp |
-| `admin-navbar.tsx` | Sidebar de navegação do painel admin |
-| `ImageUpload.tsx` | Upload de imagem com crop e redimensionamento |
-| `ObjectUploader.tsx` | Upload para Object Storage com progress |
+| Diretório | Descrição |
+|-----------|-----------|
+| `ui/` | Componentes shadcn/ui base |
+| `components/` | Componentes reutilizáveis (ImageUpload, ObjectUploader) |
+| `hooks/` | Custom hooks (use-mobile, use-toast, use-upload) |
+| `lib/` | Utilitários (api, queryClient, utils) |
+| `layout/` | Layout principal com header/footer |
 
 ---
 
@@ -612,7 +679,7 @@ EOF
 4. **Executar setup do banco**:
 
 ```bash
-node --env-file=.env script/postbuild-db.mjs
+node --env-file=.env scripts/postbuild-db.mjs
 ```
 
 Isso aplica migrations e popula dados iniciais automaticamente.
@@ -635,16 +702,16 @@ cd ~/domains/seu-dominio.com/public_html
 export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
 
 # Aplicar migrations manualmente
-node --env-file=.env script/run-migrations.mjs
+node --env-file=.env scripts/run-migrations.mjs
 
 # Aplicar seed (apenas se banco vazio)
-node --env-file=.env script/run-seed.mjs --if-empty
+node --env-file=.env scripts/run-seed.mjs --if-empty
 
 # Aplicar seed forçado (limpa e reinsere)
-node --env-file=.env script/run-seed.mjs --fresh
+node --env-file=.env scripts/run-seed.mjs --fresh
 
 # Setup completo (migrations + seed)
-node --env-file=.env script/postbuild-db.mjs
+node --env-file=.env scripts/postbuild-db.mjs
 ```
 
 ### Scripts de Produção (sem tsx)
@@ -692,10 +759,10 @@ O `tsx` é uma dependência de desenvolvimento e não está disponível em produ
 
 ```bash
 # Em vez de: npm run db:migrate
-node --env-file=.env script/run-migrations.mjs
+node --env-file=.env scripts/run-migrations.mjs
 
 # Em vez de: npm run db:seed
-node --env-file=.env script/run-seed.mjs
+node --env-file=.env scripts/run-seed.mjs
 ```
 
 ### `Access denied for user ... @'::1'`
@@ -724,7 +791,7 @@ O seed não foi executado. Execute manualmente:
 ```bash
 cd ~/domains/seu-dominio.com/public_html
 export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
-node --env-file=.env script/run-seed.mjs
+node --env-file=.env scripts/run-seed.mjs
 ```
 
 ### Permissões do esbuild
