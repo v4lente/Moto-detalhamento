@@ -9,7 +9,7 @@
     "outputDirectory": "."
   },
   "runtime": {
-    "startCommand": "node --env-file-if-exists=.env dist/index.js",
+    "startCommand": "/opt/alt/alt-nodejs20/root/usr/bin/node --env-file-if-exists=.env dist/index.js",
     "healthCheckPath": "/",
     "timeout": 30000
   },
