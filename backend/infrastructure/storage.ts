@@ -252,14 +252,43 @@ export class DatabaseStorage implements IStorage {
     return this.withDbRetry(async () => {
       const { images, ...productData } = product;
       const result = await db.insert(products).values(productData);
-      const insertId = (result as any).insertId;
+      let productId = this.extractInsertId(result);
+
+      // Fallback for drivers/environments that don't expose insertId in the expected shape.
+      if (typeof productId !== "number") {
+        const fallback = await db
+          .select()
+          .from(products)
+          .where(
+            and(
+              eq(products.name, productData.name),
+              eq(products.description, productData.description),
+              eq(products.price, productData.price),
+              eq(products.image, productData.image),
+              eq(products.category, productData.category),
+            )
+          )
+          .orderBy(desc(products.id))
+          .limit(1);
+
+        productId = fallback[0]?.id;
+      }
+
+      if (typeof productId !== "number") {
+        throw new Error("Failed to resolve created product ID");
+      }
       
       // Salva as imagens na tabela normalizada
       if (images && images.length > 0) {
-        await this.saveProductImages(insertId, images);
+        await this.saveProductImages(productId, images);
       }
-      
-      return (await this.getProduct(insertId))!;
+
+      const created = await this.getProduct(productId);
+      if (!created) {
+        throw new Error("Failed to fetch created product");
+      }
+
+      return created;
     }, "createProduct");
   }
 
