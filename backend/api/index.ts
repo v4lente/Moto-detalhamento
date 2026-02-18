@@ -41,6 +41,84 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+const trackedEnvVars = [
+  "NODE_ENV",
+  "PORT",
+  "SESSION_SECRET",
+  "DATABASE_URL",
+  "BASE_URL",
+  "STRIPE_SECRET_KEY",
+  "STRIPE_PUBLISHABLE_KEY",
+  "STRIPE_WEBHOOK_SECRET",
+] as const;
+
+function getDatabaseUrlDiagnostics() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    return {
+      present: false,
+      valid: false,
+    };
+  }
+
+  try {
+    const parsed = new URL(databaseUrl);
+    const databaseName = parsed.pathname.replace(/^\//, "");
+    return {
+      present: true,
+      valid: true,
+      protocol: parsed.protocol,
+      host: parsed.hostname,
+      port: parsed.port || "(default)",
+      database: databaseName || "(empty)",
+      hasUsername: parsed.username.length > 0,
+      hasPassword: parsed.password.length > 0,
+    };
+  } catch {
+    return {
+      present: true,
+      valid: false,
+    };
+  }
+}
+
+function logStartupEnvironmentDiagnostics() {
+  const relatedEnvKeys = Object.keys(process.env)
+    .filter((key) => /(SESSION|DATABASE|STRIPE|BASE_URL|NODE_ENV|PORT)/i.test(key))
+    .sort();
+
+  const tracked = Object.fromEntries(
+    trackedEnvVars.map((key) => {
+      const value = process.env[key];
+      return [
+        key,
+        {
+          present: typeof value === "string" && value.length > 0,
+          length: typeof value === "string" ? value.length : 0,
+        },
+      ];
+    }),
+  );
+
+  const diagnostics = {
+    runtime: {
+      node: process.version,
+      pid: process.pid,
+      cwd: process.cwd(),
+      argv1: process.argv[1] || "(unknown)",
+    },
+    tracked,
+    relatedEnvKeys,
+    databaseUrl: getDatabaseUrlDiagnostics(),
+  };
+
+  console.log("=".repeat(60));
+  console.log("STARTUP ENV DIAGNOSTICS (safe)");
+  console.log("No secret values are printed, only presence/shape metadata.");
+  console.log(JSON.stringify(diagnostics, null, 2));
+  console.log("=".repeat(60));
+}
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -68,6 +146,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  logStartupEnvironmentDiagnostics();
+
   // Run migrations with error handling - don't crash the server if migrations fail
   // Migrations also run during postbuild, so this is a safety net
   try {
