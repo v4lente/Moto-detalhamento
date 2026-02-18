@@ -3,6 +3,7 @@ import { registerAllRoutes } from "./routes/index";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { runMigrations } from "../infrastructure/db";
+import fs from "fs";
 
 const app = express();
 const httpServer = createServer(app);
@@ -51,6 +52,40 @@ const trackedEnvVars = [
   "STRIPE_PUBLISHABLE_KEY",
   "STRIPE_WEBHOOK_SECRET",
 ] as const;
+
+function loadEnvironmentFallbackFromDotEnv() {
+  const missingDatabaseUrl = !process.env.DATABASE_URL;
+  const missingSessionSecretInProduction =
+    process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET;
+
+  if (!missingDatabaseUrl && !missingSessionSecretInProduction) {
+    return;
+  }
+
+  const loadEnvFile = (
+    process as NodeJS.Process & {
+      loadEnvFile?: (path?: string) => void;
+    }
+  ).loadEnvFile;
+
+  if (typeof loadEnvFile !== "function") {
+    return;
+  }
+
+  const envPath = path.resolve(process.cwd(), ".env");
+  if (!fs.existsSync(envPath)) {
+    console.error(`[env] .env file not found at ${envPath}`);
+    return;
+  }
+
+  try {
+    loadEnvFile(envPath);
+    console.error(`[env] Loaded .env from ${envPath} via process.loadEnvFile`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[env] Failed to load .env from ${envPath}: ${message}`);
+  }
+}
 
 function getDatabaseUrlDiagnostics() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -112,11 +147,12 @@ function logStartupEnvironmentDiagnostics() {
     databaseUrl: getDatabaseUrlDiagnostics(),
   };
 
-  console.log("=".repeat(60));
-  console.log("STARTUP ENV DIAGNOSTICS (safe)");
-  console.log("No secret values are printed, only presence/shape metadata.");
-  console.log(JSON.stringify(diagnostics, null, 2));
-  console.log("=".repeat(60));
+  // Use stderr because some hosting providers only persist stderr on crashes.
+  console.error("=".repeat(60));
+  console.error("STARTUP ENV DIAGNOSTICS (safe)");
+  console.error("No secret values are printed, only presence/shape metadata.");
+  console.error(JSON.stringify(diagnostics, null, 2));
+  console.error("=".repeat(60));
 }
 
 app.use((req, res, next) => {
@@ -146,6 +182,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  loadEnvironmentFallbackFromDotEnv();
   logStartupEnvironmentDiagnostics();
 
   // Run migrations with error handling - don't crash the server if migrations fail
