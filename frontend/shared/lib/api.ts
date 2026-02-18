@@ -55,6 +55,7 @@ export async function createProduct(product: InsertProduct): Promise<ProductWith
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(product),
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Failed to create product");
@@ -67,6 +68,7 @@ export async function updateProduct(id: number, product: Partial<ProductWithImag
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(product),
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Failed to update product");
@@ -77,6 +79,7 @@ export async function updateProduct(id: number, product: Partial<ProductWithImag
 export async function deleteProduct(id: number): Promise<void> {
   const response = await fetch(`${API_BASE}/products/${id}`, {
     method: "DELETE",
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Failed to delete product");
