@@ -195,6 +195,7 @@ export async function getCurrentUser(): Promise<{ id: string; username: string }
   try {
     const response = await fetch(`${API_BASE}/auth/me`, {
       credentials: "include",
+      cache: "no-store",
     });
     if (!response.ok) {
       return null;
@@ -261,6 +262,7 @@ export async function getCurrentCustomer(): Promise<CustomerData | null> {
   try {
     const response = await fetch(`${API_BASE}/customer/me`, {
       credentials: "include",
+      cache: "no-store",
     });
     if (!response.ok) {
       return null;

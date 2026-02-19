@@ -63,11 +63,19 @@ export function registerAuthRoutes(app: Express) {
       if (err) {
         return res.status(500).json({ error: "Failed to logout" });
       }
+      res.clearCookie("connect.sid", {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+      res.set("Cache-Control", "no-store");
       res.json({ message: "Logged out successfully" });
     });
   });
 
   app.get("/api/auth/me", async (req, res) => {
+    res.set("Cache-Control", "no-store");
     if (!req.session.userId) {
       return res.status(401).json({ error: "Not authenticated" });
     }

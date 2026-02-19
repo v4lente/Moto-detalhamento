@@ -18,6 +18,9 @@ export function useUser() {
   return useQuery({
     queryKey: ["user"],
     queryFn: getCurrentUser,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
 

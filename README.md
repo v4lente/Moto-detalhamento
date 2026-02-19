@@ -606,17 +606,25 @@ npm run db:setup:prod        # Migrations + seed completo
 npm run check         # Verifica tipos TypeScript
 ```
 
+> Em produção, use `npm start`. Esse comando executa `node --env-file-if-exists=.env dist/index.js`.
+
 ---
 
 ## Variáveis de Ambiente
 
 | Variável | Obrigatória | Descrição |
 |----------|-------------|-----------|
-| `DATABASE_URL` | Sim | URL de conexão MySQL |
-| `SESSION_SECRET` | Não | Chave para sessões (gerada automaticamente) |
+| `DATABASE_URL` | Sim (produção) | URL de conexão MySQL |
+| `SESSION_SECRET` | Sim (produção) | Chave usada para assinar sessões |
 | `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Não | ID do bucket para uploads |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | Não | Caminhos públicos do storage |
 | `PRIVATE_OBJECT_DIR` | Não | Diretório privado do storage |
+
+### Observações de produção
+
+- `SESSION_SECRET` é obrigatório quando `NODE_ENV=production`.
+- O bootstrap tenta carregar `./.env` automaticamente via `process.loadEnvFile` quando variáveis críticas não estão presentes.
+- Na inicialização, o servidor registra o bloco `STARTUP ENV DIAGNOSTICS (safe)` com presença/ausência de variáveis (sem imprimir segredos).
 
 ---
 
@@ -684,6 +692,16 @@ node --env-file=.env scripts/postbuild-db.mjs
 
 Isso aplica migrations e popula dados iniciais automaticamente.
 
+5. **Confirmar comando de inicialização da aplicação Node**
+
+No painel da Hostinger, use:
+
+```bash
+npm start
+```
+
+Esse comando executa `node --env-file-if-exists=.env dist/index.js`.
+
 ### Redeploy (Atualizações)
 
 O Git Auto Deploy executa automaticamente:
@@ -726,6 +744,15 @@ node --env-file=.env scripts/postbuild-db.mjs
 ---
 
 ## Troubleshooting
+
+### Loop com `SESSION_SECRET environment variable is required in production` e `DATABASE_URL is not set`
+
+Se o processo entra em restart infinito com esses erros:
+
+1. Confirme que o arquivo `public_html/.env` existe.
+2. Confirme que o startup command da aplicação está como `npm start`.
+3. Verifique no log se apareceu `[env] Loaded .env from ...`.
+4. Verifique no bloco `STARTUP ENV DIAGNOSTICS (safe)` se `SESSION_SECRET` e `DATABASE_URL` estão com `present: true`.
 
 ### `.env: not found`
 

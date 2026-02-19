@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/ui/button";
 import { Tabs } from "@/shared/ui/tabs";
 import { AdminNavbar } from "@/features/admin/components/admin-navbar";
@@ -14,21 +14,30 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children, defaultTab = "dashboard" }: AdminLayoutProps) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
     queryFn: getCurrentUser,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   React.useEffect(() => {
     if (!userLoading && !user) {
-      setLocation("/login");
+      queryClient.clear();
+      setLocation("/login", { replace: true });
     }
-  }, [user, userLoading, setLocation]);
+  }, [queryClient, setLocation, user, userLoading]);
 
   const handleLogout = async () => {
-    await logout();
-    setLocation("/login");
+    try {
+      await logout();
+    } finally {
+      queryClient.clear();
+      setLocation("/login", { replace: true });
+    }
   };
 
   if (userLoading) {

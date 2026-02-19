@@ -6,6 +6,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Project Overview](./project-overview.md)
 - [Project Structure](./project-structure.md)
 - [Architecture Notes](./architecture.md)
+- [Runtime Env & Deploy Notes](../../README.md#deploy-na-hostinger)
 - [Assets Strategy](./assets-strategy.md)
 - [Development Workflow](./development-workflow.md)
 - [Testing Strategy](./testing-strategy.md)
@@ -34,6 +35,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 
 ### Backend (`backend/`)
 - `backend/api/` — API Express (routes, middleware)
+  - Startup includes safe env diagnostics and `.env` fallback loading before route registration.
 - `backend/services/` — Serviços de negócio
 - `backend/infrastructure/` — DB, storage, email, payments
 
