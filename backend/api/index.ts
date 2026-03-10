@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { runMigrations } from "../infrastructure/db";
 import fs from "fs";
+import { ensureUploadsDir } from "./lib/uploads-dir";
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,8 +29,10 @@ app.use(express.urlencoded({ extended: false }));
 import path from "path";
 app.use("/assets", express.static(path.resolve(process.cwd(), "attached_assets")));
 
-// Serve uploaded images from public/uploads/
-app.use("/uploads", express.static(path.resolve(process.cwd(), "public/uploads")));
+// Serve uploaded images from a single canonical directory.
+const uploadsPath = ensureUploadsDir(import.meta.url);
+app.use("/uploads", express.static(uploadsPath));
+console.error(`Serving uploads from: ${uploadsPath}`);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

@@ -1,18 +1,14 @@
 import type { Express } from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 import { randomUUID } from "crypto";
 import { requireAuth } from "../middleware/auth";
+import { ensureUploadsDir } from "../lib/uploads-dir";
 
 /**
  * File upload routes
  */
 export function registerUploadsRoutes(app: Express) {
-  const uploadsDir = path.resolve(process.cwd(), "public/uploads");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
+  const uploadsDir = ensureUploadsDir(import.meta.url);
 
   const upload = multer({
     storage: multer.diskStorage({
