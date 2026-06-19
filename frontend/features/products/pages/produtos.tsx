@@ -19,8 +19,10 @@ import {
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Separator } from "@/shared/ui/separator";
 import { CheckoutDialog } from "@/features/cart/components/checkout-dialog";
+import { PaginationControls } from "@/shared/components/PaginationControls";
 
-type SortOption = "rating" | "price_asc" | "price_desc" | "name";
+const ITEMS_PER_PAGE = 12;
+type SortOption = "rating" | "price_asc" | "price_desc" | "name_asc" | "name_desc";
 
 export default function Produtos() {
   const { toast } = useToast();
@@ -29,6 +31,9 @@ export default function Produtos() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("rating");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [productPage, setProductPage] = useState(1);
+
+  const resetPage = () => setProductPage(1);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products-with-stats"],
@@ -50,28 +55,39 @@ export default function Produtos() {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    
-    let filtered = products.filter(p => {
-      const matchesSearch = 
+
+    return products.filter((p) => {
+      const matchesSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.description.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
+  }, [products, search, selectedCategory]);
+
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
 
     switch (sortBy) {
       case "rating":
-        return filtered.sort((a, b) => b.avgRating - a.avgRating);
+        return sorted.sort((a, b) => b.avgRating - a.avgRating);
       case "price_asc":
-        return filtered.sort((a, b) => a.price - b.price);
+        return sorted.sort((a, b) => a.price - b.price);
       case "price_desc":
-        return filtered.sort((a, b) => b.price - a.price);
-      case "name":
-        return filtered.sort((a, b) => a.name.localeCompare(b.name));
+        return sorted.sort((a, b) => b.price - a.price);
+      case "name_asc":
+        return sorted.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+      case "name_desc":
+        return sorted.sort((a, b) => b.name.localeCompare(a.name, "pt-BR"));
       default:
-        return filtered;
+        return sorted;
     }
-  }, [products, search, sortBy, selectedCategory]);
+  }, [filteredProducts, sortBy]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (productPage - 1) * ITEMS_PER_PAGE;
+    return sortedProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedProducts, productPage]);
 
   const handleAddToCart = (product: ProductWithStats) => {
     addToCart(product);
@@ -202,13 +218,22 @@ export default function Produtos() {
               <Input
                 placeholder="Buscar por nome ou descrição..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  resetPage();
+                }}
                 className="pl-10"
                 data-testid="input-search"
               />
             </div>
             
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value);
+                resetPage();
+              }}
+            >
               <SelectTrigger className="w-full md:w-48" data-testid="select-category">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
@@ -220,7 +245,13 @@ export default function Produtos() {
               </SelectContent>
             </Select>
 
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => {
+                setSortBy(v as SortOption);
+                resetPage();
+              }}
+            >
               <SelectTrigger className="w-full md:w-48" data-testid="select-sort">
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
@@ -228,7 +259,8 @@ export default function Produtos() {
                 <SelectItem value="rating">Melhor Avaliados</SelectItem>
                 <SelectItem value="price_asc">Menor Preço</SelectItem>
                 <SelectItem value="price_desc">Maior Preço</SelectItem>
-                <SelectItem value="name">Nome A-Z</SelectItem>
+                <SelectItem value="name_asc">Nome A-Z</SelectItem>
+                <SelectItem value="name_desc">Nome Z-A</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -238,13 +270,14 @@ export default function Produtos() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : sortedProducts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Nenhum produto encontrado.</p>
           </div>
         ) : (
+          <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map(product => (
+            {paginatedProducts.map(product => (
               <Card 
                 key={product.id} 
                 className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-colors"
@@ -404,6 +437,14 @@ export default function Produtos() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+          <PaginationControls
+            currentPage={productPage}
+            totalItems={sortedProducts.length}
+            pageSize={ITEMS_PER_PAGE}
+            onPageChange={setProductPage}
+            testIdPrefix="public-products"
+          />
           </div>
         )}
       </main>
