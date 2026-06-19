@@ -4,6 +4,9 @@ import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { loadEnvIfExists } from "../load-env";
+
+loadEnvIfExists();
 
 // Get directory of this file (works in ESM and bundled code)
 const __filename = fileURLToPath(import.meta.url);
@@ -53,8 +56,29 @@ const pool = process.env.DATABASE_URL
     })
   : null;
 
+export class DatabaseUnavailableError extends Error {
+  code = "DATABASE_UNAVAILABLE";
+
+  constructor(message = "Database is not configured or unavailable") {
+    super(message);
+    this.name = "DatabaseUnavailableError";
+  }
+}
+
+function createUnavailableDbProxy(): ReturnType<typeof drizzle> {
+  const unavailable = () => {
+    throw new DatabaseUnavailableError();
+  };
+  return new Proxy({} as ReturnType<typeof drizzle>, {
+    get(_target, prop) {
+      if (prop === "then") return undefined;
+      return unavailable;
+    },
+  });
+}
+
 // Create drizzle instance only if pool exists
-export const db = pool ? drizzle(pool) : null as any;
+export const db = pool ? drizzle(pool) : createUnavailableDbProxy();
 
 async function getAppliedMigrations(): Promise<Set<string>> {
   if (!pool) {

@@ -13,8 +13,11 @@
 import { spawn } from "child_process";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { loadEnvIfExists } from "./load-env-if-exists.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+loadEnvIfExists();
 
 /**
  * Executa um script Node e retorna uma Promise.

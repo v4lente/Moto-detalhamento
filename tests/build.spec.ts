@@ -35,11 +35,18 @@ test.describe('Build e Servidor', () => {
     expect(bodyContent).toContain('<html');
   });
 
-  test('API deve estar acessível', async ({ request }) => {
-    // Tenta fazer uma requisição para uma rota de API (mesmo que retorne 404, o servidor deve responder)
+  test('API health deve retornar resposta estruturada', async ({ request }) => {
     const response = await request.get('/api/health');
-    // Aceita qualquer status code, apenas verifica que o servidor respondeu
-    expect(response.status()).toBeGreaterThanOrEqual(200);
-    expect(response.status()).toBeLessThan(600);
+    const body = await response.json();
+
+    expect([200, 503]).toContain(response.status());
+    expect(body.status).toMatch(/^(healthy|unhealthy)$/);
+    expect(body.timestamp).toBeTruthy();
+
+    if (response.status() === 200) {
+      expect(body.database).toMatch(/^(connected|no_data)$/);
+    } else {
+      expect(body.error).toBeTruthy();
+    }
   });
 });

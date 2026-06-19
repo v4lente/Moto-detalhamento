@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
 import { insertProductSchema, insertProductVariationSchema, createReviewSchema } from "@shared/schema";
-import { requireAuth, requireCustomerAuth } from "../middleware/auth";
+import { catalogLimiter, requireAuth, requireCustomerAuth } from "../middleware/auth";
 
 /**
  * Product routes including CRUD, variations, and reviews
@@ -20,7 +20,17 @@ export function registerProductsRoutes(app: Express) {
     }
   });
   
-  app.get("/api/products", async (req, res) => {
+  app.get("/api/admin/products/variation-counts", requireAuth, async (_req, res) => {
+    try {
+      const counts = await storage.getVariationCountsByProduct();
+      res.json(counts);
+    } catch (error) {
+      console.error("Error fetching variation counts:", error);
+      res.status(500).json({ error: "Failed to fetch variation counts" });
+    }
+  });
+  
+  app.get("/api/products", catalogLimiter, async (req, res) => {
     try {
       const products = await storage.getAllProducts();
       res.json(products);
@@ -30,7 +40,7 @@ export function registerProductsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/products-with-stats", async (req, res) => {
+  app.get("/api/products-with-stats", catalogLimiter, async (req, res) => {
     try {
       const products = await storage.getProductsWithStats();
       res.json(products);
@@ -40,7 +50,7 @@ export function registerProductsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/recent-reviews", async (req, res) => {
+  app.get("/api/recent-reviews", catalogLimiter, async (req, res) => {
     try {
       const limit = parseInt(String(req.query.limit)) || 6;
       const reviews = await storage.getRecentReviews(limit);
@@ -51,7 +61,7 @@ export function registerProductsRoutes(app: Express) {
     }
   });
 
-  app.get("/api/products/:id", async (req, res) => {
+  app.get("/api/products/:id", catalogLimiter, async (req, res) => {
     try {
       const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
@@ -122,7 +132,7 @@ export function registerProductsRoutes(app: Express) {
 
   // ===== PRODUCT VARIATIONS =====
   
-  app.get("/api/products/:id/variations", async (req, res) => {
+  app.get("/api/products/:id/variations", catalogLimiter, async (req, res) => {
     try {
       const productId = parseInt(req.params.id as string);
       if (isNaN(productId)) {
@@ -190,7 +200,7 @@ export function registerProductsRoutes(app: Express) {
 
   // ===== REVIEWS =====
   
-  app.get("/api/products/:id/reviews", async (req, res) => {
+  app.get("/api/products/:id/reviews", catalogLimiter, async (req, res) => {
     try {
       const productId = parseInt(String(req.params.id));
       if (isNaN(productId)) {

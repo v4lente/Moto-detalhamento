@@ -18,20 +18,22 @@ Improve confidence in catalog, checkout, and scheduling flows by adding reliable
 - Contributor guide: [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)
 
 ## Repository Starting Points
-- `shared/` — schema validation targets
-- `server/` — route handlers and storage
-- `client/` — UI and API usage
+- `shared/contracts/` — validation targets
+- `backend/api/routes/` — route handlers
+- `backend/infrastructure/storage.ts` — data layer
+- `frontend/` — UI and API usage
+- `tests/` — Playwright specs
 
 ## Key Files
-- [`shared/schema.ts`](../../shared/schema.ts#L1)
-- [`server/routes.ts`](../../server/routes.ts#L1)
-- [`server/storage.ts`](../../server/storage.ts#L18)
-- [`client/src/lib/api.ts`](../../client/src/lib/api.ts#L1)
+- [`shared/contracts/validation.ts`](../../shared/contracts/validation.ts)
+- [`backend/api/routes/`](../../backend/api/routes/)
+- [`backend/infrastructure/storage.ts`](../../backend/infrastructure/storage.ts)
+- [`frontend/shared/lib/api.ts`](../../frontend/shared/lib/api.ts)
+- [`tests/build.spec.ts`](../../tests/build.spec.ts)
 
 ## Key Symbols for This Agent
-- `checkoutSchema` — [`shared/schema.ts`](../../shared/schema.ts#L186)
-- `createAppointmentSchema` — [`shared/schema.ts`](../../shared/schema.ts#L301)
-- `registerRoutes` — [`server/routes.ts`](../../server/routes.ts#L59)
+- `checkoutSchema` — [`shared/contracts/validation.ts`](../../shared/contracts/validation.ts)
+- `registerAllRoutes` — [`backend/api/routes/index.ts`](../../backend/api/routes/index.ts)
 
 ## Documentation Touchpoints
 - [`testing-strategy.md`](../docs/testing-strategy.md)

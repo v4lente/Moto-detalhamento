@@ -17,6 +17,16 @@ import {
 import { db } from "./db";
 import { eq, desc, sql, asc, and } from "drizzle-orm";
 
+export type ProductWithStats = ProductWithImages & {
+  avgRating: number;
+  reviewCount: number;
+  purchaseCount: number;
+  variations: ProductVariation[];
+  variationCount: number;
+  minVariationPrice: number | null;
+  allVariationsOutOfStock: boolean;
+};
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -32,6 +42,7 @@ export interface IStorage {
   deleteProduct(id: number): Promise<boolean>;
 
   getVariationsByProduct(productId: number): Promise<ProductVariation[]>;
+  getVariationCountsByProduct(): Promise<Record<number, number>>;
   createVariation(variation: InsertProductVariation): Promise<ProductVariation>;
   updateVariation(id: number, variation: Partial<InsertProductVariation>): Promise<ProductVariation | undefined>;
   deleteVariation(id: number): Promise<boolean>;
@@ -67,7 +78,7 @@ export interface IStorage {
   createReview(review: InsertReview): Promise<Review>;
   getReviewsByProduct(productId: number): Promise<Review[]>;
   getProductAverageRating(productId: number): Promise<number>;
-  getProductsWithStats(): Promise<Array<ProductWithImages & { avgRating: number; reviewCount: number; purchaseCount: number }>>;
+  getProductsWithStats(): Promise<ProductWithStats[]>;
   getRecentReviews(limit?: number): Promise<Array<Review & { productName: string; productImage: string }>>;
 
   getAllServicePosts(): Promise<ServicePostWithMedia[]>;
@@ -333,6 +344,22 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
+  async getVariationCountsByProduct(): Promise<Record<number, number>> {
+    return this.withDbRetry(async () => {
+      const rows = await db
+        .select({
+          productId: productVariations.productId,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(productVariations)
+        .groupBy(productVariations.productId);
+
+      return Object.fromEntries(
+        rows.map((row) => [row.productId, Number(row.count) || 0])
+      );
+    }, "getVariationCountsByProduct");
+  }
+
   async createVariation(variation: InsertProductVariation): Promise<ProductVariation> {
     return this.withDbRetry(async () => {
       const result = await db.insert(productVariations).values(variation);
@@ -512,9 +539,23 @@ export class DatabaseStorage implements IStorage {
     return result[0]?.avg || 0;
   }
 
-  async getProductsWithStats(): Promise<Array<ProductWithImages & { avgRating: number; reviewCount: number; purchaseCount: number }>> {
+  async getProductsWithStats(): Promise<ProductWithStats[]> {
     return this.withDbRetry(async () => {
       const allProducts = await this.getAllProducts();
+      const allVariations = await db
+        .select()
+        .from(productVariations)
+        .orderBy(asc(productVariations.price));
+
+      const variationsByProduct = allVariations.reduce<Record<number, ProductVariation[]>>(
+        (acc, variation) => {
+          const list = acc[variation.productId] ?? [];
+          list.push(variation);
+          acc[variation.productId] = list;
+          return acc;
+        },
+        {}
+      );
       
       const productsWithStats = await Promise.all(allProducts.map(async (product) => {
         const reviewStats = await db.select({
@@ -525,12 +566,17 @@ export class DatabaseStorage implements IStorage {
         const purchaseStats = await db.select({
           purchaseCount: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`
         }).from(orderItems).where(eq(orderItems.productId, product.id));
+        const variations = variationsByProduct[product.id] ?? [];
 
         return {
           ...product,
           avgRating: Number(reviewStats[0]?.avgRating) || 0,
           reviewCount: Number(reviewStats[0]?.reviewCount) || 0,
           purchaseCount: Number(purchaseStats[0]?.purchaseCount) || 0,
+          variations,
+          variationCount: variations.length,
+          minVariationPrice: variations[0]?.price ?? null,
+          allVariationsOutOfStock: variations.length > 0 && variations.every((variation) => !variation.inStock),
         };
       }));
 

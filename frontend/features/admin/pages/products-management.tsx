@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { TabsContent } from "@/shared/ui/tabs";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
@@ -12,6 +12,7 @@ import { ImageUpload } from "@/shared/components/ImageUpload";
 import { useToast } from "@/shared/hooks/use-toast";
 import { 
   useProducts, 
+  useProductVariationCounts,
   useProductMutations, 
   useVariationMutations,
   fetchProductVariations 
@@ -42,10 +43,15 @@ export function ProductsManagementPage() {
   const [variationLabel, setVariationLabel] = useState("");
   const [variationPrice, setVariationPrice] = useState("");
   const [variationInStock, setVariationInStock] = useState(true);
-  const [productVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
+  const [localVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
 
   // Queries
   const { data: products, isLoading: productsLoading, isError: productsError } = useProducts();
+  const { data: fetchedVariationCounts = {} } = useProductVariationCounts();
+  const productVariationCounts = useMemo(
+    () => ({ ...fetchedVariationCounts, ...localVariationCounts }),
+    [fetchedVariationCounts, localVariationCounts]
+  );
   
   // Mutations
   const { createProductMutation, updateProductMutation, deleteProductMutation } = useProductMutations();
@@ -55,26 +61,6 @@ export function ProductsManagementPage() {
     variationsProductId,
     setProductVariationCounts
   );
-
-  // Load variation counts for products
-  useEffect(() => {
-    const loadVariationCounts = async () => {
-      if (!products) return;
-      const counts: Record<number, number> = {};
-      await Promise.all(
-        products.map(async (product) => {
-          try {
-            const productVariations = await fetchProductVariations(product.id);
-            counts[product.id] = productVariations.length;
-          } catch {
-            counts[product.id] = 0;
-          }
-        })
-      );
-      setProductVariationCounts(counts);
-    };
-    loadVariationCounts();
-  }, [products]);
 
   const existingCategories = useMemo(() => {
     if (!products) return [];

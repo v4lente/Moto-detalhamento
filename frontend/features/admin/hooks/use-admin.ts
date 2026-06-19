@@ -9,7 +9,7 @@ import {
   fetchServicePosts, createServicePost, updateServicePost, deleteServicePost,
   fetchAppointments, updateAppointment, deleteAppointment,
   fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService,
-  fetchProductVariations, createProductVariation, updateProductVariation, deleteProductVariation
+  fetchProductVariations, fetchProductVariationCounts, createProductVariation, updateProductVariation, deleteProductVariation
 } from "@/shared/lib/api";
 import type { ProductWithImages, ProductVariation, UpdateSiteSettings, ServicePostWithMedia } from "@shared/contracts";
 
@@ -34,6 +34,14 @@ export function useProducts() {
   });
 }
 
+export function useProductVariationCounts() {
+  return useQuery({
+    queryKey: ["productVariationCounts"],
+    queryFn: fetchProductVariationCounts,
+    retry: 1,
+  });
+}
+
 export function useProductMutations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -42,6 +50,7 @@ export function useProductMutations() {
     mutationFn: createProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["productVariationCounts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto criado com sucesso!" });
@@ -56,6 +65,7 @@ export function useProductMutations() {
         old ? old.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)) : old
       );
       queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["productVariationCounts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto atualizado!" });
@@ -76,6 +86,7 @@ export function useProductMutations() {
         old ? old.filter((p) => p.id !== productId) : old
       );
       queryClient.invalidateQueries({ queryKey: ["adminProducts"] });
+      queryClient.invalidateQueries({ queryKey: ["productVariationCounts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto desativado!" });
@@ -94,6 +105,7 @@ export function useVariationMutations(
   setProductVariationCounts: React.Dispatch<React.SetStateAction<Record<number, number>>>
 ) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const createVariationMutation = useMutation({
     mutationFn: ({ productId, data }: { productId: number; data: { label: string; price: number; inStock?: boolean } }) =>
@@ -104,6 +116,8 @@ export function useVariationMutations(
         ...prev,
         [newVariation.productId]: (prev[newVariation.productId] || 0) + 1
       }));
+      queryClient.invalidateQueries({ queryKey: ["productVariationCounts"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Variação criada!" });
     },
     onError: () => toast({ title: "Erro ao criar variação", variant: "destructive" }),
@@ -114,6 +128,7 @@ export function useVariationMutations(
       updateProductVariation(id, data),
     onSuccess: (updatedVariation) => {
       setVariations(variations.map(v => v.id === updatedVariation.id ? updatedVariation : v));
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Variação atualizada!" });
     },
     onError: () => toast({ title: "Erro ao atualizar variação", variant: "destructive" }),
@@ -130,6 +145,8 @@ export function useVariationMutations(
           [variationsProductId]: Math.max((prev[variationsProductId] || 0) - 1, 0)
         }));
       }
+      queryClient.invalidateQueries({ queryKey: ["productVariationCounts"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Variação removida!" });
     },
     onError: () => toast({ title: "Erro ao remover variação", variant: "destructive" }),

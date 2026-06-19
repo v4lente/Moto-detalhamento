@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { fetchProductsWithStats, fetchSettings, fetchProductVariations, ProductWithStats } from "@/shared/lib/api";
+import { fetchProductsWithStats, fetchSettings, ProductWithStats } from "@/shared/lib/api";
 import { useCart } from "@/features/cart/lib/cart";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { ShoppingCart, Star, Search, ArrowLeft, Plus, Eye, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
-import type { ProductVariation } from "@shared/contracts";
 import {
   Sheet,
   SheetContent,
@@ -41,23 +40,7 @@ export default function Produtos() {
     queryFn: fetchSettings,
   });
 
-  const [productVariations, setProductVariations] = useState<Record<number, ProductVariation[]>>({});
   const [productImageIndex, setProductImageIndex] = useState<Record<number, number>>({});
-
-  useEffect(() => {
-    if (products) {
-      products.forEach(async (product) => {
-        try {
-          const variations = await fetchProductVariations(product.id);
-          if (variations.length > 0) {
-            setProductVariations(prev => ({ ...prev, [product.id]: variations }));
-          }
-        } catch (e) {
-          // Ignore errors for individual product variations
-        }
-      });
-    }
-  }, [products]);
 
   const categories = useMemo(() => {
     if (!products) return [];
@@ -326,10 +309,8 @@ export default function Produtos() {
                     );
                   })()}
                   {(() => {
-                    const variations = productVariations[product.id];
-                    const hasVariations = variations && variations.length > 0;
-                    const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
-                    const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
+                    const hasVariations = product.variationCount > 0;
+                    const isOutOfStock = hasVariations ? product.allVariationsOutOfStock : !product.inStock;
                     
                     return isOutOfStock ? (
                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
@@ -349,9 +330,9 @@ export default function Produtos() {
                   <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                     {product.description}
                   </p>
-                  {productVariations[product.id] && productVariations[product.id].length > 0 && (
+                  {product.variations.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {productVariations[product.id].map(v => (
+                      {product.variations.map(v => (
                         <span 
                           key={v.id} 
                           className={`text-xs px-2 py-0.5 rounded-full ${
@@ -373,9 +354,9 @@ export default function Produtos() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    {productVariations[product.id] && productVariations[product.id].length > 0 ? (
+                    {product.variationCount > 0 && product.minVariationPrice !== null ? (
                       <span className="text-lg font-bold text-primary">
-                        A partir de R$ {Math.min(...productVariations[product.id].map(v => v.price)).toFixed(2)}
+                        A partir de R$ {product.minVariationPrice.toFixed(2)}
                       </span>
                     ) : (
                       <span className="text-xl font-bold text-primary">
@@ -393,10 +374,8 @@ export default function Produtos() {
                         </Button>
                       </Link>
                       {(() => {
-                        const variations = productVariations[product.id];
-                        const hasVariations = variations && variations.length > 0;
-                        const allVariationsOutOfStock = hasVariations && variations.every(v => !v.inStock);
-                        const isOutOfStock = hasVariations ? allVariationsOutOfStock : !product.inStock;
+                        const hasVariations = product.variationCount > 0;
+                        const isOutOfStock = hasVariations ? product.allVariationsOutOfStock : !product.inStock;
                         
                         return (
                           <Button 

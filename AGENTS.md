@@ -2,11 +2,14 @@
 
 ## Dev environment tips
 - Install dependencies with `npm install` before running any commands.
+- Copy `.env.example` to `.env` and set `SESSION_SECRET` (required) and `DATABASE_URL` (for API/DB features).
 - Use `npm run dev` to start the development server (Express + Vite on port 5000).
 - Run `npm run build` to compile frontend and backend for production.
 - Store generated artefacts in `.context/` so reruns stay deterministic.
+- Track bugs in `work-files/bugs-tracker.md`.
 
 ## Testing instructions
+- First time: `npx playwright install chromium` (required for E2E).
 - Execute `npm run test` to run the test suite.
 - Append `-- --watch` while iterating on a failing spec.
 - Trigger `npm run build && npm run test` before opening a PR to mimic CI.

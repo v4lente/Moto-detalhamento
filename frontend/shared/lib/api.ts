@@ -95,6 +95,16 @@ export async function fetchProductVariations(productId: number): Promise<Product
   return response.json();
 }
 
+export async function fetchProductVariationCounts(): Promise<Record<number, number>> {
+  const response = await fetch(`${API_BASE}/admin/products/variation-counts`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch variation counts");
+  }
+  return response.json();
+}
+
 export async function createProductVariation(productId: number, data: { label: string; price: number; inStock?: boolean }): Promise<ProductVariation> {
   const response = await fetch(`${API_BASE}/products/${productId}/variations`, {
     method: "POST",
@@ -557,6 +567,10 @@ export interface ProductWithStats extends ProductWithImages {
   avgRating: number;
   reviewCount: number;
   purchaseCount: number;
+  variations: ProductVariation[];
+  variationCount: number;
+  minVariationPrice: number | null;
+  allVariationsOutOfStock: boolean;
 }
 
 export async function fetchProductsWithStats(): Promise<ProductWithStats[]> {

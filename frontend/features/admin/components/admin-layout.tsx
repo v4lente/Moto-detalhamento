@@ -9,12 +9,17 @@ import { Home, LogOut, Loader2 } from "lucide-react";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  activeTab?: string;
   defaultTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function AdminLayout({ children, defaultTab = "dashboard" }: AdminLayoutProps) {
+export function AdminLayout({ children, activeTab, defaultTab = "dashboard", onTabChange }: AdminLayoutProps) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const [internalTab, setInternalTab] = React.useState(defaultTab);
+  const tabValue = activeTab ?? internalTab;
+  const handleTabChange = onTabChange ?? setInternalTab;
   
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ["user"],
@@ -72,7 +77,7 @@ export function AdminLayout({ children, defaultTab = "dashboard" }: AdminLayoutP
       </nav>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue={defaultTab} className="space-y-6">
+        <Tabs value={tabValue} onValueChange={handleTabChange} className="space-y-6">
           <AdminNavbar />
           {children}
         </Tabs>

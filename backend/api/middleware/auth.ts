@@ -56,8 +56,21 @@ export const authLimiter = rateLimit({
 });
 
 /**
- * General rate limiter for API routes
- * 100 requests per minute
+ * Higher ceiling for catalog reads. Product pages can legitimately load
+ * several public resources on first paint, especially behind shared hosting.
+ */
+export const catalogLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 600, // 600 catalog reads per minute
+  message: { error: "Muitas requisições de catálogo. Tente novamente em breve." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * General rate limiter for non-catalog API routes.
+ * Catalog reads have a dedicated limiter so public browsing does not exhaust
+ * the lower ceiling used by admin and mutation endpoints.
  */
 export const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -65,4 +78,12 @@ export const generalLimiter = rateLimit({
   message: { error: "Muitas requisições. Tente novamente em breve." },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const url = req.originalUrl;
+    return req.method === "GET" && (
+      url.startsWith("/api/products") ||
+      url.startsWith("/api/products-with-stats") ||
+      url.startsWith("/api/recent-reviews")
+    );
+  },
 });

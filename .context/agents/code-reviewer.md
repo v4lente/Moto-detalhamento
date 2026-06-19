@@ -19,20 +19,21 @@ Ensure code changes are correct, secure, and consistent with existing patterns.
 - Contributor guide: [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)
 
 ## Repository Starting Points
-- `client/` — UI and API usage
-- `server/` — routes and auth
-- `shared/` — domain contracts
-- `db/` and `migrations/` — persistence changes
+- `frontend/` — UI and API usage
+- `backend/api/routes/` — routes and auth
+- `shared/contracts/` — domain contracts
+- `backend/infrastructure/db/` and `migrations/` — persistence
 
 ## Key Files
-- [`server/routes.ts`](../../server/routes.ts#L1)
-- [`server/storage.ts`](../../server/storage.ts#L18)
-- [`shared/schema.ts`](../../shared/schema.ts#L1)
-- [`client/src/lib/api.ts`](../../client/src/lib/api.ts#L1)
+- [`backend/api/routes/index.ts`](../../backend/api/routes/index.ts)
+- [`backend/infrastructure/storage.ts`](../../backend/infrastructure/storage.ts)
+- [`shared/schema.ts`](../../shared/schema.ts)
+- [`shared/contracts/validation.ts`](../../shared/contracts/validation.ts)
+- [`frontend/shared/lib/api.ts`](../../frontend/shared/lib/api.ts)
 
 ## Key Symbols for This Agent
-- `registerRoutes` — [`server/routes.ts`](../../server/routes.ts#L59)
-- `DatabaseStorage` — [`server/storage.ts`](../../server/storage.ts#L85)
+- `registerAllRoutes` — [`backend/api/routes/index.ts`](../../backend/api/routes/index.ts)
+- `DatabaseStorage` — [`backend/infrastructure/storage.ts`](../../backend/infrastructure/storage.ts)
 - `CheckoutDialog` — [`client/src/components/checkout-dialog.tsx`](../../client/src/components/checkout-dialog.tsx#L24)
 
 ## Documentation Touchpoints
