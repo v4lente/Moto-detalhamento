@@ -8,6 +8,8 @@ import { Textarea } from "@/shared/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/dialog";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { CreatableSelect } from "@/shared/ui/creatable-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { PaginationControls } from "@/shared/components/PaginationControls";
 import { ImageUpload } from "@/shared/components/ImageUpload";
 import { useToast } from "@/shared/hooks/use-toast";
 import { 
@@ -18,9 +20,13 @@ import {
   fetchProductVariations 
 } from "../hooks/use-admin";
 import type { ProductWithImages, ProductVariation } from "@shared/contracts";
-import { 
-  Plus, Pencil, Trash2, Package, Loader2, X, ToggleLeft, ToggleRight 
+import {
+  Plus, Pencil, Trash2, Package, Loader2, X, ToggleLeft, ToggleRight, Search
 } from "lucide-react";
+
+const ITEMS_PER_PAGE = 10;
+type ProductStatusFilter = "all" | "active" | "inactive";
+type ProductSortDirection = "asc" | "desc";
 
 export function ProductsManagementPage() {
   const { toast } = useToast();
@@ -44,6 +50,10 @@ export function ProductsManagementPage() {
   const [variationPrice, setVariationPrice] = useState("");
   const [variationInStock, setVariationInStock] = useState(true);
   const [localVariationCounts, setProductVariationCounts] = useState<Record<number, number>>({});
+  const [productSearch, setProductSearch] = useState("");
+  const [productStatusFilter, setProductStatusFilter] = useState<ProductStatusFilter>("all");
+  const [productSortDirection, setProductSortDirection] = useState<ProductSortDirection>("asc");
+  const [productPage, setProductPage] = useState(1);
 
   // Queries
   const { data: products, isLoading: productsLoading, isError: productsError } = useProducts();
@@ -67,6 +77,45 @@ export function ProductsManagementPage() {
     const categories = products.map(p => p.category).filter(Boolean);
     return Array.from(new Set(categories)).sort();
   }, [products]);
+  const normalizeSearch = (value: string) => value.trim().toLowerCase();
+
+  const resetProductPage = () => setProductPage(1);
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    const query = normalizeSearch(productSearch);
+
+    return products.filter((product) => {
+      const matchesSearch =
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query);
+
+      const matchesStatus =
+        productStatusFilter === "all" ||
+        (productStatusFilter === "active" && product.isActive) ||
+        (productStatusFilter === "inactive" && !product.isActive);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [products, productSearch, productStatusFilter]);
+
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      if (a.isActive !== b.isActive) {
+        return a.isActive ? 1 : -1;
+      }
+      const cmp = a.name.localeCompare(b.name, "pt-BR");
+      return productSortDirection === "asc" ? cmp : -cmp;
+    });
+  }, [filteredProducts, productSortDirection]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (productPage - 1) * ITEMS_PER_PAGE;
+    return sortedProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedProducts, productPage]);
+
 
   const handleOpenVariationsDialog = async (product: ProductWithImages) => {
     setVariationsProductId(product.id);
@@ -286,6 +335,55 @@ export function ProductsManagementPage() {
         </Dialog>
       </div>
 
+      {!productsLoading && !productsError && products && products.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, descrição ou categoria..."
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                resetProductPage();
+              }}
+              className="pl-9"
+              data-testid="input-admin-product-search"
+            />
+          </div>
+          <Select
+            value={productStatusFilter}
+            onValueChange={(value) => {
+              setProductStatusFilter(value as ProductStatusFilter);
+              resetProductPage();
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-44" data-testid="select-product-status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="inactive">Desativados</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={productSortDirection}
+            onValueChange={(value) => {
+              setProductSortDirection(value as ProductSortDirection);
+              resetProductPage();
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-44" data-testid="select-product-sort">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="asc">Nome (A–Z)</SelectItem>
+              <SelectItem value="desc">Nome (Z–A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {productsLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -298,9 +396,14 @@ export function ProductsManagementPage() {
         <div className="py-10 text-center text-sm text-muted-foreground">
           Nenhum produto encontrado.
         </div>
+      ) : sortedProducts.length === 0 ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          Nenhum produto corresponde aos filtros aplicados.
+        </div>
       ) : (
+        <div className="space-y-4">
         <div className="grid gap-4">
-          {products?.map((product) => (
+          {paginatedProducts.map((product) => (
             <Card
               key={product.id}
               className={`bg-card border-border ${!product.isActive ? "opacity-60" : ""}`}
@@ -377,6 +480,14 @@ export function ProductsManagementPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+        <PaginationControls
+          currentPage={productPage}
+          totalItems={sortedProducts.length}
+          pageSize={ITEMS_PER_PAGE}
+          onPageChange={setProductPage}
+          testIdPrefix="admin-products"
+        />
         </div>
       )}
 
