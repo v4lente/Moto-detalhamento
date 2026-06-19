@@ -14,7 +14,7 @@ This project blends ecommerce and service scheduling. Terms below map directly t
 - `ObjectPermission` — ACL permissions (`server/replit_integrations/object_storage/objectAcl.ts`)
 
 ## Core Terms
-- **Produto**: catalog item customers can buy; supports multiple images and variations.
+- **Produto**: catalog item customers can buy; supports multiple images and variations. Public list at `/produtos` supports client-side search, category filter, sort, and pagination (12 per page).
 - **Variacao**: size/color-like option with its own price/stock.
 - **Pedido**: order created during checkout; status tracked in admin.
 - **Cliente**: person purchasing or booking services; can be registered or guest.

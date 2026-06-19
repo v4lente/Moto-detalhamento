@@ -28,6 +28,7 @@ O projeto segue uma **arquitetura modular** com separação clara entre frontend
 
 ### Frontend
 - `CartProvider`, `CheckoutDialog` — Commerce UX (`frontend/features/cart/`)
+- `PaginationControls` — Paginação reutilizável em listagens (`frontend/shared/components/PaginationControls.tsx`)
 - `apiRequest`, `queryClient` — API client (`frontend/shared/lib/queryClient.ts`)
 
 ### Shared

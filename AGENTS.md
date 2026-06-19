@@ -36,7 +36,7 @@
   - `scheduling/` — Agendamento de serviços
 - `frontend/shared/` — Código compartilhado do frontend:
   - `ui/` — Componentes shadcn/ui (50+)
-  - `components/` — Componentes reutilizáveis (ImageUpload, ObjectUploader)
+  - `components/` — Componentes reutilizáveis (ImageUpload, ObjectUploader, PaginationControls)
   - `hooks/` — Custom hooks (use-mobile, use-toast, use-upload)
   - `lib/` — Utilitários (api, queryClient, utils)
   - `layout/` — Layout principal com header/footer

@@ -23,6 +23,8 @@ frontend/               # Código do cliente React
 │   ├── home/           # Página inicial
 │   └── scheduling/     # Agendamento
 ├── shared/             # UI, hooks, lib compartilhados
+│   ├── ui/             # shadcn (Select com scroll em listas longas)
+│   └── components/     # PaginationControls, ImageUpload, etc.
 └── pages/              # Páginas genéricas (404)
 
 backend/                # Código do servidor Express

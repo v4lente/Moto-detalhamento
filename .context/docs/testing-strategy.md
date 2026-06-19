@@ -33,6 +33,9 @@ Copy `.env.example` to `.env` and set at least `SESSION_SECRET` and `DATABASE_UR
 |------|---------|
 | `tests/build.spec.ts` | Build output, static serving, health response shape |
 | `tests/api-degraded.spec.ts` | Behavior when `DATABASE_URL` is missing |
+| `tests/admin-requests.spec.ts` | Admin dashboard request budget (e.g. no N+1 variation fetches on load) |
+
+Manual checks recommended after catalog UX changes: `/produtos` (busca, categoria, ordenação, paginação) and `/admin` → Produtos (busca, status, ordenação, paginação).
 
 ## Quality Gates
 

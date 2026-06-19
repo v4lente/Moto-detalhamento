@@ -57,6 +57,17 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - `drizzle.config.ts` — Configuração Drizzle
 - `components.json` — Configuração shadcn/ui
 
+## Catálogo e listagens de produtos (client-side)
+
+Filtros, ordenação e paginação rodam no frontend após carregar a lista completa da API (sem query params de paginação no backend).
+
+| Área | Arquivo | Capacidades |
+| --- | --- | --- |
+| Loja pública | `frontend/features/products/pages/produtos.tsx` | Busca (nome/descrição), filtro de categoria, ordenação (rating, preço asc/desc, nome A–Z/Z–A), **12 itens/página**, `PaginationControls` |
+| Admin produtos | `frontend/features/admin/pages/products-management.tsx` | Busca (nome/descrição/categoria), filtro status (todos/ativos/desativados), ordenação (inativos primeiro + nome A–Z/Z–A), **10 itens/página**, `PaginationControls` |
+| Componente compartilhado | `frontend/shared/components/PaginationControls.tsx` | Paginação controlada reutilizável (admin, loja, futuras telas) |
+| Select longo | `frontend/shared/ui/select.tsx` | Scroll em dropdowns com muitos itens (ex.: categorias na loja) |
+
 ## Document Map
 | Guide | File | Primary Inputs |
 | --- | --- | --- |

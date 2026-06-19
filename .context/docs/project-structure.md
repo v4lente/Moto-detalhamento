@@ -38,7 +38,7 @@ frontend/
 │   │   │   └── use-admin.ts
 │   │   ├── pages/              # Páginas do admin
 │   │   │   ├── dashboard.tsx
-│   │   │   ├── products-management.tsx
+│   │   │   ├── products-management.tsx  # CRUD + busca/filtro/ordenação/paginação
 │   │   │   ├── orders-management.tsx
 │   │   │   ├── customers-management.tsx
 │   │   │   ├── appointments-management.tsx
@@ -67,7 +67,7 @@ frontend/
 │   │   ├── components/
 │   │   │   └── product-card.tsx
 │   │   └── pages/
-│   │       ├── produtos.tsx    # Listagem
+│   │       ├── produtos.tsx    # Listagem (busca, categoria, ordenação, paginação 12/página)
 │   │       └── produto.tsx     # Detalhes
 │   │
 │   ├── account/                # Área do cliente
@@ -94,7 +94,8 @@ frontend/
 │   │   ├── dialog.tsx
 │   │   ├── form.tsx
 │   │   ├── input.tsx
-│   │   ├── select.tsx
+│   │   ├── select.tsx          # Select Radix (scroll em listas longas)
+│   │   ├── pagination.tsx      # Primitives shadcn (links de página)
 │   │   ├── table.tsx
 │   │   ├── tabs.tsx
 │   │   ├── toast.tsx
@@ -102,7 +103,8 @@ frontend/
 │   │
 │   ├── components/             # Componentes reutilizáveis
 │   │   ├── ImageUpload.tsx     # Upload com crop
-│   │   └── ObjectUploader.tsx  # Upload para storage
+│   │   ├── ObjectUploader.tsx  # Upload para storage
+│   │   └── PaginationControls.tsx  # Paginação controlada (loja + admin)
 │   │
 │   ├── hooks/                  # Custom hooks
 │   │   ├── use-mobile.tsx      # Detecção de dispositivo

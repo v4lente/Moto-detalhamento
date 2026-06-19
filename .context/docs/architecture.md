@@ -69,6 +69,11 @@ flowchart TB
 | **Repository Pattern** | `backend/infrastructure/storage.ts` | Abstração de acesso a dados |
 | **Shared Contracts** | `shared/contracts/` | Tipos e validações compartilhados |
 | **Context Pattern** | `frontend/features/cart/lib/cart.tsx` | Estado global do carrinho |
+| **Client-side list UX** | `produtos.tsx`, `products-management.tsx` | Busca, filtro, ordenação e paginação em memória após fetch da API; componente `PaginationControls` |
+
+## Catálogo (frontend)
+
+As listagens de produtos (loja e admin) carregam o conjunto completo via API e aplicam **filtro, ordenação e paginação no cliente**. Não há query params de paginação nos endpoints de listagem. Detalhes na seção *Catálogo e listagens de produtos* em [README.md](./README.md).
 
 ## Entry Points
 

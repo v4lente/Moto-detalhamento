@@ -34,6 +34,8 @@ backend/infrastructure/*
 Frontend Event → API Request → Express Route → Validation → Service → Storage → Database → Response → UI Update
 ```
 
+**Listagens de produtos (loja/admin):** a UI busca a lista completa (`GET /api/products-with-stats` ou `GET /api/admin/products`), depois aplica busca, filtro, ordenação e paginação no React (`useMemo` + `PaginationControls`) sem round-trips adicionais por página.
+
 ```mermaid
 flowchart LR
   UI["React Frontend"] -->|"fetch /api/*"| Routes["API Routes"]

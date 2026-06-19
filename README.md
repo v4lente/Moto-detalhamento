@@ -22,6 +22,8 @@ E-commerce completo para negócio de detalhamento de motocicletas, com catálogo
 
 ### Para Clientes
 - **Catálogo de Produtos** - Navegue por produtos com múltiplas imagens em carrossel, descrições, preços e avaliações
+- **Busca e Filtros no Catálogo** - Busca por nome ou descrição, filtro por categoria e ordenação (melhor avaliados, preço, nome A–Z / Z–A)
+- **Paginação do Catálogo** - Listagem paginada (12 produtos por página) com resumo e navegação entre páginas
 - **Variações de Produtos** - Suporte a variações (tamanhos, cores) com preços e estoque individuais
 - **Carrinho de Compras** - Adicione produtos, ajuste quantidades e finalize via WhatsApp
 - **Sistema de Avaliações** - Avalie produtos após a compra com estrelas e comentários
@@ -31,7 +33,7 @@ E-commerce completo para negócio de detalhamento de motocicletas, com catálogo
 
 ### Para Administradores
 - **Dashboard** - Visão geral de pedidos, clientes, agendamentos e métricas
-- **Gestão de Produtos** - CRUD completo com upload de múltiplas imagens e variações
+- **Gestão de Produtos** - CRUD completo com upload de múltiplas imagens e variações; busca por nome, descrição ou categoria; filtro por status (ativos/desativados); ordenação com produtos desativados primeiro e nome A–Z / Z–A; paginação (10 por página)
 - **Gestão de Pedidos** - Acompanhe e atualize status dos pedidos
 - **Gestão de Clientes** - Visualize e gerencie clientes cadastrados
 - **Gestão de Usuários** - Controle de acesso de administradores (admin/editor)
@@ -259,7 +261,7 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 
 - **Layout**: Card, Dialog, Sheet, Drawer, Tabs, Accordion
 - **Forms**: Input, Select, Checkbox, Radio, Switch, DatePicker
-- **Navigation**: Button, Menu, Breadcrumb, Pagination
+- **Navigation**: Button, Menu, Breadcrumb, Pagination (primitives shadcn) + `PaginationControls` (listagens paginadas)
 - **Feedback**: Alert, Toast, Progress, Skeleton, Spinner
 - **Data Display**: Table, Badge, Avatar, Carousel, Chart
 
@@ -267,8 +269,8 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 
 | Diretório | Descrição |
 |-----------|-----------|
-| `ui/` | Componentes shadcn/ui base |
-| `components/` | Componentes reutilizáveis (ImageUpload, ObjectUploader) |
+| `ui/` | Componentes shadcn/ui base (incl. `select.tsx` com scroll em listas longas) |
+| `components/` | Componentes reutilizáveis (`ImageUpload`, `ObjectUploader`, `PaginationControls`) |
 | `hooks/` | Custom hooks (use-mobile, use-toast, use-upload) |
 | `lib/` | Utilitários (api, queryClient, utils) |
 | `layout/` | Layout principal com header/footer |
@@ -468,6 +470,7 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
+| GET | `/api/products-with-stats` | Lista produtos ativos com estatísticas (usado em `/produtos`; filtros/paginação no client) |
 | GET | `/api/products` | Lista todos os produtos |
 | GET | `/api/products/:id` | Detalhes de um produto |
 | GET | `/api/products/:id/variations` | Variações de um produto |
@@ -492,7 +495,7 @@ A aplicação utiliza **50+ componentes** da biblioteca shadcn/ui, incluindo:
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | GET | `/api/admin/stats` | Estatísticas do dashboard |
-| CRUD | `/api/admin/products` | Gestão de produtos |
+| CRUD | `/api/admin/products` | Gestão de produtos (lista completa; busca/filtro/paginação no client em `/admin`) |
 | CRUD | `/api/admin/customers` | Gestão de clientes |
 | CRUD | `/api/admin/orders` | Gestão de pedidos |
 | CRUD | `/api/admin/users` | Gestão de usuários admin |

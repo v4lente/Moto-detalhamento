@@ -137,12 +137,15 @@ node scripts/smoke-test-api.mjs
 - [ ] Página inicial carrega corretamente
 - [ ] Navegação entre páginas funciona
 - [ ] Imagens e assets carregam
+- [ ] `/produtos`: busca, filtro de categoria, ordenação e paginação funcionam
+- [ ] Combo de categorias em `/produtos` rola até o fim da lista (scroll no Select)
 
 ### Admin
 
 - [ ] Login admin funciona
 - [ ] Dashboard carrega dados
 - [ ] CRUD de produtos funciona
+- [ ] Admin → Produtos: busca, filtro de status, ordenação e paginação funcionam
 - [ ] Upload de imagens funciona
 
 ### Cliente
