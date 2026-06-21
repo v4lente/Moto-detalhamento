@@ -58,7 +58,8 @@ export async function createProduct(product: InsertProduct): Promise<ProductWith
     credentials: "include",
   });
   if (!response.ok) {
-    throw new Error("Failed to create product");
+    const message = await extractErrorMessage(response, "Falha ao criar produto");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -71,7 +72,8 @@ export async function updateProduct(id: number, product: Partial<ProductWithImag
     credentials: "include",
   });
   if (!response.ok) {
-    throw new Error("Failed to update product");
+    const message = await extractErrorMessage(response, "Falha ao atualizar produto");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -155,9 +157,11 @@ export async function updateSettings(settings: UpdateSiteSettings): Promise<Site
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
+    credentials: "include",
   });
   if (!response.ok) {
-    throw new Error("Failed to update settings");
+    const message = await extractErrorMessage(response, "Falha ao atualizar configuracoes");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -646,7 +650,8 @@ export async function createServicePost(post: Omit<ServicePostWithMedia, "id" | 
     credentials: "include",
   });
   if (!response.ok) {
-    throw new Error("Failed to create service post");
+    const message = await extractErrorMessage(response, "Falha ao criar post de servico");
+    throw new Error(message);
   }
   return response.json();
 }
@@ -659,7 +664,8 @@ export async function updateServicePost(id: number, post: Partial<ServicePostWit
     credentials: "include",
   });
   if (!response.ok) {
-    throw new Error("Failed to update service post");
+    const message = await extractErrorMessage(response, "Falha ao atualizar post de servico");
+    throw new Error(message);
   }
   return response.json();
 }

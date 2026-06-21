@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
 import { insertOfferedServiceSchema, updateOfferedServiceSchema } from "@shared/schema";
 import { requireAuth } from "../middleware/auth";
+import { validateServicePostMediaPayload } from "../lib/image-validation";
 
 /**
  * Services routes including offered services and service posts
@@ -50,6 +51,10 @@ export function registerServicesRoutes(app: Express) {
 
   app.post("/api/service-posts", requireAuth, async (req, res) => {
     try {
+      const imageValidation = validateServicePostMediaPayload(req.body);
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.message });
+      }
       const post = await storage.createServicePost(req.body);
       res.status(201).json(post);
     } catch (error) {
@@ -63,6 +68,10 @@ export function registerServicesRoutes(app: Express) {
       const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid service post ID" });
+      }
+      const imageValidation = validateServicePostMediaPayload(req.body);
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.message });
       }
       const post = await storage.updateServicePost(id, req.body);
       if (!post) {

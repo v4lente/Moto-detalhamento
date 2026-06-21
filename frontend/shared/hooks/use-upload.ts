@@ -29,6 +29,7 @@ export function useUpload(options: UseUploadOptions = {}) {
         const response = await fetch(apiUrl("/uploads/local"), {
           method: "POST",
           body: formData,
+          credentials: "include",
         });
 
         if (!response.ok) {

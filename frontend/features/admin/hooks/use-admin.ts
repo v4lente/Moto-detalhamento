@@ -55,7 +55,7 @@ export function useProductMutations() {
       queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto criado com sucesso!" });
     },
-    onError: () => toast({ title: "Erro ao criar produto", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Erro ao criar produto", description: error.message, variant: "destructive" }),
   });
 
   const updateProductMutation = useMutation({
@@ -70,7 +70,7 @@ export function useProductMutations() {
       queryClient.invalidateQueries({ queryKey: ["products-with-stats"] });
       toast({ title: "Produto atualizado!" });
     },
-    onError: () => toast({ title: "Erro ao atualizar produto", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Erro ao atualizar produto", description: error.message, variant: "destructive" }),
   });
 
   const deleteProductMutation = useMutation({

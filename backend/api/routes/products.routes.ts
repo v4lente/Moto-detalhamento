@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
 import { insertProductSchema, insertProductVariationSchema, createReviewSchema } from "@shared/schema";
 import { catalogLimiter, requireAuth, requireCustomerAuth } from "../middleware/auth";
+import { validateProductImagePayload } from "../lib/image-validation";
 
 /**
  * Product routes including CRUD, variations, and reviews
@@ -81,6 +82,10 @@ export function registerProductsRoutes(app: Express) {
   app.post("/api/products", requireAuth, async (req, res) => {
     try {
       const validatedData = insertProductSchema.parse(req.body);
+      const imageValidation = validateProductImagePayload(validatedData, { requireMainImage: true });
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.message });
+      }
       const product = await storage.createProduct(validatedData);
       res.status(201).json(product);
     } catch (error) {
@@ -99,6 +104,10 @@ export function registerProductsRoutes(app: Express) {
         return res.status(400).json({ error: "Invalid product ID" });
       }
       const validatedData = insertProductSchema.partial().parse(req.body);
+      const imageValidation = validateProductImagePayload(validatedData, { requireMainImage: false });
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.message });
+      }
       const product = await storage.updateProduct(id, validatedData);
       if (!product) {
         return res.status(404).json({ error: "Product not found" });

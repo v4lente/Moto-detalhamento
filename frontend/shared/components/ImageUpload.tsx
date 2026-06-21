@@ -132,6 +132,7 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
       const response = await fetch(apiUrl("/uploads/local"), {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {

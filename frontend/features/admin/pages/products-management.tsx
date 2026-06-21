@@ -190,10 +190,22 @@ export function ProductsManagementPage() {
   const handleProductSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    const mainImage = productImage.trim();
+    const additionalImages = productImages.map((image) => image.trim()).filter(Boolean);
+
     if (!productCategory.trim()) {
       toast({
         title: "Categoria obrigatoria",
         description: "Por favor, selecione ou crie uma categoria.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!mainImage) {
+      toast({
+        title: "Imagem principal obrigatoria",
+        description: "Envie uma imagem principal antes de salvar o produto.",
         variant: "destructive",
       });
       return;
@@ -204,8 +216,8 @@ export function ProductsManagementPage() {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
       price: parseFloat(formData.get("price") as string),
-      image: productImage,
-      images: productImages,
+      image: mainImage,
+      images: additionalImages,
       category: productCategory.trim(),
       inStock: productInStock,
     };
@@ -327,7 +339,15 @@ export function ProductsManagementPage() {
                   Produto em estoque
                 </Label>
               </div>
-              <Button type="submit" className="w-full bg-primary text-black hover:bg-primary/90" data-testid="button-save-product">
+              <Button
+                type="submit"
+                className="w-full bg-primary text-black hover:bg-primary/90"
+                disabled={createProductMutation.isPending || updateProductMutation.isPending}
+                data-testid="button-save-product"
+              >
+                {(createProductMutation.isPending || updateProductMutation.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 {editingProduct ? "Atualizar" : "Criar"} Produto
               </Button>
             </form>

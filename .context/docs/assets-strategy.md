@@ -1,30 +1,38 @@
-# Estratégia de Assets
+# Estrategia de Assets
 
-## Decisão: Assets no Root do Projeto
+## Decisao: assets estaticos no projeto, uploads em pasta configuravel
 
-Os assets estáticos são mantidos na **raiz do projeto** e servidos pelo Express usando `process.cwd()` como base. Isso garante que o servidor encontre os arquivos independentemente do diretório de trabalho atual em diferentes ambientes (dev, build, deploy).
+Assets estaticos continuam em `attached_assets/` e sao servidos em `/assets`.
+Uploads do admin usam uma estrategia de escrita unica e leitura compativel:
 
-## Configuração em `backend/api/index.ts`
+- Escrita: `UPLOADS_DIR` quando configurado; senao `public/uploads`.
+- Leitura: `UPLOADS_DIR` primeiro e `public/uploads` como fallback legado.
+- URLs salvas no banco continuam no formato `/uploads/<arquivo>.jpg`.
+
+## Configuracao em `backend/api/index.ts`
 
 ```typescript
 import path from "path";
+import { ensureUploadsWriteDir, resolveUploadsReadDirs } from "./lib/uploads-dir";
 
-// Assets anexados (imagens, logos, etc.) - servidos em /assets
 app.use("/assets", express.static(path.resolve(process.cwd(), "attached_assets")));
 
-// Uploads de usuários (imagens de produtos, etc.) - servidos em /uploads
-app.use("/uploads", express.static(path.resolve(process.cwd(), "public/uploads")));
+const uploadsWriteDir = ensureUploadsWriteDir();
+const uploadsReadDirs = resolveUploadsReadDirs();
+uploadsReadDirs.forEach((uploadsDir) => {
+  app.use("/uploads", express.static(uploadsDir));
+});
 ```
 
-## Diretórios
+## Diretorios
 
-| URL       | Diretório Físico   | Uso                                      |
-| --------- | ------------------ | ---------------------------------------- |
-| `/assets` | `attached_assets/`  | Imagens fixas, logos, assets do site     |
-| `/uploads`| `public/uploads/`  | Imagens enviadas por usuários (produtos)  |
+| URL        | Diretorio fisico                         | Uso                                  |
+| ---------- | ---------------------------------------- | ------------------------------------ |
+| `/assets`  | `attached_assets/`                       | Imagens fixas, logos, assets do site |
+| `/uploads` | `UPLOADS_DIR` + fallback `public/uploads` | Imagens enviadas pelo admin          |
 
-## Motivação
+## Motivacao
 
-- **Simplicidade**: Um único local para assets, fácil de versionar e fazer backup
-- **Portabilidade**: `process.cwd()` funciona em dev, build e produção
-- **Consistência**: Mesma estrutura em todos os ambientes
+- Persistencia: uploads novos sobrevivem a redeploys quando `UPLOADS_DIR` aponta para pasta persistente.
+- Compatibilidade: imagens antigas/versionadas em `public/uploads` continuam aparecendo.
+- Simplicidade: o banco nao muda e as URLs publicas continuam iguais.

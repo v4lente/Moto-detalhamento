@@ -619,6 +619,7 @@ npm run check         # Verifica tipos TypeScript
 |----------|-------------|-----------|
 | `DATABASE_URL` | Sim (produção) | URL de conexão MySQL |
 | `SESSION_SECRET` | Sim (produção) | Chave usada para assinar sessões |
+| `UPLOADS_DIR` | Não | Diretório persistente para imagens enviadas no admin |
 | `DEFAULT_OBJECT_STORAGE_BUCKET_ID` | Não | ID do bucket para uploads |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | Não | Caminhos públicos do storage |
 | `PRIVATE_OBJECT_DIR` | Não | Diretório privado do storage |
@@ -626,6 +627,7 @@ npm run check         # Verifica tipos TypeScript
 ### Observações de produção
 
 - `SESSION_SECRET` é obrigatório quando `NODE_ENV=production`.
+- `UPLOADS_DIR` é recomendado em produção. Sem essa variável, o app usa `public/uploads`, que pode ser sobrescrito em redeploys.
 - O bootstrap tenta carregar `./.env` automaticamente via `process.loadEnvFile` quando variáveis críticas não estão presentes.
 - Na inicialização, o servidor registra o bloco `STARTUP ENV DIAGNOSTICS (safe)` com presença/ausência de variáveis (sem imprimir segredos).
 
@@ -679,11 +681,13 @@ npm run check         # Verifica tipos TypeScript
 ssh -p 65002 usuario@ip-do-servidor
 cd ~/domains/seu-dominio.com/public_html
 export PATH="/opt/alt/alt-nodejs20/root/usr/bin:$PATH"
+mkdir -p ~/domains/seu-dominio.com/uploads
 
 cat > .env << 'EOF'
 DATABASE_URL=mysql://usuario:senha@127.0.0.1:3306/nome_do_banco
 SESSION_SECRET=sua-chave-secreta-de-32-caracteres-ou-mais
 BASE_URL=https://seu-dominio.com
+UPLOADS_DIR=/home/usuario/domains/seu-dominio.com/uploads
 EOF
 ```
 
@@ -694,6 +698,8 @@ node --env-file=.env scripts/postbuild-db.mjs
 ```
 
 Isso aplica migrations e popula dados iniciais automaticamente.
+
+Se imagens antigas estiverem quebradas, copie os arquivos ausentes para o diretório definido em `UPLOADS_DIR` ou reenvie as imagens pelo admin. Os registros do banco continuam usando URLs no formato `/uploads/nome-do-arquivo.jpg`.
 
 5. **Confirmar comando de inicialização da aplicação Node**
 
@@ -850,3 +856,6 @@ MIT License - Veja [LICENSE](LICENSE) para detalhes.
 3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
 4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
+## Nota sobre uploads persistentes
+
+Uploads novos do admin sao gravados em `UPLOADS_DIR` quando a variavel estiver configurada. A leitura de `/uploads/<arquivo>` procura primeiro em `UPLOADS_DIR` e depois em `public/uploads`, mantendo imagens legadas/versionadas funcionando. Arquivos que nao existem em nenhum dos dois locais precisam ser copiados para `UPLOADS_DIR` ou reenviados pelo admin.

@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { runMigrations } from "../infrastructure/db";
 import fs from "fs";
+import { ensureUploadsWriteDir, resolveUploadsReadDirs } from "./lib/uploads-dir";
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,8 +29,17 @@ app.use(express.urlencoded({ extended: false }));
 import path from "path";
 app.use("/assets", express.static(path.resolve(process.cwd(), "attached_assets")));
 
-// Serve uploaded images from public/uploads/
-app.use("/uploads", express.static(path.resolve(process.cwd(), "public/uploads")));
+function configureUploadedImagesStatic() {
+  const uploadsWriteDir = ensureUploadsWriteDir();
+  const uploadsReadDirs = resolveUploadsReadDirs();
+
+  uploadsReadDirs.forEach((uploadsDir) => {
+    app.use("/uploads", express.static(uploadsDir));
+  });
+
+  console.error(`[uploads] Writing uploaded files to: ${uploadsWriteDir}`);
+  console.error(`[uploads] Serving uploaded files from: ${uploadsReadDirs.join(", ")}`);
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -48,6 +58,7 @@ const trackedEnvVars = [
   "SESSION_SECRET",
   "DATABASE_URL",
   "BASE_URL",
+  "UPLOADS_DIR",
   "STRIPE_SECRET_KEY",
   "STRIPE_PUBLISHABLE_KEY",
   "STRIPE_WEBHOOK_SECRET",
@@ -57,8 +68,11 @@ function loadEnvironmentFallbackFromDotEnv() {
   const missingDatabaseUrl = !process.env.DATABASE_URL;
   const missingSessionSecretInProduction =
     process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET;
+  const envPath = path.resolve(process.cwd(), ".env");
+  const dotEnvExists = fs.existsSync(envPath);
+  const missingUploadsDirWithDotEnv = !process.env.UPLOADS_DIR && dotEnvExists;
 
-  if (!missingDatabaseUrl && !missingSessionSecretInProduction) {
+  if (!missingDatabaseUrl && !missingSessionSecretInProduction && !missingUploadsDirWithDotEnv) {
     return;
   }
 
@@ -72,8 +86,7 @@ function loadEnvironmentFallbackFromDotEnv() {
     return;
   }
 
-  const envPath = path.resolve(process.cwd(), ".env");
-  if (!fs.existsSync(envPath)) {
+  if (!dotEnvExists) {
     console.error(`[env] .env file not found at ${envPath}`);
     return;
   }
@@ -183,6 +196,7 @@ app.use((req, res, next) => {
 
 (async () => {
   loadEnvironmentFallbackFromDotEnv();
+  configureUploadedImagesStatic();
   logStartupEnvironmentDiagnostics();
 
   // Run migrations with error handling - don't crash the server if migrations fail

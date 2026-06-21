@@ -3,6 +3,7 @@ import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
 import { updateSiteSettingsSchema } from "@shared/schema";
 import { requireAuth } from "../middleware/auth";
+import { validateSettingsImagePayload } from "../lib/image-validation";
 
 /**
  * Site settings routes
@@ -23,6 +24,10 @@ export function registerSettingsRoutes(app: Express) {
   app.patch("/api/settings", requireAuth, async (req, res) => {
     try {
       const validatedData = updateSiteSettingsSchema.parse(req.body);
+      const imageValidation = validateSettingsImagePayload(validatedData);
+      if (!imageValidation.valid) {
+        return res.status(400).json({ error: imageValidation.message });
+      }
       const settings = await storage.updateSiteSettings(validatedData);
       res.json(settings);
     } catch (error) {
