@@ -77,18 +77,19 @@ test.describe('Checkout simplificado por WhatsApp', () => {
     await page.getByRole('button', { name: /Finalizar pelo WhatsApp/ }).click();
 
     await expect(page.getByTestId('input-name')).toBeVisible();
-    await expect(page.getByTestId('input-phone')).toBeVisible();
+    await expect(page.getByTestId('input-phone')).toHaveCount(0);
     await expect(page.getByTestId('input-email')).toHaveCount(0);
     await expect(page.getByTestId('link-customer-login')).toHaveCount(0);
 
     await page.getByTestId('input-name').fill('Daniele');
-    await page.getByTestId('input-phone').fill('53981116072');
     await page.getByTestId('button-confirm-checkout').click();
 
     await page.waitForURL(/https:\/\/wa\.me\/5511988887777/);
 
     expect(checkoutRequests).toBe(0);
     expect(decodeURIComponent(page.url())).toContain('*Novo Pedido*');
+    expect(decodeURIComponent(page.url())).toContain('*Cliente:* Daniele');
+    expect(decodeURIComponent(page.url())).not.toContain('*Telefone:*');
     expect(decodeURIComponent(page.url())).toContain('Produto Teste');
     expect(decodeURIComponent(page.url())).toContain('*Total: R$ 12,00*');
   });

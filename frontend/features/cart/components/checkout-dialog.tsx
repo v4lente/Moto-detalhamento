@@ -107,7 +107,6 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       "*Novo Pedido*",
       "",
       `*Cliente:* ${customerData.name}`,
-      `*Telefone:* ${customerData.phone}`,
       customerData.email ? `*Email:* ${customerData.email}` : null,
       customerData.deliveryAddress ? `*Endereco:* ${customerData.deliveryAddress}` : null,
       "",
@@ -167,11 +166,12 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     }
   };
 
-  const hasCustomerContact = customer || (formData.name.trim().length >= 2 && formData.phone.replace(/\D/g, "").length >= 10);
+  const hasCustomerName = customer || formData.name.trim().length >= 2;
+  const hasCustomerPhone = customer || formData.phone.replace(/\D/g, "").length >= 10;
   const hasPaymentContact = customer || Boolean(formData.email);
   const isFormValid = paymentMethod === "whatsapp"
-    ? hasCustomerContact
-    : hasCustomerContact && hasPaymentContact;
+    ? hasCustomerName
+    : hasCustomerName && hasCustomerPhone && hasPaymentContact;
   const isPending = stripeCheckoutMutation.isPending;
 
   return (
@@ -223,24 +223,24 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="11999999999"
-                    className="pl-10"
-                    required
-                    data-testid="input-phone"
-                  />
-                </div>
-              </div>
-
               {paymentMethod !== "whatsapp" && (
                 <>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="11999999999"
+                        className="pl-10"
+                        required
+                        data-testid="input-phone"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="email">Email *</Label>
                     <div className="relative">
