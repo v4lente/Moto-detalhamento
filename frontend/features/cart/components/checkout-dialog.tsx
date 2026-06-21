@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { processCheckout, createStripeCheckoutSession, getCurrentCustomer, fetchSettings } from "@/shared/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createStripeCheckoutSession, getCurrentCustomer, fetchSettings } from "@/shared/lib/api";
 import { useCart } from "@/features/cart/lib/cart";
 import { useToast } from "@/shared/hooks/use-toast";
 import { isStripeAvailable, redirectToCheckout } from "@/shared/lib/stripe";
@@ -20,6 +20,20 @@ import { Link } from "wouter";
 
 type PaymentMethod = "whatsapp" | "card" | "pix";
 
+type CustomerData = {
+  name: string;
+  phone: string;
+  email?: string;
+  nickname?: string;
+  deliveryAddress?: string;
+};
+
+type OrderItemData = {
+  productName: string;
+  productPrice: number;
+  quantity: number;
+};
+
 interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -28,7 +42,6 @@ interface CheckoutDialogProps {
 export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const { items, cartTotal, clearCart } = useCart();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const [stripeEnabled, setStripeEnabled] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("whatsapp");
@@ -56,24 +69,6 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     isStripeAvailable().then(setStripeEnabled);
   }, []);
 
-  // WhatsApp checkout mutation
-  const whatsappCheckoutMutation = useMutation({
-    mutationFn: processCheckout,
-    onSuccess: (result) => {
-      const phoneNumber = settings?.whatsappNumber || "5511999999999";
-      const encodedMessage = encodeURIComponent(result.whatsappMessage);
-      window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, "_blank");
-      
-      clearCart();
-      onOpenChange(false);
-      toast({ title: "Pedido enviado com sucesso!" });
-      queryClient.invalidateQueries({ queryKey: ["customer"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    },
-  });
-
   // Stripe checkout mutation
   const stripeCheckoutMutation = useMutation({
     mutationFn: createStripeCheckoutSession,
@@ -97,6 +92,43 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
+
+  const formatCurrency = (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`;
+
+  const buildWhatsAppMessage = (customerData: CustomerData, orderItems: OrderItemData[]) => {
+    const itemsList = orderItems
+      .map(
+        (item) =>
+          `- ${item.quantity}x ${item.productName} - ${formatCurrency(item.productPrice * item.quantity)}`
+      )
+      .join("\n");
+
+    return [
+      "*Novo Pedido*",
+      "",
+      `*Cliente:* ${customerData.name}`,
+      `*Telefone:* ${customerData.phone}`,
+      customerData.email ? `*Email:* ${customerData.email}` : null,
+      customerData.deliveryAddress ? `*Endereco:* ${customerData.deliveryAddress}` : null,
+      "",
+      "*Itens:*",
+      itemsList,
+      "",
+      `*Total: ${formatCurrency(cartTotal)}*`,
+    ]
+      .filter((line): line is string => line !== null)
+      .join("\n");
+  };
+
+  const sendWhatsAppOrder = (customerData: CustomerData, orderItems: OrderItemData[]) => {
+    const phoneNumber = (settings?.whatsappNumber || "5511999999999").replace(/\D/g, "");
+    const encodedMessage = encodeURIComponent(buildWhatsAppMessage(customerData, orderItems));
+
+    clearCart();
+    onOpenChange(false);
+    toast({ title: "Pedido pronto para envio!" });
+    window.location.href = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,12 +155,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     }));
 
     if (paymentMethod === "whatsapp") {
-      whatsappCheckoutMutation.mutate({
-        customer: customerData,
-        items: orderItems,
-        total: cartTotal,
-        paymentMethod: "whatsapp",
-      });
+      sendWhatsAppOrder(customerData, orderItems);
     } else {
       // For card or pix, use Stripe
       stripeCheckoutMutation.mutate({
@@ -140,8 +167,12 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     }
   };
 
-  const isFormValid = customer || (formData.name.length >= 2 && formData.phone.length >= 10);
-  const isPending = whatsappCheckoutMutation.isPending || stripeCheckoutMutation.isPending;
+  const hasCustomerContact = customer || (formData.name.trim().length >= 2 && formData.phone.replace(/\D/g, "").length >= 10);
+  const hasPaymentContact = customer || Boolean(formData.email);
+  const isFormValid = paymentMethod === "whatsapp"
+    ? hasCustomerContact
+    : hasCustomerContact && hasPaymentContact;
+  const isPending = stripeCheckoutMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,17 +191,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
               <p className="text-sm text-muted-foreground">{customer.phone}</p>
               {customer.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
               
-              <div className="pt-2">
-                <Label htmlFor="deliveryAddress">Endereço de Entrega</Label>
-                <Textarea
-                  id="deliveryAddress"
-                  value={formData.deliveryAddress || customer.deliveryAddress || ""}
-                  onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                  placeholder="Rua, número, bairro, cidade..."
-                  className="mt-1"
-                  data-testid="input-delivery-address"
-                />
-              </div>
+              {paymentMethod !== "whatsapp" && (
+                <div className="pt-2">
+                  <Label htmlFor="deliveryAddress">Endereço de Entrega</Label>
+                  <Textarea
+                    id="deliveryAddress"
+                    value={formData.deliveryAddress || customer.deliveryAddress || ""}
+                    onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                    placeholder="Rua, número, bairro, cidade..."
+                    className="mt-1"
+                    data-testid="input-delivery-address"
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -206,44 +239,48 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email {paymentMethod !== "whatsapp" ? "*" : "(opcional)"}</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="seu@email.com"
-                    className="pl-10"
-                    required={paymentMethod !== "whatsapp"}
-                    data-testid="input-email"
-                  />
-                </div>
-              </div>
+              {paymentMethod !== "whatsapp" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="seu@email.com"
+                        className="pl-10"
+                        required
+                        data-testid="input-email"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="deliveryAddress">Endereço de Entrega (opcional)</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Textarea
-                    id="deliveryAddress"
-                    value={formData.deliveryAddress}
-                    onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                    placeholder="Rua, número, bairro, cidade..."
-                    className="pl-10"
-                    data-testid="input-delivery-address"
-                  />
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryAddress">Endereço de Entrega (opcional)</Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Textarea
+                        id="deliveryAddress"
+                        value={formData.deliveryAddress}
+                        onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                        placeholder="Rua, número, bairro, cidade..."
+                        className="pl-10"
+                        data-testid="input-delivery-address"
+                      />
+                    </div>
+                  </div>
 
-              <div className="text-sm text-muted-foreground">
-                Já tem conta?{" "}
-                <Link href="/conta" className="text-primary hover:underline" data-testid="link-customer-login">
-                  Faça login
-                </Link>
-              </div>
+                  <div className="text-sm text-muted-foreground">
+                    Já tem conta?{" "}
+                    <Link href="/conta" className="text-primary hover:underline" data-testid="link-customer-login">
+                      Faça login
+                    </Link>
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -308,7 +345,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
                 ? "bg-green-600 hover:bg-green-700" 
                 : "bg-primary hover:bg-primary/90"
             } text-white`}
-            disabled={!isFormValid || isPending || (paymentMethod !== "whatsapp" && !formData.email && !customer?.email)}
+            disabled={!isFormValid || isPending}
             data-testid="button-confirm-checkout"
           >
             {isPending ? (
