@@ -17,8 +17,10 @@ import { Textarea } from "@/shared/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
 import { Phone, User, Mail, MapPin, Loader2, CreditCard, QrCode } from "lucide-react";
 import { Link } from "wouter";
+import { WHATSAPP_ORDER_CONFIRMATION_MESSAGE } from "@/features/cart/lib/whatsapp-order-confirmation";
 
 type PaymentMethod = "whatsapp" | "card" | "pix";
+type CheckoutStep = "form" | "confirmation";
 
 type CustomerData = {
   name: string;
@@ -45,6 +47,8 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
   const [stripeEnabled, setStripeEnabled] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("whatsapp");
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("form");
+  const [whatsappOrderUrl, setWhatsappOrderUrl] = useState<string | null>(null);
 
   const { data: customer } = useQuery({
     queryKey: ["customer"],
@@ -68,6 +72,13 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   useEffect(() => {
     isStripeAvailable().then(setStripeEnabled);
   }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setCheckoutStep("form");
+      setWhatsappOrderUrl(null);
+    }
+  }, [open]);
 
   // Stripe checkout mutation
   const stripeCheckoutMutation = useMutation({
@@ -122,11 +133,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const sendWhatsAppOrder = (customerData: CustomerData, orderItems: OrderItemData[]) => {
     const phoneNumber = (settings?.whatsappNumber || "5511999999999").replace(/\D/g, "");
     const encodedMessage = encodeURIComponent(buildWhatsAppMessage(customerData, orderItems));
+    const url = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 
     clearCart();
-    onOpenChange(false);
-    toast({ title: "Pedido pronto para envio!" });
-    window.location.href = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    setWhatsappOrderUrl(url);
+    setCheckoutStep("confirmation");
+  };
+
+  const openWhatsAppWithOrder = () => {
+    if (whatsappOrderUrl) {
+      window.location.href = whatsappOrderUrl;
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -179,10 +196,38 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       <DialogContent className="sm:max-w-md bg-card border-primary/20 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display uppercase tracking-widest text-primary">
-            Finalizar Pedido
+            {checkoutStep === "confirmation" ? "Pedido registrado" : "Finalizar Pedido"}
           </DialogTitle>
         </DialogHeader>
 
+        {checkoutStep === "confirmation" ? (
+          <div className="space-y-4" data-testid="whatsapp-order-confirmation">
+            <div className="rounded-lg bg-background/50 p-4 text-sm text-foreground whitespace-pre-line leading-relaxed">
+              {WHATSAPP_ORDER_CONFIRMATION_MESSAGE}
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Para concluir, envie os detalhes do pedido para nossa equipe no WhatsApp.
+            </p>
+            <Button
+              type="button"
+              className="w-full font-bold bg-green-600 hover:bg-green-700 text-white"
+              onClick={openWhatsAppWithOrder}
+              data-testid="button-open-whatsapp"
+            >
+              <Phone className="mr-2 h-4 w-4" />
+              Abrir WhatsApp
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => onOpenChange(false)}
+              data-testid="button-close-confirmation"
+            >
+              Fechar
+            </Button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {customer ? (
             <div className="bg-background/50 rounded-lg p-4 space-y-2">
@@ -371,6 +416,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             </p>
           )}
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

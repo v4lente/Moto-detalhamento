@@ -84,6 +84,12 @@ test.describe('Checkout simplificado por WhatsApp', () => {
     await page.getByTestId('input-name').fill('Daniele');
     await page.getByTestId('button-confirm-checkout').click();
 
+    await expect(page.getByTestId('whatsapp-order-confirmation')).toBeVisible();
+    await expect(page.getByText('Pedido realizado com sucesso!')).toBeVisible();
+    await expect(page.getByText('Daniel Valente Detail Store')).toBeVisible();
+
+    await page.getByTestId('button-open-whatsapp').click();
+
     await page.waitForURL(/https:\/\/wa\.me\/5511988887777/);
 
     expect(checkoutRequests).toBe(0);
