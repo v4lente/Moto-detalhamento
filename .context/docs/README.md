@@ -12,6 +12,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Testing Strategy](./testing-strategy.md)
 - [Glossary & Domain Concepts](./glossary.md)
 - [Data Flow & Integrations](./data-flow.md)
+- [Checkout por WhatsApp](./whatsapp-checkout.md)
 - [Security & Compliance Notes](./security.md)
 - [Tooling & Productivity Guide](./tooling.md)
 - [Boundary Rules](./boundary-rules.md)

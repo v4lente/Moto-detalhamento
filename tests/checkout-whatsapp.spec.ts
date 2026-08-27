@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Checkout simplificado por WhatsApp', () => {
-  test('envia pedido anonimo direto para o WhatsApp sem chamar checkout backend', async ({ page }) => {
+  test('inclui endereco opcional e confirma o envio antes de concluir o pedido', async ({ page }) => {
     let checkoutRequests = 0;
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.route('**/api/settings', async (route) => {
       await route.fulfill({
@@ -80,17 +81,54 @@ test.describe('Checkout simplificado por WhatsApp', () => {
     await expect(page.getByTestId('input-phone')).toHaveCount(0);
     await expect(page.getByTestId('input-email')).toHaveCount(0);
     await expect(page.getByTestId('link-customer-login')).toHaveCount(0);
+    await expect(page.getByTestId('input-delivery-address')).toBeVisible();
+    await expect(page.getByTestId('input-delivery-address')).not.toHaveAttribute('required');
 
     await page.getByTestId('input-name').fill('Daniele');
-    await page.getByTestId('button-confirm-checkout').click();
+    await expect(page.getByTestId('button-confirm-checkout')).toBeEnabled();
+    await page.getByTestId('input-delivery-address').fill(
+      'Rua das Flores, 123, Centro, São Paulo - SP, 01000-000'
+    );
+    await page.screenshot({
+      path: '.context/artifacts/checkout-whatsapp-address.png',
+      fullPage: true,
+    });
 
-    await page.waitForURL(/https:\/\/wa\.me\/5511988887777/);
+    const whatsappPagePromise = page.waitForEvent('popup');
+    await page.getByTestId('button-confirm-checkout').click();
+    const whatsappPage = await whatsappPagePromise;
+    await expect.poll(() => new URL(whatsappPage.url()).searchParams.get('phone')).toBe('5511988887777');
+
+    await expect(page.getByTestId('whatsapp-confirmation-step')).toBeVisible();
+    await expect(page.getByTestId('button-reopen-whatsapp')).toBeVisible();
+    expect(page.url()).toContain('/produtos');
 
     expect(checkoutRequests).toBe(0);
-    expect(decodeURIComponent(page.url())).toContain('*Novo Pedido*');
-    expect(decodeURIComponent(page.url())).toContain('*Cliente:* Daniele');
-    expect(decodeURIComponent(page.url())).not.toContain('*Telefone:*');
-    expect(decodeURIComponent(page.url())).toContain('Produto Teste');
-    expect(decodeURIComponent(page.url())).toContain('*Total: R$ 12,00*');
+    const whatsappMessage = new URL(whatsappPage.url()).searchParams.get('text') || '';
+    expect(whatsappMessage).toContain('*Novo Pedido*');
+    expect(whatsappMessage).toContain('*Cliente:* Daniele');
+    expect(whatsappMessage).not.toContain('*Telefone:*');
+    expect(whatsappMessage).toContain(
+      '*Endereço:* Rua das Flores, 123, Centro, São Paulo - SP, 01000-000'
+    );
+    expect(whatsappMessage).toContain('Produto Teste');
+    expect(whatsappMessage).toContain('*Total: R$ 12,00*');
+
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('cart') || '[]'))).toHaveLength(1);
+
+    await page.getByTestId('button-whatsapp-sent').click();
+
+    await expect(page.getByTestId('checkout-success-feedback')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Pedido realizado com sucesso/ })).toBeVisible();
+    await expect(page.getByText(/encaminhado para nossa equipe de vendas/)).toBeVisible();
+    await expect(page.getByText(/transportadora ou SEDEX/)).toBeVisible();
+    await expect(page.getByText('Daniel Valente Detail Store')).toBeVisible();
+    await page.screenshot({
+      path: '.context/artifacts/checkout-whatsapp-success.png',
+      fullPage: true,
+    });
+    await expect.poll(
+      () => page.evaluate(() => JSON.parse(localStorage.getItem('cart') || '[]').length)
+    ).toBe(0);
   });
 });

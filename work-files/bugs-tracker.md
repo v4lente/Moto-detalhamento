@@ -76,6 +76,16 @@
 **Status:** FIXED  
 **Fix:** `loadEnvIfExists()` em `backend/infrastructure/load-env.ts`, chamado no topo de `db/index.ts`.
 
+### BUG-009 — Carrinho apagado antes do envio do pedido no WhatsApp
+
+**Severidade:** Média
+
+**Descrição:** O checkout limpava o carrinho assim que abria o deep link do WhatsApp, embora o cliente ainda pudesse fechar a janela sem enviar a mensagem.
+
+**Status:** FIXED (2026-08-27)
+
+**Fix:** Adicionada uma etapa de confirmação de envio; o carrinho só é limpo após **Já enviei a mensagem**. A mesma mudança tornou o endereço opcional visível no checkout por WhatsApp e posicionou o feedback de sucesso após essa confirmação.
+
 ---
 
 ## Checklist manual F4-T4 (sem DATABASE_URL)
