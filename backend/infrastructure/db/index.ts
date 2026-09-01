@@ -80,6 +80,17 @@ function createUnavailableDbProxy(): ReturnType<typeof drizzle> {
 // Create drizzle instance only if pool exists
 export const db = pool ? drizzle(pool) : createUnavailableDbProxy();
 
+/** Executa operações compostas no mesmo contexto transacional. */
+export async function withTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T> {
+  if (!pool) throw new DatabaseUnavailableError();
+  return db.transaction(async (tx) => callback(tx));
+}
+
+export function getDatabasePool() {
+  if (!pool) throw new DatabaseUnavailableError();
+  return pool;
+}
+
 async function getAppliedMigrations(): Promise<Set<string>> {
   if (!pool) {
     throw new Error("Database pool not initialized - DATABASE_URL is missing");
@@ -98,8 +109,8 @@ async function getAppliedMigrations(): Promise<Set<string>> {
       return new Set();
     }
     
-    const [rows] = await connection.query('SELECT hash FROM `__drizzle_migrations`');
-    return new Set((rows as any[]).map(row => row.hash));
+    const [rows] = await connection.query('SELECT hash, created_at FROM `__drizzle_migrations` ORDER BY id');
+    return new Set((rows as any[]).map(row => String(row.hash)));
   } finally {
     connection.release();
   }
@@ -183,23 +194,8 @@ export async function runMigrations() {
     }
     
     if (coreTablesExist && appliedMigrations.size === 0 && pendingMigrations.length > 0) {
-      console.log("Existing database detected - marking baseline migration as applied...");
-      const baselineMigration = allMigrations[0];
-      if (baselineMigration) {
-        await markMigrationAsApplied(baselineMigration);
-        appliedMigrations.add(baselineMigration);
-        console.log(`Baseline migration '${baselineMigration}' marked as applied.`);
-      }
-      
-      const updatedPending = allMigrations.filter(m => !appliedMigrations.has(m));
-      if (updatedPending.length === 0) {
-        console.log("No additional migrations to run.");
-        isDatabaseAvailable = true;
-        databaseError = null;
-        return;
-      }
-      pendingMigrations.length = 0;
-      pendingMigrations.push(...updatedPending);
+      // Nunca marque tags do journal como hashes aplicados: isso pode ocultar migrations futuras.
+      throw new Error("Banco legado sem __drizzle_migrations; execute o procedimento de baseline antes de aplicar novas migrations");
     }
     
     console.log(`Running ${pendingMigrations.length} pending migration(s)...`);

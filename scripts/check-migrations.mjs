@@ -29,6 +29,12 @@ const INVALID_PATTERNS = [
   }
 ];
 
+const REQUIRED_CHECKS = [
+  { pattern: /decimal\(\s*12\s*,\s*2\s*\)/i, message: "Valores monetários devem usar DECIMAL(12,2), não FLOAT." },
+  { pattern: /CREATE\s+INDEX|CREATE\s+UNIQUE\s+INDEX/i, message: "Novos relacionamentos de checkout precisam de índices explícitos." },
+  { pattern: /FOREIGN\s+KEY/i, message: "Tabelas de pedido precisam declarar chaves estrangeiras." },
+];
+
 async function checkMigrations() {
   console.log("🔍 Verificando migrations para compatibilidade MariaDB...\n");
   
@@ -57,6 +63,15 @@ async function checkMigrations() {
           console.error(`   ${message}`);
           console.error(`   Ocorrências: ${matches.length}`);
           console.error(`   Correção: ${fix}\n`);
+        }
+      }
+
+      if (/0002_checkout_orders/.test(file)) {
+        for (const { pattern, message } of REQUIRED_CHECKS) {
+          if (!pattern.test(content)) {
+            hasErrors = true;
+            console.error(`❌ ${file}: ${message}`);
+          }
         }
       }
     }

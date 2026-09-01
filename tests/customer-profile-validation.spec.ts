@@ -1,0 +1,5 @@
+import { test, expect } from "@playwright/test";
+import { customerRegistrationSchema } from "../shared/contracts/validation";
+const valid = { name: "Cliente Teste", email: "cliente@example.com", phone: "11999999999", password: "senha-segura", address: { street: "Rua A", number: "10", neighborhood: "Centro", city: "São Paulo", state: "SP", postalCode: "01000-000" } };
+test("valida cadastro PF e rejeita documento inválido", () => { expect(customerRegistrationSchema.safeParse({ ...valid, documentType: "cpf", document: "52998224725" }).success).toBeTruthy(); expect(customerRegistrationSchema.safeParse({ ...valid, documentType: "cpf", document: "00000000000" }).success).toBeFalsy(); });
+test("aceita CNPJ numérico e exige endereço completo", () => { expect(customerRegistrationSchema.safeParse({ ...valid, documentType: "cnpj", document: "11222333000181" }).success).toBeTruthy(); expect(customerRegistrationSchema.safeParse({ ...valid, documentType: "cnpj", document: "11222333000181", address: { ...valid.address, city: "" } }).success).toBeFalsy(); });

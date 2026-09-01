@@ -1,20 +1,24 @@
 import { useState } from "react";
 import type { ProductWithImages } from "@shared/contracts";
 import { useCart } from "@/features/cart/lib/cart";
+import { useToast } from "@/shared/hooks/use-toast";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/shared/ui/card";
 import { Plus, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface ProductCardProps {
-  product: ProductWithImages & { avgRating?: number; reviewCount?: number };
+  product: ProductWithImages & { avgRating?: number; reviewCount?: number; variations?: Array<{ id: number; label: string; price: number; inStock: boolean }> };
 }
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { toast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(0);
   
   const allImages = [product.image, ...(product.images || [])];
+  const availableVariation = product.variations?.find((variation) => variation.inStock);
+  const hasUnavailableVariations = Boolean(product.variations?.length && !availableVariation);
 
   const handlePrev = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -112,7 +116,14 @@ export function ProductCard({ product }: ProductCardProps) {
       <CardFooter className="p-4 pt-0">
         <Button 
           className="w-full bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider"
-          onClick={() => addToCart(product)}
+          onClick={() => {
+            if (hasUnavailableVariations) {
+              toast({ title: "Produto sem estoque", description: "Nenhuma variação está disponível.", variant: "destructive" });
+              return;
+            }
+            addToCart(product, availableVariation as any);
+          }}
+          disabled={hasUnavailableVariations}
           data-testid={`button-add-${product.id}`}
         >
           <Plus className="mr-2 h-4 w-4" /> Adicionar

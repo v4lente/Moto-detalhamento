@@ -16,6 +16,10 @@ import { Lock, User, Mail, Phone, MapPin, Home, LogOut, Package, Loader2, Chevro
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/shared/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import type { Order, OrderItem } from "@shared/contracts";
+import { CustomerRegistrationForm } from "@/features/auth/components/CustomerRegistrationForm";
+import { CustomerLoginForm } from "@/features/auth/components/CustomerLoginForm";
+import { CustomerDocumentFields, CustomerPhoneInput } from "@/shared/components/customer-fields";
+import { formatPhoneBR } from "@/shared/lib/formatters";
 
 export default function Conta() {
   const [, setLocation] = useLocation();
@@ -28,7 +32,10 @@ export default function Conta() {
     name: "",
     phone: "",
     deliveryAddress: "",
+    documentType: "cpf" as "cpf" | "cnpj",
+    document: "",
   });
+  const [orderSearch, setOrderSearch] = useState("");
 
   const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ["customer"],
@@ -99,6 +106,8 @@ export default function Conta() {
         name: customer.name,
         phone: customer.phone,
         deliveryAddress: customer.deliveryAddress || "",
+        documentType: customer.documentType || "cpf",
+        document: "",
       });
       setIsProfileDialogOpen(true);
     }
@@ -106,7 +115,12 @@ export default function Conta() {
 
   const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate(profileFormData);
+    updateProfileMutation.mutate({
+      name: profileFormData.name,
+      phone: profileFormData.phone,
+      ...(!customer?.documentMasked && profileFormData.document ? { document: profileFormData.document, documentType: profileFormData.documentType } : {}),
+      ...(customer?.address ? { address: customer.address } : {}),
+    } as any);
   };
 
   if (customerLoading) {
@@ -156,13 +170,14 @@ export default function Conta() {
                 <CardDescription>Histórico de todos os seus pedidos</CardDescription>
               </CardHeader>
               <CardContent>
+                <Input aria-label="Buscar no histórico" placeholder="Buscar por referência" value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} className="mb-4" />
                 {ordersLoading ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : orders && orders.length > 0 ? (
                   <div className="space-y-4">
-                    {orders.map((order: Order) => (
+                    {orders.filter((order: Order) => `${order.publicReference || order.id}`.toLowerCase().includes(orderSearch.toLowerCase())).map((order: Order) => (
                       <Collapsible 
                         key={order.id}
                         open={!!expandedOrders[order.id]}
@@ -175,7 +190,7 @@ export default function Conta() {
                           <CollapsibleTrigger asChild>
                             <button className="w-full p-4 flex items-center justify-between text-left hover:bg-background/50 transition-colors">
                               <div>
-                                <p className="font-medium">Pedido #{order.id}</p>
+                                <p className="font-medium">Pedido #{order.publicReference || order.id}</p>
                                 <p className="text-sm text-muted-foreground">
                                   {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                                     day: "2-digit",
@@ -190,14 +205,14 @@ export default function Conta() {
                                 <div className="text-right">
                                   <p className="font-bold text-primary">R$ {order.total.toFixed(2)}</p>
                                   <span className={`text-xs px-2 py-1 rounded-full ${
-                                    order.status === "completed" 
+                                    order.status === "delivered" 
                                       ? "bg-green-500/20 text-green-500" 
                                       : order.status === "cancelled"
                                       ? "bg-red-500/20 text-red-500"
                                       : "bg-yellow-500/20 text-yellow-500"
                                   }`}>
                                     {order.status === "pending" ? "Pendente" : 
-                                     order.status === "completed" ? "Concluído" : 
+                                     order.status === "delivered" ? "Entregue" : 
                                      order.status === "cancelled" ? "Cancelado" : order.status}
                                   </span>
                                 </div>
@@ -267,14 +282,21 @@ export default function Conta() {
                   />
                 </div>
               </div>
+              {!customer.documentMasked && <CustomerDocumentFields
+                documentType={profileFormData.documentType}
+                document={profileFormData.document}
+                onDocumentTypeChange={(value) => setProfileFormData({ ...profileFormData, documentType: value })}
+                onDocumentChange={(value) => setProfileFormData({ ...profileFormData, document: value })}
+                required
+              />}
               <div className="space-y-2">
                 <Label htmlFor="profile-phone">Telefone</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
+                  <CustomerPhoneInput
                     id="profile-phone"
                     value={profileFormData.phone}
-                    onChange={(e) => setProfileFormData({ ...profileFormData, phone: e.target.value })}
+                    onValueChange={(value) => setProfileFormData({ ...profileFormData, phone: value })}
                     className="pl-10"
                     required
                     data-testid="input-profile-phone"
@@ -326,11 +348,11 @@ export default function Conta() {
             </TabsList>
 
             <TabsContent value="login">
-              <LoginForm />
+              <CustomerLoginForm onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["customer"] }); toast({ title: "Login realizado com sucesso!" }); }} />
             </TabsContent>
 
             <TabsContent value="register">
-              <RegisterForm />
+              <CustomerRegistrationForm onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["customer"] }); toast({ title: "Conta criada com sucesso!" }); }} />
             </TabsContent>
           </Tabs>
 

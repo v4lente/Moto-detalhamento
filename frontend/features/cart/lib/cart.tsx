@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import type { Product, ProductVariation } from "@shared/contracts";
 import { useToast } from "@/shared/hooks/use-toast";
 
-interface CartItem extends Product {
+export interface CartItem extends Product {
   quantity: number;
   variationId?: number;
   variationLabel?: string;
@@ -17,6 +17,7 @@ interface CartContextType {
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
+  checkoutItems: Array<{ productId: number; variationId: number | null; quantity: number }>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -109,6 +110,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (acc, item) => acc + item.price * item.quantity,
     0
   );
+  const checkoutItems = items.map((item) => ({
+    productId: item.id,
+    variationId: item.variationId ?? null,
+    quantity: item.quantity,
+  }));
 
   return (
     <CartContext.Provider
@@ -120,6 +126,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         cartCount,
         cartTotal,
+        checkoutItems,
       }}
     >
       {children}

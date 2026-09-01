@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { runMigrations } from "../infrastructure/db";
 import fs from "fs";
 import { ensureUploadsWriteDir, resolveUploadsReadDirs } from "./lib/uploads-dir";
+import { validateDocumentKeyConfig } from "../services/customer-document.service";
+import { redactForLog, requestCorrelationId } from "./lib/request-logging";
 
 const app = express();
 const httpServer = createServer(app);
@@ -171,6 +173,8 @@ function logStartupEnvironmentDiagnostics() {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const requestId = requestCorrelationId(req);
+  res.setHeader("x-request-id", requestId);
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -184,7 +188,7 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: ${JSON.stringify(redactForLog(capturedJsonResponse))}`;
       }
 
       log(logLine);
@@ -196,6 +200,12 @@ app.use((req, res, next) => {
 
 (async () => {
   loadEnvironmentFallbackFromDotEnv();
+  try {
+    validateDocumentKeyConfig();
+  } catch (error) {
+    console.error("[security] Customer document key configuration invalid", error);
+    if (process.env.NODE_ENV === "production") throw error;
+  }
   configureUploadedImagesStatic();
   logStartupEnvironmentDiagnostics();
 

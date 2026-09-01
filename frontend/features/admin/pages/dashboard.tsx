@@ -10,6 +10,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { useOrders, useAppointments, useOrderMutations, useAppointmentMutations } from "../hooks/use-admin";
 import type { Order, OrderItem, Appointment } from "@shared/contracts";
+import { formatCurrencyBRL, formatPhoneBR } from "@/shared/lib/formatters";
 import { 
   ShoppingBag, Calendar, Eye, Search, ChevronLeft, ChevronRight, Loader2, 
   MessageCircle
@@ -139,7 +140,7 @@ export function DashboardPage() {
                             <div className="flex-1">
                               <p className="font-medium">{order.customerName}</p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(order.createdAt).toLocaleDateString('pt-BR')} - R$ {(order.total / 100).toFixed(2).replace('.', ',')}
+                                {new Date(order.createdAt).toLocaleDateString('pt-BR')} - {formatCurrencyBRL(order.total)}
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -359,7 +360,7 @@ export function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Telefone</p>
-                  <p className="font-medium">{selectedOrder.customerPhone}</p>
+                  <p className="font-medium">{formatPhoneBR(selectedOrder.customerPhone)}</p>
                 </div>
                 {selectedOrder.customerEmail && (
                   <div>
@@ -428,7 +429,7 @@ export function DashboardPage() {
               <div className="p-3 bg-muted/30 rounded-lg space-y-2">
                 <p className="text-sm"><strong>Cliente:</strong> {editingAppointment.customerName || 'Cliente logado'}</p>
                 {editingAppointment.customerPhone && (
-                  <p className="text-sm"><strong>Telefone:</strong> {editingAppointment.customerPhone}</p>
+                  <p className="text-sm"><strong>Telefone:</strong> {formatPhoneBR(editingAppointment.customerPhone)}</p>
                 )}
                 <p className="text-sm"><strong>Veículo:</strong> {editingAppointment.vehicleInfo}</p>
                 <p className="text-sm"><strong>Serviço:</strong> {editingAppointment.serviceDescription}</p>

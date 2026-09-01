@@ -93,6 +93,8 @@ export interface SiteSettings {
   instagramUrl: string | null;
   facebookUrl: string | null;
   youtubeUrl: string | null;
+  paymentsCardEnabled: boolean;
+  paymentsPixEnabled: boolean;
 }
 
 export type UpdateSiteSettings = Partial<Omit<SiteSettings, "id">>;
@@ -105,9 +107,36 @@ export interface Customer {
   name: string;
   nickname: string | null;
   deliveryAddress: string | null;
+  documentType?: "cpf" | "cnpj" | null;
+  documentMasked?: string | null;
+  address?: CustomerAddress | null;
+  profileComplete?: boolean;
   password: string | null;
   isRegistered: boolean;
   createdAt: Date;
+}
+
+export interface CustomerAddress {
+  street: string;
+  number: string;
+  complement?: string | null;
+  neighborhood: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
+export type CustomerDocumentType = "cpf" | "cnpj";
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  documentType: CustomerDocumentType;
+  documentMasked: string;
+  address: CustomerAddress;
+  profileComplete: boolean;
 }
 
 export interface InsertCustomer {
@@ -136,6 +165,10 @@ export interface Order {
   stripePaymentIntentId: string | null;
   paidAt: Date | null;
   createdAt: Date;
+  publicReference?: string;
+  totalDecimal?: string;
+  addressSnapshot?: CustomerAddress | null;
+  documentMasked?: string | null;
 }
 
 export interface InsertOrder {
@@ -162,6 +195,8 @@ export interface OrderItem {
   productName: string;
   productPrice: number;
   quantity: number;
+  variationId?: number | null;
+  variationLabel?: string | null;
 }
 
 export interface InsertOrderItem {
@@ -189,6 +224,59 @@ export interface CheckoutData {
   }>;
   total: number;
   paymentMethod?: "card" | "pix" | "whatsapp";
+}
+
+export interface CheckoutItemInput {
+  productId: number;
+  variationId?: number | null;
+  quantity: number;
+}
+
+export interface CheckoutPreviewRequest {
+  items: CheckoutItemInput[];
+}
+
+export interface CheckoutPreviewItem {
+  productId: number;
+  productName: string;
+  variationId: number | null;
+  variationLabel: string | null;
+  unitPrice: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export interface CheckoutPreview {
+  fingerprint: string;
+  items: CheckoutPreviewItem[];
+  total: string;
+  customer: CustomerProfile;
+  paymentCapabilities: { card: boolean; pix: boolean };
+}
+
+export interface CreateOrderRequest {
+  items: CheckoutItemInput[];
+  fingerprint: string;
+  paymentMethod?: "whatsapp" | "card" | "pix";
+}
+
+export interface OrderEvent {
+  id: number;
+  orderId: number;
+  fromStatus: string | null;
+  toStatus: string;
+  actorType: "customer" | "admin" | "system";
+  actorId: string | null;
+  reason: string | null;
+  createdAt: Date;
+}
+
+export interface PaginatedOrders {
+  items: Array<Order & { items?: OrderItem[] }>;
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 }
 
 export interface StripeCheckoutData {

@@ -11,6 +11,8 @@ import { Loader2, Calendar, AlertTriangle, CheckCircle, MessageCircle, ArrowLeft
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { DateTimePicker } from "@/shared/ui/datetime-picker";
 import { Link } from "wouter";
+import { CustomerPhoneInput } from "@/shared/components/customer-fields";
+import { formatPhoneBR } from "@/shared/lib/formatters";
 
 export default function Agendar() {
   const { toast } = useToast();
@@ -205,7 +207,7 @@ export default function Agendar() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="customerPhone">Telefone/WhatsApp *</Label>
-                        <Input
+                        <CustomerPhoneInput
                           id="customerPhone"
                           name="customerPhone"
                           type="tel"
@@ -232,7 +234,7 @@ export default function Agendar() {
                 {customer && (
                   <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
                     <p className="text-sm">
-                      Agendando como: <strong>{customer.name}</strong> ({customer.phone})
+                      Agendando como: <strong>{customer.name}</strong> ({formatPhoneBR(customer.phone)})
                     </p>
                   </div>
                 )}

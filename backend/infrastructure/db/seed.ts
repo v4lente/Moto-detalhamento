@@ -1,5 +1,6 @@
 import { db } from "./index";
-import { products } from "@shared/schema";
+import { products, siteSettings } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const seedProducts = [
   {
@@ -51,6 +52,11 @@ async function seed() {
   
   for (const product of seedProducts) {
     await db.insert(products).values(product);
+  }
+
+  const existingSettings = await db.select({ id: siteSettings.id }).from(siteSettings).where(eq(siteSettings.id, 1));
+  if (existingSettings.length === 0) {
+    await db.insert(siteSettings).values({ id: 1, paymentsCardEnabled: false, paymentsPixEnabled: false });
   }
   
   console.log("Seeding complete!");

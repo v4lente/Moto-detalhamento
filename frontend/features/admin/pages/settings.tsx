@@ -9,10 +9,13 @@ import { ImageUpload } from "@/shared/components/ImageUpload";
 import { useSettings, useSettingsMutation } from "../hooks/use-admin";
 import type { UpdateSiteSettings } from "@shared/contracts";
 import { Loader2 } from "lucide-react";
+import { Switch } from "@/shared/ui/switch";
 
 export function SettingsPage() {
   const [logoImage, setLogoImage] = useState("");
   const [backgroundImage, setBackgroundImage] = useState("");
+  const [cardEnabled, setCardEnabled] = useState(false);
+  const [pixEnabled, setPixEnabled] = useState(false);
 
   const { data: settings, isLoading: settingsLoading } = useSettings();
   const updateSettingsMutation = useSettingsMutation();
@@ -21,6 +24,8 @@ export function SettingsPage() {
     if (settings) {
       setLogoImage(settings.logoImage || "");
       setBackgroundImage(settings.backgroundImage || "");
+      setCardEnabled(Boolean(settings.paymentsCardEnabled));
+      setPixEnabled(Boolean(settings.paymentsPixEnabled));
     }
   }, [settings]);
 
@@ -42,6 +47,8 @@ export function SettingsPage() {
       instagramUrl: formData.get("instagramUrl") as string,
       facebookUrl: formData.get("facebookUrl") as string,
       youtubeUrl: formData.get("youtubeUrl") as string,
+      paymentsCardEnabled: cardEnabled,
+      paymentsPixEnabled: pixEnabled,
     };
     updateSettingsMutation.mutate(settingsData);
   };
@@ -118,6 +125,11 @@ export function SettingsPage() {
                     <Input id="youtubeUrl" name="youtubeUrl" defaultValue={settings?.youtubeUrl || ""} placeholder="https://youtube.com/@seu_canal" data-testid="input-youtube" />
                   </div>
                 </div>
+              </div>
+              <div className="rounded-lg border p-4 space-y-3">
+                <div><p className="font-semibold">Capacidades de pagamento</p><p className="text-xs text-muted-foreground">Desligadas por padrão; só ative após configurar o provedor.</p></div>
+                <label className="flex items-center justify-between text-sm"><span>Cartão</span><Switch checked={cardEnabled} onCheckedChange={setCardEnabled} /></label>
+                <label className="flex items-center justify-between text-sm"><span>Pix</span><Switch checked={pixEnabled} onCheckedChange={setPixEnabled} /></label>
               </div>
               
               <div className="grid md:grid-cols-2 gap-6">

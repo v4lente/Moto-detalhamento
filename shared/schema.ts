@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
-import { mysqlTable, text, varchar, float, timestamp, int, boolean, bigint } from "drizzle-orm/mysql-core";
+import { mysqlTable, text, varchar, float, decimal, timestamp, int, boolean, bigint, index, uniqueIndex } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { adminCustomerCreateSchema, adminCustomerUpdateSchema } from "./contracts/validation";
 
 // Helper para criar ID auto-incremento compatível com MariaDB
 // Usa bigint unsigned com autoincrement em vez de serial (que gera SQL inválido no MariaDB)
@@ -117,6 +118,8 @@ export const siteSettings = mysqlTable("site_settings", {
   instagramUrl: text("instagram_url").$default(() => ""),
   facebookUrl: text("facebook_url").$default(() => ""),
   youtubeUrl: text("youtube_url").$default(() => ""),
+  paymentsCardEnabled: boolean("payments_card_enabled").notNull().$default(() => false),
+  paymentsPixEnabled: boolean("payments_pix_enabled").notNull().$default(() => false),
 });
 
 export const updateSiteSettingsSchema = createInsertSchema(siteSettings).omit({
@@ -135,8 +138,26 @@ export const customers = mysqlTable("customers", {
   deliveryAddress: text("delivery_address"),
   password: text("password"),
   isRegistered: boolean("is_registered").$default(() => false).notNull(),
+  documentType: varchar("document_type", { length: 4 }),
+  // Current release stores the normalized document in plain text. The legacy
+  // ciphertext column remains for a future migration/compatibility path.
+  documentPlaintext: text("document_plaintext"),
+  documentCiphertext: text("document_ciphertext"),
+  documentHash: varchar("document_hash", { length: 128 }),
+  documentMasked: varchar("document_masked", { length: 32 }),
+  documentKeyVersion: int("document_key_version"),
+  addressStreet: text("address_street"),
+  addressNumber: varchar("address_number", { length: 20 }),
+  addressComplement: text("address_complement"),
+  addressNeighborhood: text("address_neighborhood"),
+  addressCity: text("address_city"),
+  addressState: varchar("address_state", { length: 2 }),
+  addressPostalCode: varchar("address_postal_code", { length: 9 }),
+  profileComplete: boolean("profile_complete").notNull().$default(() => false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  documentHashIdx: uniqueIndex("customers_document_hash_unique").on(table.documentHash),
+}));
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
@@ -157,22 +178,8 @@ export const customerLoginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const adminCreateCustomerSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  email: z.string().email().optional().or(z.literal("")),
-  nickname: z.string().optional(),
-  deliveryAddress: z.string().optional(),
-  password: z.string().min(6).optional(),
-});
-
-export const adminUpdateCustomerSchema = z.object({
-  name: z.string().min(2).optional(),
-  phone: z.string().min(10).optional(),
-  email: z.string().email().optional().or(z.literal("")).or(z.null()),
-  nickname: z.string().optional().or(z.null()),
-  deliveryAddress: z.string().optional().or(z.null()),
-});
+export const adminCreateCustomerSchema = adminCustomerCreateSchema;
+export const adminUpdateCustomerSchema = adminCustomerUpdateSchema;
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
@@ -182,6 +189,7 @@ export const orders = mysqlTable("orders", {
   customerId: varchar("customer_id", { length: 36 }).references(() => customers.id),
   status: text("status").notNull().$default(() => "pending"),
   total: float("total").notNull(),
+  totalDecimal: decimal("total_decimal", { precision: 12, scale: 2 }),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
@@ -193,8 +201,17 @@ export const orders = mysqlTable("orders", {
   stripeSessionId: text("stripe_session_id"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   paidAt: timestamp("paid_at"),
+  publicReference: varchar("public_reference", { length: 24 }),
+  idempotencyKey: varchar("idempotency_key", { length: 200 }),
+  pricingFingerprint: varchar("pricing_fingerprint", { length: 64 }),
+  documentMasked: varchar("document_masked", { length: 32 }),
+  addressSnapshot: text("address_snapshot"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  publicReferenceIdx: uniqueIndex("orders_public_reference_unique").on(table.publicReference),
+  customerCreatedIdx: index("orders_customer_created_idx").on(table.customerId, table.createdAt),
+  idempotencyIdx: uniqueIndex("orders_customer_idempotency_unique").on(table.customerId, table.idempotencyKey),
+}));
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
@@ -210,6 +227,9 @@ export const orderItems = mysqlTable("order_items", {
   productId: bigint("product_id", { mode: "number", unsigned: true }).references(() => products.id),
   productName: text("product_name").notNull(),
   productPrice: float("product_price").notNull(),
+  unitPriceDecimal: decimal("unit_price_decimal", { precision: 12, scale: 2 }),
+  variationId: bigint("variation_id", { mode: "number", unsigned: true }),
+  variationLabel: text("variation_label"),
   quantity: int("quantity").notNull(),
 });
 
@@ -219,6 +239,41 @@ export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
 
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type OrderItem = typeof orderItems.$inferSelect;
+
+export const orderEvents = mysqlTable("order_events", {
+  id: autoIncrementId(),
+  orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull().references(() => orders.id, { onDelete: "cascade" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  actorType: varchar("actor_type", { length: 16 }).notNull(),
+  actorId: varchar("actor_id", { length: 36 }),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  orderCreatedIdx: index("order_events_order_created_idx").on(table.orderId, table.createdAt),
+}));
+
+export const insertOrderEventSchema = createInsertSchema(orderEvents).omit({ id: true, createdAt: true });
+export type InsertOrderEvent = z.infer<typeof insertOrderEventSchema>;
+export type OrderEvent = typeof orderEvents.$inferSelect;
+
+export const sensitiveDataAccessEvents = mysqlTable("sensitive_data_access_events", {
+  id: autoIncrementId(),
+  userId: varchar("user_id", { length: 36 }).notNull(),
+  customerId: varchar("customer_id", { length: 36 }).notNull(),
+  orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull(),
+  action: varchar("action", { length: 64 }).notNull(),
+  purpose: varchar("purpose", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userCreatedIdx: index("sensitive_data_access_user_created_idx").on(table.userId, table.createdAt),
+  customerCreatedIdx: index("sensitive_data_access_customer_created_idx").on(table.customerId, table.createdAt),
+  orderCreatedIdx: index("sensitive_data_access_order_created_idx").on(table.orderId, table.createdAt),
+}));
+
+export const insertSensitiveDataAccessEventSchema = createInsertSchema(sensitiveDataAccessEvents).omit({ id: true, createdAt: true });
+export type InsertSensitiveDataAccessEvent = z.infer<typeof insertSensitiveDataAccessEventSchema>;
+export type SensitiveDataAccessEvent = typeof sensitiveDataAccessEvents.$inferSelect;
 
 export const checkoutSchema = z.object({
   customer: z.object({

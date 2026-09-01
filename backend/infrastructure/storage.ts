@@ -7,15 +7,18 @@ import {
   type Customer, type InsertCustomer,
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
+  type OrderEvent, type InsertOrderEvent,
+  type SensitiveDataAccessEvent, type InsertSensitiveDataAccessEvent,
   type Review, type InsertReview,
   type ServicePost, type InsertServicePost, type ServicePostWithMedia,
   type ServicePostMedia, type InsertServicePostMedia,
   type Appointment, type InsertAppointment,
   type OfferedService, type InsertOfferedService,
-  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, reviews, servicePosts, servicePostMedia, appointments, offeredServices
+  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, offeredServices
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, asc, and } from "drizzle-orm";
+import { eq, desc, sql, asc, and, or, like, count, gte, lte } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 
 export type ProductWithStats = ProductWithImages & {
   avgRating: number;
@@ -26,6 +29,26 @@ export type ProductWithStats = ProductWithImages & {
   minVariationPrice: number | null;
   allVariationsOutOfStock: boolean;
 };
+
+export interface CheckoutResolvedItem {
+  productId: number;
+  variationId: number | null;
+  productName: string;
+  variationLabel: string | null;
+  unitPrice: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export interface OrderSearchOptions {
+  customerId?: string;
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  status?: string;
+  from?: Date;
+  to?: Date;
+}
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -53,6 +76,7 @@ export interface IStorage {
   getCustomer(id: string): Promise<Customer | undefined>;
   getCustomerByEmail(email: string): Promise<Customer | undefined>;
   getCustomerByPhone(phone: string): Promise<Customer | undefined>;
+  getCustomerByDocumentHash(hash: string): Promise<Customer | undefined>;
   getAllCustomers(): Promise<Customer[]>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
@@ -71,6 +95,26 @@ export interface IStorage {
   }): Promise<Order | undefined>;
   getOrderByStripeSessionId(sessionId: string): Promise<Order | undefined>;
   getOrderByStripePaymentIntent(paymentIntentId: string): Promise<Order | undefined>;
+  getOrderByIdempotency(customerId: string, idempotencyKey: string): Promise<Order | undefined>;
+  getOrderByReference(reference: string): Promise<Order | undefined>;
+  resolveCheckoutItems(items: Array<{ productId: number; variationId?: number | null; quantity: number }>): Promise<CheckoutResolvedItem[]>;
+  createOrderBundle(input: {
+    customerId: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    documentMasked?: string | null;
+    addressSnapshot?: string | null;
+    items: CheckoutResolvedItem[];
+    total: string;
+    fingerprint: string;
+    idempotencyKey: string;
+    paymentMethod: string;
+  }): Promise<{ order: Order; items: OrderItem[]; replayed: boolean }>;
+  searchOrders(options: OrderSearchOptions): Promise<{ items: Order[]; total: number; page: number; pageSize: number }>;
+  getOrderEvents(orderId: number): Promise<OrderEvent[]>;
+  createOrderEvent(event: InsertOrderEvent, executor?: any): Promise<OrderEvent>;
+  createSensitiveDataAccessEvent(event: InsertSensitiveDataAccessEvent): Promise<SensitiveDataAccessEvent>;
 
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
   getOrderItems(orderId: number): Promise<OrderItem[]>;
@@ -441,6 +485,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getCustomerByDocumentHash(hash: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.documentHash, hash)).limit(1);
+    return result[0];
+  }
+
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
     const id = crypto.randomUUID();
     await db.insert(customers).values({ ...customer, id });
@@ -508,6 +557,150 @@ export class DatabaseStorage implements IStorage {
   async getOrderByStripePaymentIntent(paymentIntentId: string): Promise<Order | undefined> {
     const result = await db.select().from(orders).where(eq(orders.stripePaymentIntentId, paymentIntentId));
     return result[0];
+  }
+
+  async getOrderByIdempotency(customerId: string, idempotencyKey: string): Promise<Order | undefined> {
+    const result = await db.select().from(orders).where(and(eq(orders.customerId, customerId), eq(orders.idempotencyKey, idempotencyKey))).limit(1);
+    return result[0];
+  }
+
+  async getOrderByReference(reference: string): Promise<Order | undefined> {
+    const result = await db.select().from(orders).where(eq(orders.publicReference, reference)).limit(1);
+    return result[0];
+  }
+
+  async resolveCheckoutItems(items: Array<{ productId: number; variationId?: number | null; quantity: number }>): Promise<CheckoutResolvedItem[]> {
+    const resolved: CheckoutResolvedItem[] = [];
+    for (const item of items) {
+      const product = await this.getProduct(item.productId);
+      if (!product || !product.isActive || !product.inStock) {
+        throw new Error(`PRODUCT_UNAVAILABLE:${item.productId}`);
+      }
+      const variations = await this.getVariationsByProduct(item.productId);
+      let variation = item.variationId ? variations.find((candidate) => candidate.id === item.variationId) : undefined;
+      if (variations.length > 0 && !variation) throw new Error(`VARIATION_REQUIRED:${item.productId}`);
+      if (variation && !variation.inStock) throw new Error(`VARIATION_UNAVAILABLE:${variation.id}`);
+      const unitPrice = Number(variation?.price ?? product.price).toFixed(2);
+      const lineTotal = (Number(unitPrice) * item.quantity).toFixed(2);
+      resolved.push({
+        productId: product.id,
+        variationId: variation?.id ?? null,
+        productName: product.name,
+        variationLabel: variation?.label ?? null,
+        unitPrice,
+        quantity: item.quantity,
+        lineTotal,
+      });
+    }
+    return resolved;
+  }
+
+  async createOrderBundle(input: {
+    customerId: string;
+    customerName: string;
+    customerPhone: string;
+    customerEmail: string;
+    documentMasked?: string | null;
+    addressSnapshot?: string | null;
+    items: CheckoutResolvedItem[];
+    total: string;
+    fingerprint: string;
+    idempotencyKey: string;
+    paymentMethod: string;
+  }): Promise<{ order: Order; items: OrderItem[]; replayed: boolean }> {
+    const existing = await this.getOrderByIdempotency(input.customerId, input.idempotencyKey);
+    if (existing) return { order: existing, items: await this.getOrderItems(existing.id), replayed: true };
+    const publicReference = `DV-${randomBytes(8).toString("hex").toUpperCase()}`;
+    const orderData: InsertOrder = {
+      customerId: input.customerId,
+      status: input.paymentMethod === "whatsapp" ? "pending" : "awaiting_payment",
+      total: Number(input.total),
+      totalDecimal: input.total,
+      customerName: input.customerName,
+      customerPhone: input.customerPhone,
+      customerEmail: input.customerEmail,
+      documentMasked: input.documentMasked || null,
+      addressSnapshot: input.addressSnapshot || null,
+      publicReference,
+      idempotencyKey: input.idempotencyKey,
+      pricingFingerprint: input.fingerprint,
+      paymentMethod: input.paymentMethod,
+      paymentStatus: input.paymentMethod === "whatsapp" ? "pending" : "awaiting_payment",
+    };
+    try {
+      const result = await db.transaction(async (tx: any) => {
+        const inserted = await tx.insert(orders).values(orderData);
+        const orderId = this.extractInsertId(inserted);
+        if (!orderId) throw new Error("ORDER_ID_UNAVAILABLE");
+        const rows = input.items.map((item) => ({
+          orderId,
+          productId: item.productId,
+          productName: item.productName,
+          productPrice: Number(item.unitPrice),
+          unitPriceDecimal: item.unitPrice,
+          variationId: item.variationId,
+          variationLabel: item.variationLabel,
+          quantity: item.quantity,
+        }));
+        await tx.insert(orderItems).values(rows);
+        await tx.insert(orderEvents).values({
+          orderId,
+          fromStatus: null,
+          toStatus: orderData.status,
+          actorType: "customer",
+          actorId: input.customerId,
+          reason: "Pedido criado",
+        });
+        const created = await tx.select().from(orders).where(eq(orders.id, orderId));
+        const createdItems = await tx.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+        return { order: created[0] as Order, items: createdItems as OrderItem[], replayed: false };
+      });
+      return result;
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const replay = await this.getOrderByIdempotency(input.customerId, input.idempotencyKey);
+        if (replay) return { order: replay, items: await this.getOrderItems(replay.id), replayed: true };
+      }
+      throw error;
+    }
+  }
+
+  async searchOrders(options: OrderSearchOptions): Promise<{ items: Order[]; total: number; page: number; pageSize: number }> {
+    const page = Math.max(1, options.page || 1);
+    const pageSize = Math.min(100, Math.max(1, options.pageSize || 20));
+    const predicates: any[] = [];
+    if (options.customerId) predicates.push(eq(orders.customerId, options.customerId));
+    if (options.status) predicates.push(eq(orders.status, options.status));
+    if (options.from) predicates.push(gte(orders.createdAt, options.from));
+    if (options.to) predicates.push(lte(orders.createdAt, options.to));
+    if (options.query) {
+      const q = `%${options.query}%`;
+      predicates.push(or(like(orders.publicReference, q), like(orders.customerName, q), like(orders.customerEmail, q), like(orders.customerPhone, q)));
+    }
+    const where = predicates.length ? and(...predicates) : undefined;
+    const rows = await db.select().from(orders).where(where as any).orderBy(desc(orders.createdAt)).limit(pageSize).offset((page - 1) * pageSize);
+    const countRows = await db.select({ total: count() }).from(orders).where(where as any);
+    return { items: rows, total: Number(countRows[0]?.total || 0), page, pageSize };
+  }
+
+  async getOrderEvents(orderId: number): Promise<OrderEvent[]> {
+    return await db.select().from(orderEvents).where(eq(orderEvents.orderId, orderId)).orderBy(asc(orderEvents.createdAt));
+  }
+
+  async createOrderEvent(event: InsertOrderEvent, executor: any = db): Promise<OrderEvent> {
+    const result = await executor.insert(orderEvents).values(event);
+    const id = this.extractInsertId(result);
+    const rows = await db.select().from(orderEvents).where(id ? eq(orderEvents.id, id) : eq(orderEvents.orderId, event.orderId)).orderBy(desc(orderEvents.id)).limit(1);
+    return rows[0];
+  }
+
+  async createSensitiveDataAccessEvent(event: InsertSensitiveDataAccessEvent): Promise<SensitiveDataAccessEvent> {
+    const result = await db.insert(sensitiveDataAccessEvents).values(event);
+    const id = this.extractInsertId(result);
+    const rows = await db.select().from(sensitiveDataAccessEvents)
+      .where(id ? eq(sensitiveDataAccessEvents.id, id) : eq(sensitiveDataAccessEvents.orderId, event.orderId))
+      .orderBy(desc(sensitiveDataAccessEvents.id)).limit(1);
+    return rows[0];
   }
 
   async createOrderItem(item: InsertOrderItem): Promise<OrderItem> {

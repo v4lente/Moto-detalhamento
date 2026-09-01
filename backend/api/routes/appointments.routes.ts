@@ -4,6 +4,7 @@ import { storage } from "../../infrastructure/storage";
 import { createAppointmentSchema, updateAppointmentSchema } from "@shared/schema";
 import { sendAppointmentRequestNotification, sendAppointmentStatusUpdateNotification } from "../../infrastructure/email/resend.service";
 import { requireAuth, requireCustomerAuth } from "../middleware/auth";
+import { normalizePhone } from "../../services/customer-identity.service";
 
 /**
  * Appointment routes
@@ -45,7 +46,7 @@ export function registerAppointmentsRoutes(app: Express) {
       
       let customerId: string | null = null;
       let customerName = validatedData.customerName || "";
-      let customerPhone = validatedData.customerPhone || "";
+      let customerPhone = normalizePhone(validatedData.customerPhone || "");
       let customerEmail = validatedData.customerEmail || null;
       
       // Check if logged in customer
@@ -54,7 +55,7 @@ export function registerAppointmentsRoutes(app: Express) {
         if (customer) {
           customerId = customer.id;
           customerName = customer.name;
-          customerPhone = customer.phone;
+          customerPhone = normalizePhone(customer.phone);
           customerEmail = customer.email;
         }
       }

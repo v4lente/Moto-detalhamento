@@ -49,7 +49,7 @@ export default function Produto() {
 
   useEffect(() => {
     if (variations && variations.length > 0 && !selectedVariation) {
-      setSelectedVariation(variations[0]);
+      setSelectedVariation(variations.find((variation) => variation.inStock) || variations[0]);
     }
   }, [variations, selectedVariation]);
 
@@ -82,6 +82,10 @@ export default function Produto() {
   const handleAddToCart = () => {
     if (!product) return;
     const hasVariations = variations && variations.length > 0;
+    if (hasVariations && (!selectedVariation || !selectedVariation.inStock)) {
+      toast({ title: "Selecione uma variação disponível", variant: "destructive" });
+      return;
+    }
     for (let i = 0; i < quantity; i++) {
       addToCart(product, hasVariations ? selectedVariation || undefined : undefined);
     }
@@ -228,7 +232,7 @@ export default function Produto() {
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold" 
                         onClick={() => setCheckoutOpen(true)}
                       >
-                        <Phone className="mr-2 h-4 w-4" /> Finalizar pelo WhatsApp
+                        <Phone className="mr-2 h-4 w-4" /> Finalizar pedido
                       </Button>
                     </div>
                   </>

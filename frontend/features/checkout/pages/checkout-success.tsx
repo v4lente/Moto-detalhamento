@@ -1,24 +1,24 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getOrderPaymentStatus, fetchCustomerOrder } from "@/shared/lib/api";
+import { getOrderPaymentStatusByReference, fetchCustomerOrderByReference } from "@/shared/lib/api";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { CheckCircle, Loader2, Package, Home, ShoppingBag, AlertCircle } from "lucide-react";
 
 export default function CheckoutSuccess() {
   const [, setLocation] = useLocation();
-  const [orderId, setOrderId] = useState<number | null>(null);
+  const [orderReference, setOrderReference] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   // Extract query parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const orderIdParam = params.get("order_id");
+    const orderIdParam = params.get("order_reference") || params.get("order_id");
     const sessionIdParam = params.get("session_id");
     
     if (orderIdParam) {
-      setOrderId(parseInt(orderIdParam));
+      setOrderReference(orderIdParam);
     }
     if (sessionIdParam) {
       setSessionId(sessionIdParam);
@@ -27,9 +27,9 @@ export default function CheckoutSuccess() {
 
   // Poll for payment status
   const { data: paymentStatus, isLoading: statusLoading } = useQuery({
-    queryKey: ["payment-status", orderId],
-    queryFn: () => getOrderPaymentStatus(orderId!),
-    enabled: !!orderId,
+    queryKey: ["payment-status", orderReference],
+    queryFn: () => getOrderPaymentStatusByReference(orderReference!),
+    enabled: !!orderReference,
     refetchInterval: (query) => {
       // Stop polling once payment is confirmed
       if (query.state.data?.paymentStatus === "paid") {
@@ -41,9 +41,9 @@ export default function CheckoutSuccess() {
 
   // Fetch order details once payment is confirmed
   const { data: orderDetails, isLoading: orderLoading } = useQuery({
-    queryKey: ["order-details", orderId],
-    queryFn: () => fetchCustomerOrder(orderId!),
-    enabled: !!orderId && paymentStatus?.paymentStatus === "paid",
+    queryKey: ["order-details", orderReference],
+    queryFn: () => fetchCustomerOrderByReference(orderReference!),
+    enabled: !!orderReference && paymentStatus?.paymentStatus === "paid",
   });
 
   const isPaid = paymentStatus?.paymentStatus === "paid";
@@ -89,10 +89,10 @@ export default function CheckoutSuccess() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {orderId && (
+          {orderReference && (
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground">Número do Pedido</p>
-              <p className="text-2xl font-bold text-primary">#{orderId}</p>
+              <p className="text-2xl font-bold text-primary">{orderReference}</p>
             </div>
           )}
 

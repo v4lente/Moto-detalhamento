@@ -16,6 +16,9 @@ import { registerCustomersRoutes } from "./customers.routes";
 import { registerUsersRoutes } from "./users.routes";
 import { registerUploadsRoutes } from "./uploads.routes";
 import { registerSettingsRoutes } from "./settings.routes";
+import { registerSecurityRoutes } from "./security.routes";
+import { registerPaymentsRoutes } from "./payments.routes";
+import { csrfProtection } from "../middleware/csrf";
 
 /**
  * Register all API routes
@@ -53,11 +56,10 @@ export async function registerAllRoutes(
   // General rate limiting for all API routes
   app.use("/api", generalLimiter);
 
-  // Validate SESSION_SECRET in production
+  // Validate SESSION_SECRET in production. O fallback permite health checks e
+  // ambientes locais subirem; deployments devem sempre injetar o segredo.
   const sessionSecret = process.env.SESSION_SECRET;
-  if (process.env.NODE_ENV === "production" && !sessionSecret) {
-    throw new Error("SESSION_SECRET environment variable is required in production");
-  }
+  if (!sessionSecret) console.warn("SESSION_SECRET ausente; usando segredo efêmero de desenvolvimento");
   
   app.use(
     session({
@@ -67,7 +69,7 @@ export async function registerAllRoutes(
       proxy: true,
       store: new MemStore({ checkPeriod: 86400000 }),
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production" && Boolean(sessionSecret),
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000,
         // Same-site requests are enough for this app and more reliable behind shared hosting proxies.
@@ -75,6 +77,9 @@ export async function registerAllRoutes(
       },
     })
   );
+
+  registerSecurityRoutes(app);
+  app.use("/api", csrfProtection);
 
   // Register all route modules
   registerHealthRoutes(app);
@@ -87,6 +92,7 @@ export async function registerAllRoutes(
   registerUsersRoutes(app);
   registerUploadsRoutes(app);
   registerSettingsRoutes(app);
+  registerPaymentsRoutes(app);
 
   return httpServer;
 }

@@ -1,300 +1,103 @@
 import type Stripe from "stripe";
+import type { CheckoutItemInput } from "@shared/contracts/types";
 import { storage } from "../infrastructure/storage";
-import {
-  createCheckoutSession,
-  constructWebhookEvent,
-  getCheckoutSession,
-  isStripeConfigured,
-} from "../infrastructure/payments/stripe.service";
-import type { CheckoutData, StripeCheckoutData } from "@shared/schema";
+import { ApiError } from "../api/lib/api-error";
+import { buildCheckoutPreview } from "./order-pricing.service";
+import { transitionOrder } from "./order-status.service";
+import { constructWebhookEvent, getCheckoutSession, isStripeConfigured } from "../infrastructure/payments/stripe.service";
 
-export interface WhatsAppCheckoutResult {
-  orderId: number;
-  whatsappMessage: string;
-  whatsappNumber: string;
+export async function createPersistedOrder(input: {
   customerId: string;
-}
-
-export interface StripeCheckoutResult {
-  orderId: number;
-  sessionId: string;
-  checkoutUrl: string | null;
-  customerId: string;
-}
-
-export interface PaymentStatusResult {
-  orderId: number;
-  status: string;
-  paymentStatus?: string;
-  stripeStatus?: string;
-}
-
-/**
- * Process checkout via WhatsApp: create order, order items, and return
- * WhatsApp message + number for client to send.
- */
-export async function processWhatsAppCheckout(
-  data: CheckoutData
-): Promise<WhatsAppCheckoutResult> {
-  const { customer: customerData, items, total } = data;
-
-  let customer = await storage.getCustomerByPhone(customerData.phone);
-  if (!customer && customerData.email) {
-    customer = await storage.getCustomerByEmail(customerData.email);
+  items: CheckoutItemInput[];
+  fingerprint: string;
+  idempotencyKey: string;
+  paymentMethod?: "whatsapp" | "card" | "pix";
+}) {
+  const customer = await storage.getCustomer(input.customerId);
+  if (!customer) throw new ApiError(401, "UNAUTHENTICATED", "Sessão de cliente inválida");
+  const preview = await buildCheckoutPreview(input.customerId, input.items);
+  if (preview.fingerprint !== input.fingerprint) throw new ApiError(409, "PRICE_CHANGED", "Os preços do carrinho mudaram. Revise o pedido.", { preview });
+  const paymentMethod = input.paymentMethod || "whatsapp";
+  if (paymentMethod !== "whatsapp" && !preview.paymentCapabilities[paymentMethod]) {
+    throw new ApiError(409, "PAYMENT_DISABLED", "Esta forma de pagamento está temporariamente indisponível");
   }
-
-  if (!customer) {
-    customer = await storage.createCustomer({
-      name: customerData.name,
-      phone: customerData.phone,
-      email: customerData.email || null,
-      nickname: customerData.nickname || null,
-      deliveryAddress: customerData.deliveryAddress || null,
-      isRegistered: false,
-    });
-  } else {
-    await storage.updateCustomer(customer.id, {
-      name: customerData.name,
-      deliveryAddress: customerData.deliveryAddress || customer.deliveryAddress,
-    });
-  }
-
-  const itemsList = items
-    .map(
-      (item) =>
-        `• ${item.quantity}x ${item.productName} - R$ ${(item.productPrice * item.quantity).toFixed(2)}`
-    )
-    .join("\n");
-
-  const whatsappMessage =
-    `🏍️ *Novo Pedido*\n\n` +
-    `*Cliente:* ${customerData.name}\n` +
-    `*Telefone:* ${customerData.phone}\n` +
-    (customerData.email ? `*Email:* ${customerData.email}\n` : "") +
-    (customerData.deliveryAddress ? `*Endereço:* ${customerData.deliveryAddress}\n` : "") +
-    `\n*Itens:*\n${itemsList}\n\n` +
-    `*Total: R$ ${total.toFixed(2)}*`;
-
-  const order = await storage.createOrder({
+  const order = await storage.createOrderBundle({
     customerId: customer.id,
-    status: "pending",
-    total,
-    customerName: customerData.name,
-    customerPhone: customerData.phone,
-    customerEmail: customerData.email || null,
-    deliveryAddress: customerData.deliveryAddress || null,
-    whatsappMessage,
-  });
-
-  for (const item of items) {
-    await storage.createOrderItem({
-      orderId: order.id,
-      productId: item.productId,
-      productName: item.productName,
-      productPrice: item.productPrice,
-      quantity: item.quantity,
-    });
-  }
-
-  const settings = await storage.getSiteSettings();
-  const whatsappNumber = settings?.whatsappNumber || "";
-
-  return {
-    orderId: order.id,
-    whatsappMessage,
-    whatsappNumber,
-    customerId: customer.id,
-  };
-}
-
-/**
- * Process checkout via Stripe: create order, order items, Stripe session,
- * and return checkout URL.
- */
-export async function processStripeCheckout(
-  data: StripeCheckoutData
-): Promise<StripeCheckoutResult | null> {
-  if (!isStripeConfigured()) {
-    return null;
-  }
-
-  const { customer: customerData, items, total, paymentMethod } = data;
-
-  let customer = await storage.getCustomerByPhone(customerData.phone);
-  if (!customer && customerData.email) {
-    customer = await storage.getCustomerByEmail(customerData.email);
-  }
-
-  if (!customer) {
-    customer = await storage.createCustomer({
-      name: customerData.name,
-      phone: customerData.phone,
-      email: customerData.email || null,
-      nickname: customerData.nickname || null,
-      deliveryAddress: customerData.deliveryAddress || null,
-      isRegistered: false,
-    });
-  } else {
-    await storage.updateCustomer(customer.id, {
-      name: customerData.name,
-      deliveryAddress: customerData.deliveryAddress || customer.deliveryAddress,
-    });
-  }
-
-  const order = await storage.createOrder({
-    customerId: customer.id,
-    status: "awaiting_payment",
-    total,
-    customerName: customerData.name,
-    customerPhone: customerData.phone,
-    customerEmail: customerData.email || null,
-    deliveryAddress: customerData.deliveryAddress || null,
-    whatsappMessage: null,
+    customerName: customer.name,
+    customerPhone: customer.phone,
+    customerEmail: customer.email || "",
+    documentMasked: customer.documentMasked,
+    addressSnapshot: preview.customer.address ? JSON.stringify(preview.customer.address) : null,
+    items: preview.items,
+    total: preview.total,
+    fingerprint: preview.fingerprint,
+    idempotencyKey: input.idempotencyKey,
     paymentMethod,
-    paymentStatus: "awaiting_payment",
   });
-
-  for (const item of items) {
-    await storage.createOrderItem({
-      orderId: order.id,
-      productId: item.productId,
-      productName: item.productName,
-      productPrice: item.productPrice,
-      quantity: item.quantity,
-    });
-  }
-
-  const session = await createCheckoutSession(
-    items,
-    customerData,
-    order.id,
-    paymentMethod
-  );
-
-  if (!session) {
-    await storage.updateOrderStatus(order.id, "payment_failed");
-    return null;
-  }
-
-  await storage.updateOrderPayment(order.id, {
-    stripeSessionId: session.id,
-  });
-
-  return {
-    orderId: order.id,
-    sessionId: session.id,
-    checkoutUrl: session.url,
-    customerId: customer.id,
-  };
+  return { ...order, preview };
 }
 
-/**
- * Handle Stripe webhook events: update order status based on event type.
- */
-export async function handleStripeWebhook(
-  rawBody: Buffer,
-  signature: string
-): Promise<{ success: boolean; error?: string }> {
-  if (!signature) {
-    return { success: false, error: "Missing stripe-signature header" };
-  }
+export function buildWhatsAppShare(reference: string, whatsappNumber: string) {
+  const message = `Olá! Gostaria de acompanhar o pedido ${reference}.`;
+  return `https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+}
 
+export async function handleStripeWebhook(rawBody: Buffer, signature: string): Promise<{ success: boolean; error?: string }> {
+  if (!signature) return { success: false, error: "Missing stripe-signature header" };
   const event = constructWebhookEvent(rawBody, signature);
-  if (!event) {
-    return { success: false, error: "Invalid webhook signature" };
-  }
-
+  if (!event) return { success: false, error: "Invalid webhook signature" };
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const orderId = parseInt(session.metadata?.orderId || "0");
-
+      const orderId = Number(session.metadata?.orderId || 0);
       if (orderId) {
-        await storage.updateOrderStatus(orderId, "paid");
-        await storage.updateOrderPayment(orderId, {
-          paymentStatus: "paid",
-          stripePaymentIntentId: session.payment_intent as string,
-          paidAt: new Date(),
-        });
-        console.log(`Order ${orderId} marked as paid`);
-      }
-      break;
-    }
-
-    case "checkout.session.expired": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const orderId = parseInt(session.metadata?.orderId || "0");
-
-      if (orderId) {
-        await storage.updateOrderStatus(orderId, "payment_failed");
-        await storage.updateOrderPayment(orderId, {
-          paymentStatus: "failed",
-        });
-        console.log(`Order ${orderId} payment expired`);
-      }
-      break;
-    }
-
-    case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const order = await storage.getOrderByStripePaymentIntent(paymentIntent.id);
-      if (order) {
-        await storage.updateOrderStatus(order.id, "payment_failed");
-        await storage.updateOrderPayment(order.id, {
-          paymentStatus: "failed",
-        });
-        console.log(`Order ${order.id} payment failed`);
-      }
-      break;
-    }
-
-    case "charge.refunded": {
-      const charge = event.data.object as Stripe.Charge;
-      const paymentIntentId = charge.payment_intent as string;
-      if (paymentIntentId) {
-        const order = await storage.getOrderByStripePaymentIntent(paymentIntentId);
-        if (order) {
-          await storage.updateOrderStatus(order.id, "refunded");
-          await storage.updateOrderPayment(order.id, {
-            paymentStatus: "refunded",
-          });
-          console.log(`Order ${order.id} refunded`);
+        const order = await storage.getOrder(orderId);
+        if (order && order.status !== "paid") {
+          await transitionOrder(orderId, "paid", { type: "system" }, "Stripe checkout.session.completed");
+          await storage.updateOrderPayment(orderId, { paymentStatus: "paid", stripePaymentIntentId: session.payment_intent as string, paidAt: new Date() });
         }
       }
       break;
     }
-
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      const orderId = Number(session.metadata?.orderId || 0);
+      if (orderId) {
+        const order = await storage.getOrder(orderId);
+        if (order && order.status === "awaiting_payment") {
+          await transitionOrder(orderId, "payment_failed", { type: "system" }, "Stripe sessão expirada");
+          await storage.updateOrderPayment(orderId, { paymentStatus: "failed" });
+        }
+      }
+      break;
+    }
+    case "payment_intent.payment_failed": {
+      const order = await storage.getOrderByStripePaymentIntent((event.data.object as Stripe.PaymentIntent).id);
+      if (order && order.status === "awaiting_payment") {
+        await transitionOrder(order.id, "payment_failed", { type: "system" }, "Stripe pagamento falhou");
+        await storage.updateOrderPayment(order.id, { paymentStatus: "failed" });
+      }
+      break;
+    }
+    case "charge.refunded": {
+      const paymentIntentId = (event.data.object as Stripe.Charge).payment_intent as string;
+      const order = paymentIntentId ? await storage.getOrderByStripePaymentIntent(paymentIntentId) : undefined;
+      if (order && order.status !== "refunded") {
+        await transitionOrder(order.id, "refunded", { type: "system" }, "Stripe charge.refunded");
+        await storage.updateOrderPayment(order.id, { paymentStatus: "refunded" });
+      }
+      break;
+    }
   }
-
   return { success: true };
 }
 
-/**
- * Get order payment status, optionally enriched with Stripe session status.
- */
-export async function getOrderPaymentStatus(
-  orderId: number
-): Promise<PaymentStatusResult | null> {
+export async function getOrderPaymentStatus(orderId: number) {
   const order = await storage.getOrder(orderId);
   if (!order) return null;
-
   if (order.stripeSessionId && isStripeConfigured()) {
     const session = await getCheckoutSession(order.stripeSessionId);
-    if (session) {
-      return {
-        orderId: order.id,
-        status: order.status,
-        paymentStatus: order.paymentStatus ?? undefined,
-        stripeStatus: session.payment_status ?? undefined,
-      };
-    }
+    return { orderId: order.id, publicReference: order.publicReference, status: order.status, paymentStatus: order.paymentStatus, stripeStatus: session?.payment_status };
   }
-
-  return {
-    orderId: order.id,
-    status: order.status,
-    paymentStatus: order.paymentStatus ?? undefined,
-  };
+  return { orderId: order.id, publicReference: order.publicReference, status: order.status, paymentStatus: order.paymentStatus };
 }

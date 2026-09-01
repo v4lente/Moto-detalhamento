@@ -1,170 +1,84 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
-import { insertUserSchema, registerCustomerSchema, customerLoginSchema } from "@shared/schema";
+import { insertUserSchema, customerLoginSchema } from "@shared/schema";
+import { customerRegistrationSchema, customerProfileUpdateSchema } from "@shared/contracts/validation";
 import { hashPassword, comparePasswords, shouldRehashPassword } from "../../services/auth.service";
 import { sendNewCustomerNotification } from "../../infrastructure/email/resend.service";
 import { requireAuth, requireAdmin, requireCustomerAuth, authLimiter } from "../middleware/auth";
+import { registerCustomer, safeProfile, updateCustomerProfile, CustomerIdentityConflictError } from "../../services/customer-profile.service";
+import { normalizeEmail } from "../../services/customer-identity.service";
 
-/**
- * Authentication routes for Admin and Customer
- */
 export function registerAuthRoutes(app: Express) {
-  // ===== ADMIN AUTH ROUTES =====
-  
-  // Admin registration - protected route (only existing admins can create new admins)
   app.post("/api/auth/register", requireAdmin, async (req, res) => {
     try {
-      const validatedData = insertUserSchema.parse(req.body);
-      const existing = await storage.getUserByUsername(validatedData.username);
-      if (existing) {
-        return res.status(400).json({ error: "Username already exists" });
-      }
-      const hashedPassword = await hashPassword(validatedData.password);
-      const user = await storage.createUser({ ...validatedData, password: hashedPassword });
-      // Don't auto-login the new user - the admin who created them stays logged in
-      res.status(201).json({ id: user.id, username: user.username });
+      const data = insertUserSchema.parse(req.body);
+      if (await storage.getUserByUsername(data.username)) return res.status(409).json({ error: { code: "CONFLICT", message: "Username já existe" } });
+      const user = await storage.createUser({ ...data, password: await hashPassword(data.password) });
+      res.status(201).json({ id: user.id, username: user.username, role: user.role });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      console.error("Error registering user:", error);
-      res.status(500).json({ error: "Failed to register user" });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos", details: error.flatten() } });
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao cadastrar usuário" } });
     }
   });
 
   app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ error: "Username and password required" });
-      }
+      const { username, password } = z.object({ username: z.string().min(1), password: z.string().min(1) }).parse(req.body);
       const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-
-      // Opportunistic migration for legacy or malformed stored hashes.
-      if (shouldRehashPassword(user.password)) {
-        const newHash = await hashPassword(password);
-        await storage.updateUser(user.id, { password: newHash });
-      }
-
+      if (!user || !(await comparePasswords(password, user.password))) return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Credenciais inválidas" } });
+      if (shouldRehashPassword(user.password)) await storage.updateUser(user.id, { password: await hashPassword(password) });
+      await regenerateSession(req);
       req.session.userId = user.id;
-      res.json({ id: user.id, username: user.username });
+      res.json({ id: user.id, username: user.username, role: user.role });
     } catch (error) {
-      console.error("Error logging in:", error);
-      res.status(500).json({ error: "Failed to login" });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos" } });
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao fazer login" } });
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to logout" });
-      }
-      res.clearCookie("connect.sid", {
-        path: "/",
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-      });
-      res.set("Cache-Control", "no-store");
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-
+  app.post("/api/auth/logout", (req, res) => destroySession(req, res));
   app.get("/api/auth/me", async (req, res) => {
     res.set("Cache-Control", "no-store");
-    if (!req.session.userId) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+    if (!req.session.userId) return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Não autenticado" } });
     const user = await storage.getUser(req.session.userId);
-    if (!user) {
-      return res.status(401).json({ error: "User not found" });
-    }
-    res.json({ id: user.id, username: user.username });
+    if (!user) return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Usuário não encontrado" } });
+    res.json({ id: user.id, username: user.username, role: user.role });
   });
 
-  // ===== CUSTOMER AUTH ROUTES =====
-  
   app.post("/api/customer/register", async (req, res) => {
     try {
-      const validatedData = registerCustomerSchema.parse(req.body);
-      
-      const existingCustomer = await storage.getCustomerByEmail(validatedData.email);
-      if (existingCustomer && existingCustomer.isRegistered) {
-        return res.status(400).json({ error: "Email já cadastrado" });
-      }
-
-      const hashedPassword = await hashPassword(validatedData.password);
-      
-      let customer;
-      if (existingCustomer) {
-        customer = await storage.updateCustomer(existingCustomer.id, {
-          ...validatedData,
-          password: hashedPassword,
-          isRegistered: true,
-        });
-      } else {
-        customer = await storage.createCustomer({
-          ...validatedData,
-          password: hashedPassword,
-          isRegistered: true,
-        });
-      }
-
-      // Send email notification to admins
+      customerRegistrationSchema.parse(req.body);
+      const customer = await registerCustomer(req.body);
       const admins = await storage.getAllUsers();
-      const adminEmails = admins
-        .filter(u => u.username.includes('@'))
-        .map(u => u.username);
-      
-      sendNewCustomerNotification(adminEmails, {
-        name: customer!.name,
-        email: customer!.email,
-        phone: customer!.phone
-      }).catch(err => console.error('Email notification failed:', err));
-
-      req.session.customerId = customer!.id;
-      res.status(201).json({ id: customer!.id, name: customer!.name, email: customer!.email });
+      sendNewCustomerNotification(admins.filter((u) => u.username.includes("@")).map((u) => u.username), {
+        name: customer.name, email: customer.email, phone: customer.phone,
+      }).catch((error) => console.error("Customer notification failed", error));
+      await regenerateSession(req);
+      req.session.customerId = customer.id;
+      res.status(201).json(safeProfile(customer));
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      console.error("Error registering customer:", error);
-      res.status(500).json({ error: "Failed to register" });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos", details: error.flatten() } });
+      if (error instanceof CustomerIdentityConflictError) return res.status(409).json({ error: { code: "CONFLICT", message: error.message } });
+      console.error("Error registering customer", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao cadastrar cliente" } });
     }
   });
 
   app.post("/api/customer/login", authLimiter, async (req, res) => {
     try {
-      const validatedData = customerLoginSchema.parse(req.body);
-      
-      const customer = await storage.getCustomerByEmail(validatedData.email);
-      if (!customer || !customer.isRegistered || !customer.password) {
-        return res.status(401).json({ error: "Email ou senha inválidos" });
+      const data = customerLoginSchema.parse(req.body);
+      const customer = await storage.getCustomerByEmail(normalizeEmail(data.email));
+      if (!customer || !customer.isRegistered || !customer.password || !(await comparePasswords(data.password, customer.password))) {
+        return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Email ou senha inválidos" } });
       }
-
-      const isValid = await comparePasswords(validatedData.password, customer.password);
-      if (!isValid) {
-        return res.status(401).json({ error: "Email ou senha inválidos" });
-      }
-
-      // Opportunistic migration for legacy or malformed stored hashes.
-      if (shouldRehashPassword(customer.password)) {
-        const newHash = await hashPassword(validatedData.password);
-        await storage.updateCustomer(customer.id, { password: newHash });
-      }
-
+      if (shouldRehashPassword(customer.password)) await storage.updateCustomer(customer.id, { password: await hashPassword(data.password) });
+      await regenerateSession(req);
       req.session.customerId = customer.id;
-      res.json({ id: customer.id, name: customer.name, email: customer.email });
+      res.json(safeProfile(customer));
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
-      }
-      console.error("Error logging in customer:", error);
-      res.status(500).json({ error: "Failed to login" });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos" } });
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao fazer login" } });
     }
   });
 
@@ -174,39 +88,35 @@ export function registerAuthRoutes(app: Express) {
   });
 
   app.get("/api/customer/me", async (req, res) => {
-    if (!req.session.customerId) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-    try {
-      const customer = await storage.getCustomer(req.session.customerId);
-      if (!customer) {
-        req.session.customerId = undefined;
-        return res.status(401).json({ error: "Customer not found" });
-      }
-      res.json({ 
-        id: customer.id, 
-        name: customer.name, 
-        email: customer.email, 
-        phone: customer.phone,
-        nickname: customer.nickname,
-        deliveryAddress: customer.deliveryAddress 
-      });
-    } catch (error) {
-      console.error("Error fetching customer:", error);
-      res.status(500).json({ error: "Failed to fetch customer" });
-    }
+    if (!req.session.customerId) return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Não autenticado" } });
+    const customer = await storage.getCustomer(req.session.customerId);
+    if (!customer) { req.session.customerId = undefined; return res.status(401).json({ error: { code: "UNAUTHENTICATED", message: "Cliente não encontrado" } }); }
+    res.set("Cache-Control", "no-store");
+    res.json(safeProfile(customer));
   });
 
   app.patch("/api/customer/me", requireCustomerAuth, async (req, res) => {
     try {
-      const { name, phone, nickname, deliveryAddress } = req.body;
-      const customer = await storage.updateCustomer(req.session.customerId!, {
-        name, phone, nickname, deliveryAddress
-      });
-      res.json(customer);
+      customerProfileUpdateSchema.parse(req.body);
+      res.json(safeProfile(await updateCustomerProfile(req.session.customerId!, req.body)));
     } catch (error) {
-      console.error("Error updating customer:", error);
-      res.status(500).json({ error: "Failed to update customer" });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos", details: error.flatten() } });
+      if (error instanceof CustomerIdentityConflictError) return res.status(409).json({ error: { code: "CONFLICT", message: error.message } });
+      console.error("Error updating customer", error);
+      res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao atualizar perfil" } });
     }
+  });
+}
+
+function regenerateSession(req: any): Promise<void> {
+  return new Promise((resolve, reject) => req.session.regenerate((error: Error | null) => error ? reject(error) : resolve()));
+}
+
+function destroySession(req: any, res: any) {
+  req.session.destroy((error: Error | null) => {
+    if (error) return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Falha ao sair" } });
+    res.clearCookie("connect.sid", { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
+    res.set("Cache-Control", "no-store");
+    res.json({ success: true });
   });
 }

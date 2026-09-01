@@ -1,5 +1,6 @@
-import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct } from "@shared/contracts";
+import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress } from "@shared/contracts";
 import { API_BASE } from "./api-config";
+import { http } from "./http";
 
 /**
  * Extrai mensagem de erro de uma Response HTTP de forma segura.
@@ -51,41 +52,15 @@ export async function fetchProduct(id: number): Promise<ProductWithImages> {
 }
 
 export async function createProduct(product: InsertProduct): Promise<ProductWithImages> {
-  const response = await fetch(`${API_BASE}/products`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(product),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao criar produto");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<ProductWithImages>("/products", { method: "POST", body: JSON.stringify(product) });
 }
 
 export async function updateProduct(id: number, product: Partial<ProductWithImages>): Promise<ProductWithImages> {
-  const response = await fetch(`${API_BASE}/products/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(product),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao atualizar produto");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<ProductWithImages>(`/products/${id}`, { method: "PATCH", body: JSON.stringify(product) });
 }
 
 export async function deleteProduct(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/products/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete product");
-  }
+  await http<void>(`/products/${id}`, { method: "DELETE" });
 }
 
 // Product Variations
@@ -108,39 +83,15 @@ export async function fetchProductVariationCounts(): Promise<Record<number, numb
 }
 
 export async function createProductVariation(productId: number, data: { label: string; price: number; inStock?: boolean }): Promise<ProductVariation> {
-  const response = await fetch(`${API_BASE}/products/${productId}/variations`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create variation");
-  }
-  return response.json();
+  return http<ProductVariation>(`/products/${productId}/variations`, { method: "POST", body: JSON.stringify(data) });
 }
 
 export async function updateProductVariation(id: number, data: Partial<{ label: string; price: number; inStock: boolean }>): Promise<ProductVariation> {
-  const response = await fetch(`${API_BASE}/variations/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update variation");
-  }
-  return response.json();
+  return http<ProductVariation>(`/variations/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
 export async function deleteProductVariation(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/variations/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete variation");
-  }
+  await http<void>(`/variations/${id}`, { method: "DELETE" });
 }
 
 // Site Settings
@@ -153,59 +104,23 @@ export async function fetchSettings(): Promise<SiteSettings> {
 }
 
 export async function updateSettings(settings: UpdateSiteSettings): Promise<SiteSettings> {
-  const response = await fetch(`${API_BASE}/settings`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(settings),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao atualizar configuracoes");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<SiteSettings>("/settings", { method: "PATCH", body: JSON.stringify(settings) });
 }
 
 // Auth
 export async function login(username: string, password: string): Promise<{ id: string; username: string }> {
-  const response = await fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao fazer login");
-    throw new Error(message);
-  }
-  return response.json();
+  return http("/auth/login", { method: "POST", body: JSON.stringify({ username, password }) });
 }
 
 export async function register(username: string, password: string): Promise<{ id: string; username: string }> {
-  const response = await fetch(`${API_BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao cadastrar");
-    throw new Error(message);
-  }
-  return response.json();
+  return http("/auth/register", { method: "POST", body: JSON.stringify({ username, password }) });
 }
 
 export async function logout(): Promise<void> {
-  const response = await fetch(`${API_BASE}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to logout");
-  }
+  await http<void>("/auth/logout", { method: "POST" });
 }
 
-export async function getCurrentUser(): Promise<{ id: string; username: string } | null> {
+export async function getCurrentUser(): Promise<{ id: string; username: string; role: "admin" | "viewer" } | null> {
   try {
     const response = await fetch(`${API_BASE}/auth/me`, {
       credentials: "include",
@@ -228,20 +143,22 @@ export interface CustomerData {
   phone: string;
   nickname: string | null;
   deliveryAddress: string | null;
+  documentType?: "cpf" | "cnpj" | null;
+  documentMasked?: string | null;
+  address?: {
+    street: string;
+    number: string;
+    complement?: string | null;
+    neighborhood: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  } | null;
+  profileComplete?: boolean;
 }
 
 export async function customerLogin(email: string, password: string): Promise<CustomerData> {
-  const response = await fetch(`${API_BASE}/customer/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao fazer login");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<CustomerData>("/customer/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
 export async function customerRegister(data: {
@@ -249,27 +166,26 @@ export async function customerRegister(data: {
   password: string;
   name: string;
   phone: string;
+  documentType?: "cpf" | "cnpj";
+  document?: string;
+  address?: {
+    street: string;
+    number: string;
+    complement?: string | null;
+    neighborhood: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  /** Compatibilidade de tipagem para telas legadas; o servidor exige o novo cadastro completo. */
   nickname?: string;
   deliveryAddress?: string;
 }): Promise<CustomerData> {
-  const response = await fetch(`${API_BASE}/customer/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao cadastrar");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<CustomerData>("/customer/register", { method: "POST", body: JSON.stringify(data) });
 }
 
 export async function customerLogout(): Promise<void> {
-  await fetch(`${API_BASE}/customer/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
+  await http<void>("/customer/logout", { method: "POST" });
 }
 
 export async function getCurrentCustomer(): Promise<CustomerData | null> {
@@ -288,16 +204,42 @@ export async function getCurrentCustomer(): Promise<CustomerData | null> {
 }
 
 export async function updateCustomerProfile(data: Partial<CustomerData>): Promise<CustomerData> {
-  const response = await fetch(`${API_BASE}/customer/me`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update profile");
-  }
-  return response.json();
+  return http<CustomerData>("/customer/me", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export interface CheckoutItemInput {
+  productId: number;
+  variationId?: number | null;
+  quantity: number;
+}
+
+export interface CheckoutPreviewResult {
+  fingerprint: string;
+  items: Array<{ productId: number; productName: string; variationId: number | null; variationLabel: string | null; unitPrice: string; quantity: number; lineTotal: string }>;
+  total: string;
+  customer: CustomerData;
+  paymentCapabilities: { card: boolean; pix: boolean };
+}
+
+export async function previewCheckout(items: CheckoutItemInput[]): Promise<CheckoutPreviewResult> {
+  return http<CheckoutPreviewResult>("/checkout/preview", { method: "POST", body: JSON.stringify({ items }) });
+}
+
+export async function createCustomerOrder(data: {
+  items: CheckoutItemInput[];
+  fingerprint: string;
+  paymentMethod?: "whatsapp" | "card" | "pix";
+}, idempotencyKey: string): Promise<{ order: any; publicReference: string; whatsappShareUrl: string | null; payment: { checkoutUrl?: string; sessionId?: string } | null; replayed: boolean }> {
+  return http(`/customer/orders`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(data) });
+}
+
+export async function fetchCustomerOrdersPage(params: { page?: number; pageSize?: number; q?: string; status?: string } = {}) {
+  const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined) as Array<[string, string]>).toString();
+  return http<{ items: Order[]; total: number; page: number; pageSize: number; totalPages: number }>(`/customer/orders${query ? `?${query}` : ""}`);
+}
+
+export async function fetchCustomerOrderByReference(reference: string) {
+  return http<Order & { items: OrderItem[]; events: any[] }>(`/customer/orders/${encodeURIComponent(reference)}`);
 }
 
 // Checkout
@@ -308,17 +250,7 @@ export interface CheckoutResult {
 }
 
 export async function processCheckout(data: CheckoutData): Promise<CheckoutResult> {
-  const response = await fetch(`${API_BASE}/checkout`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao processar pedido");
-    throw new Error(message);
-  }
-  return response.json();
+  return http<CheckoutResult>("/checkout", { method: "POST", body: JSON.stringify(data) });
 }
 
 // Stripe Checkout
@@ -348,12 +280,7 @@ export interface StripeCheckoutData {
 }
 
 export async function createStripeCheckoutSession(data: StripeCheckoutData): Promise<StripeCheckoutResult> {
-  const response = await fetch(`${API_BASE}/checkout/create-session`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
+  const response = await fetch(`${API_BASE}/checkout/create-session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data), credentials: "include" });
   if (!response.ok) {
     const message = await extractErrorMessage(response, "Falha ao criar sessão de pagamento");
     throw new Error(message);
@@ -386,7 +313,16 @@ export async function fetchCustomerOrders(): Promise<Order[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch orders");
   }
-  return response.json();
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.items || [];
+}
+
+export async function getOrderPaymentStatusByReference(reference: string): Promise<PaymentStatusResult & { publicReference?: string }> {
+  return http(`/orders/${encodeURIComponent(reference)}/payment-status`);
+}
+
+export async function fetchPaymentCapabilities(): Promise<{ card: boolean; pix: boolean; providerConfigured: boolean }> {
+  return http("/payments/capabilities");
 }
 
 export async function fetchCustomerOrder(id: number): Promise<Order & { items: OrderItem[] }> {
@@ -407,10 +343,11 @@ export async function fetchAllOrders(): Promise<Order[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch orders");
   }
-  return response.json();
+  const data = await response.json();
+  return Array.isArray(data) ? data : data.items || [];
 }
 
-export async function fetchOrderDetails(id: number): Promise<Order & { items: OrderItem[] }> {
+export async function fetchOrderDetails(id: number): Promise<Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; customer?: CustomerData | null }> {
   const response = await fetch(`${API_BASE}/orders/${id}`, {
     credentials: "include",
   });
@@ -420,21 +357,41 @@ export async function fetchOrderDetails(id: number): Promise<Order & { items: Or
   return response.json();
 }
 
-export async function updateOrderStatus(id: number, status: string): Promise<Order> {
-  const response = await fetch(`${API_BASE}/orders/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-    credentials: "include",
+export async function revealOrderCustomerDocument(reference: string): Promise<{
+  customer: CustomerData;
+  documentType: "cpf" | "cnpj";
+  document: string;
+}> {
+  return http<{ customer: CustomerData; documentType: "cpf" | "cnpj"; document: string }>(`/orders/${encodeURIComponent(reference)}/customer-document/reveal`, {
+    method: "POST",
+    body: JSON.stringify({ purpose: "invoice" }),
   });
-  if (!response.ok) {
-    throw new Error("Failed to update order status");
-  }
-  return response.json();
+}
+
+export async function updateOrderStatus(id: number, status: string): Promise<Order> {
+  return http<Order>(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
 }
 
 // Admin Customer Management
 import type { Customer } from "@shared/contracts";
+
+export interface AdminCustomerInput {
+  name: string;
+  phone: string;
+  email: string;
+  nickname?: string;
+  deliveryAddress?: string;
+  password: string;
+  documentType: "cpf" | "cnpj";
+  document: string;
+  address: CustomerAddress;
+}
+
+export type AdminCustomerUpdateInput = Partial<Omit<AdminCustomerInput, "email" | "nickname" | "deliveryAddress">> & {
+  email?: string | null;
+  nickname?: string | null;
+  deliveryAddress?: string | null;
+};
 
 export async function fetchAllCustomers(): Promise<Customer[]> {
   const response = await fetch(`${API_BASE}/customers`, {
@@ -456,54 +413,16 @@ export async function fetchCustomer(id: string): Promise<Customer> {
   return response.json();
 }
 
-export async function createAdminCustomer(data: {
-  name: string;
-  phone: string;
-  email?: string;
-  nickname?: string;
-  deliveryAddress?: string;
-  password?: string;
-}): Promise<Customer> {
-  const response = await fetch(`${API_BASE}/customers`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao criar cliente");
-    throw new Error(message);
-  }
-  return response.json();
+export async function createAdminCustomer(data: AdminCustomerInput): Promise<Customer> {
+  return http<Customer>("/customers", { method: "POST", body: JSON.stringify(data) });
 }
 
-export async function updateAdminCustomer(id: string, data: Partial<{
-  name: string;
-  phone: string;
-  email: string | null;
-  nickname: string | null;
-  deliveryAddress: string | null;
-}>): Promise<Customer> {
-  const response = await fetch(`${API_BASE}/customers/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update customer");
-  }
-  return response.json();
+export async function updateAdminCustomer(id: string, data: AdminCustomerUpdateInput): Promise<Customer> {
+  return http<Customer>(`/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
 export async function deleteAdminCustomer(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/customers/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete customer");
-  }
+  await http<void>(`/customers/${id}`, { method: "DELETE" });
 }
 
 // Admin User Management
@@ -524,6 +443,7 @@ export async function createAdminUser(data: {
   password: string;
   role?: "admin" | "viewer";
 }): Promise<SafeUser> {
+  return http<SafeUser>("/users", { method: "POST", body: JSON.stringify(data) });
   const response = await fetch(`${API_BASE}/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -542,6 +462,7 @@ export async function updateAdminUser(id: string, data: {
   role?: "admin" | "viewer";
   password?: string;
 }): Promise<SafeUser> {
+  return http<SafeUser>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   const response = await fetch(`${API_BASE}/users/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -556,6 +477,8 @@ export async function updateAdminUser(id: string, data: {
 }
 
 export async function deleteAdminUser(id: string): Promise<void> {
+  await http<void>(`/users/${id}`, { method: "DELETE" });
+  return;
   const response = await fetch(`${API_BASE}/users/${id}`, {
     method: "DELETE",
     credentials: "include",
@@ -600,6 +523,7 @@ export async function fetchProductReviews(productId: number): Promise<ReviewsRes
 }
 
 export async function createReview(productId: number, rating: number, comment?: string): Promise<Review> {
+  return http<Review>(`/products/${productId}/reviews`, { method: "POST", body: JSON.stringify({ productId, rating, comment }) });
   const response = await fetch(`${API_BASE}/products/${productId}/reviews`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -643,6 +567,7 @@ export async function fetchFeaturedServicePosts(limit: number = 8): Promise<Serv
 }
 
 export async function createServicePost(post: Omit<ServicePostWithMedia, "id" | "createdAt">): Promise<ServicePostWithMedia> {
+  return http<ServicePostWithMedia>("/service-posts", { method: "POST", body: JSON.stringify(post) });
   const response = await fetch(`${API_BASE}/service-posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -657,6 +582,7 @@ export async function createServicePost(post: Omit<ServicePostWithMedia, "id" | 
 }
 
 export async function updateServicePost(id: number, post: Partial<ServicePostWithMedia>): Promise<ServicePostWithMedia> {
+  return http<ServicePostWithMedia>(`/service-posts/${id}`, { method: "PATCH", body: JSON.stringify(post) });
   const response = await fetch(`${API_BASE}/service-posts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -671,6 +597,8 @@ export async function updateServicePost(id: number, post: Partial<ServicePostWit
 }
 
 export async function deleteServicePost(id: number): Promise<void> {
+  await http<void>(`/service-posts/${id}`, { method: "DELETE" });
+  return;
   const response = await fetch(`${API_BASE}/service-posts/${id}`, {
     method: "DELETE",
     credentials: "include",
@@ -702,6 +630,7 @@ export async function fetchAppointment(id: number): Promise<Appointment> {
 }
 
 export async function createAppointment(data: CreateAppointment): Promise<{ appointment: Appointment; whatsappNumber: string; message: string }> {
+  return http("/appointments", { method: "POST", body: JSON.stringify(data) });
   const response = await fetch(`${API_BASE}/appointments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -716,6 +645,7 @@ export async function createAppointment(data: CreateAppointment): Promise<{ appo
 }
 
 export async function updateAppointment(id: number, data: UpdateAppointment): Promise<Appointment> {
+  return http<Appointment>(`/appointments/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   const response = await fetch(`${API_BASE}/appointments/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -729,6 +659,8 @@ export async function updateAppointment(id: number, data: UpdateAppointment): Pr
 }
 
 export async function deleteAppointment(id: number): Promise<void> {
+  await http<void>(`/appointments/${id}`, { method: "DELETE" });
+  return;
   const response = await fetch(`${API_BASE}/appointments/${id}`, {
     method: "DELETE",
     credentials: "include",
@@ -776,6 +708,7 @@ export async function fetchOfferedService(id: number): Promise<OfferedService> {
 }
 
 export async function createOfferedService(service: Omit<InsertOfferedService, "id" | "createdAt">): Promise<OfferedService> {
+  return http<OfferedService>("/offered-services", { method: "POST", body: JSON.stringify(service) });
   const response = await fetch(`${API_BASE}/offered-services`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -789,6 +722,7 @@ export async function createOfferedService(service: Omit<InsertOfferedService, "
 }
 
 export async function updateOfferedService(id: number, service: UpdateOfferedService): Promise<OfferedService> {
+  return http<OfferedService>(`/offered-services/${id}`, { method: "PATCH", body: JSON.stringify(service) });
   const response = await fetch(`${API_BASE}/offered-services/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -802,6 +736,8 @@ export async function updateOfferedService(id: number, service: UpdateOfferedSer
 }
 
 export async function deleteOfferedService(id: number): Promise<void> {
+  await http<void>(`/offered-services/${id}`, { method: "DELETE" });
+  return;
   const response = await fetch(`${API_BASE}/offered-services/${id}`, {
     method: "DELETE",
     credentials: "include",

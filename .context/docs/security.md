@@ -23,6 +23,13 @@ Authentication logic is centralized in `backend/services/auth.service.ts`.
 
 Store secrets in environment variables or a secrets manager; do not commit `.env` files.
 
+The current release stores the normalized customer document in
+`customers.document_plaintext` by explicit product decision. It is treated as
+sensitive data: it is excluded from profile/list APIs, shown only after an
+admin action from the order modal, and access is audited. A future release may
+migrate this field to protected storage; the legacy ciphertext helpers remain
+available for that transition.
+
 ## Compliance & Policies
 
 No explicit compliance framework is configured. If handling personal data (names, emails, addresses), treat it as sensitive and limit access to admin users.

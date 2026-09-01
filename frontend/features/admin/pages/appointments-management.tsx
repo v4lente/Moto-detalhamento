@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { useAppointments, useAppointmentMutations } from "../hooks/use-admin";
 import type { Appointment } from "@shared/contracts";
+import { formatPhoneBR } from "@/shared/lib/formatters";
 import { 
   Pencil, Trash2, Loader2, Calendar, User, Phone, Clock, Play,
   AlertTriangle, CheckCircle, XCircle, MessageCircle
@@ -70,7 +71,7 @@ export function AppointmentsManagementPage() {
                         {appointment.customerPhone && (
                           <div className="flex items-center gap-2">
                             <Phone className="h-4 w-4 text-muted-foreground" />
-                            <span>{appointment.customerPhone}</span>
+                            <span>{formatPhoneBR(appointment.customerPhone)}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2">

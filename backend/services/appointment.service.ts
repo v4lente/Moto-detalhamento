@@ -1,4 +1,5 @@
 import { storage } from "../infrastructure/storage";
+import { normalizePhone } from "./customer-identity.service";
 import {
   sendAppointmentRequestNotification,
   sendAppointmentStatusUpdateNotification,
@@ -31,7 +32,7 @@ export async function createAppointment(
 ): Promise<CreateAppointmentResult> {
   let customerId: string | null = null;
   let customerName = data.customerName || "";
-  let customerPhone = data.customerPhone || "";
+  let customerPhone = normalizePhone(data.customerPhone || "");
   let customerEmail = data.customerEmail || null;
 
   if (session?.customerId) {
@@ -39,7 +40,7 @@ export async function createAppointment(
     if (customer) {
       customerId = customer.id;
       customerName = customer.name;
-      customerPhone = customer.phone;
+      customerPhone = normalizePhone(customer.phone);
       customerEmail = customer.email;
     }
   }

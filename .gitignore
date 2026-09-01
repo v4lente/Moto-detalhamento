@@ -5,3 +5,12 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+# Reversa
+_reversa*
+.reversa/config.user.toml
+_reversa_sdd/
+.agents/*
+.context/*
+.reversa/*
+AGENTS.md
+.gitignore

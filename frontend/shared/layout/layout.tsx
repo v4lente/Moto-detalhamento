@@ -159,7 +159,7 @@ export function Navbar() {
                     onClick={handleCheckout}
                     data-testid="button-checkout"
                   >
-                    <Phone className="mr-2 h-4 w-4" /> Finalizar pelo WhatsApp
+                    <Phone className="mr-2 h-4 w-4" /> Finalizar pedido
                   </Button>
                 </div>
               </>
