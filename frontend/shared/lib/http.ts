@@ -14,12 +14,24 @@ function mutating(method?: string) {
   return !["GET", "HEAD", "OPTIONS"].includes((method || "GET").toUpperCase());
 }
 
+function isFormDataBody(body: BodyInit | null | undefined): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
 export async function http<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  if (mutating(init.method) && !path.includes("/webhooks/")) headers.set("x-csrf-token", await getCsrfToken());
+  const usesCsrf = mutating(init.method) && !path.includes("/webhooks/");
+  if (init.body && !headers.has("Content-Type") && !isFormDataBody(init.body)) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (usesCsrf) headers.set("x-csrf-token", await getCsrfToken());
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: "include" });
-  if (response.status === 403 && mutating(init.method) && retry) {
+  if (
+    response.status === 403 &&
+    usesCsrf &&
+    retry &&
+    response.headers.get("x-csrf-retry") === "1"
+  ) {
     csrfToken = null;
     return http<T>(path, init, false);
   }

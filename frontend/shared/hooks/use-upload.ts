@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { apiUrl } from "@/shared/lib/api-config";
+import { http } from "@/shared/lib/http";
 
 interface UploadResponse {
   filePath: string;
@@ -26,19 +26,12 @@ export function useUpload(options: UseUploadOptions = {}) {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await fetch(apiUrl("/uploads/local"), {
+        const uploadResponse = await http<UploadResponse>("/uploads/local", {
           method: "POST",
           body: formData,
-          credentials: "include",
         });
 
-        if (!response.ok) {
-          throw new Error("Falha ao enviar arquivo");
-        }
-
         setProgress(100);
-        const data = await response.json();
-        const uploadResponse: UploadResponse = { filePath: data.filePath };
         options.onSuccess?.(uploadResponse);
         return uploadResponse;
       } catch (err) {

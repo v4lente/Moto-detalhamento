@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useId, useCallback } from "react";
 import { Button } from "@/shared/ui/button";
-import { apiUrl } from "@/shared/lib/api-config";
+import { http } from "@/shared/lib/http";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/ui/dialog";
 import { Upload, X, Loader2, Crop } from "lucide-react";
 import ReactCrop, { centerCrop, makeAspectCrop, type Crop as CropType, type PixelCrop } from "react-image-crop";
@@ -129,17 +129,10 @@ export function ImageUpload({ value, onChange, className, aspectRatio }: ImageUp
       const formData = new FormData();
       formData.append("file", croppedBlob, originalFile.name);
 
-      const response = await fetch(apiUrl("/uploads/local"), {
+      const { filePath } = await http<{ filePath: string }>("/uploads/local", {
         method: "POST",
         body: formData,
-        credentials: "include",
       });
-
-      if (!response.ok) {
-        throw new Error("Falha ao enviar arquivo");
-      }
-
-      const { filePath } = await response.json();
 
       setPreview(filePath);
       onChange(filePath);
