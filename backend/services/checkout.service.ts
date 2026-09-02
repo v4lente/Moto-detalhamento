@@ -37,8 +37,8 @@ export async function createPersistedOrder(input: {
   return { ...order, preview };
 }
 
-export function buildWhatsAppShare(reference: string, whatsappNumber: string) {
-  const message = `Olá! Gostaria de acompanhar o pedido ${reference}.`;
+export function buildWhatsAppShare(reference: string, whatsappNumber: string, customerName: string) {
+  const message = `Olá, sou o ${customerName}, acabei de realizar o pedido ${reference}, fico aguardo para combinarmos o pagamento, obrigado!`;
   return `https://wa.me/${whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
 }
 

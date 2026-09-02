@@ -47,7 +47,7 @@ export function registerOrdersRoutes(app: Express) {
       const result = await createPersistedOrder({ customerId: req.session.customerId!, ...body, idempotencyKey });
       const settings = await storage.getSiteSettings();
       const whatsappShareUrl = settings?.whatsappNumber && result.order.publicReference
-        ? buildWhatsAppShare(result.order.publicReference, settings.whatsappNumber)
+        ? buildWhatsAppShare(result.order.publicReference, settings.whatsappNumber, result.order.customerName)
         : null;
       let payment: any = null;
       if (body.paymentMethod !== "whatsapp" && isStripeConfigured()) {
