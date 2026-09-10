@@ -21,12 +21,12 @@ type AdminTab =
   | "appointments"
   | "settings";
 
-function renderActiveTab(tab: AdminTab, onTabChange: (tab: AdminTab) => void) {
+function renderActiveTab(tab: AdminTab, onTabChange: (tab: AdminTab) => void, orderToOpen: number | null, onOrderOpened: () => void) {
   switch (tab) {
     case "products":
       return <ProductsManagementPage />;
     case "orders":
-      return <OrdersManagementPage />;
+      return <OrdersManagementPage initialOrderId={orderToOpen} onInitialOrderHandled={onOrderOpened} />;
     case "customers":
       return <CustomersManagementPage />;
     case "users":
@@ -47,14 +47,21 @@ function renderActiveTab(tab: AdminTab, onTabChange: (tab: AdminTab) => void) {
 
 export default function Admin() {
   const [activeTab, setActiveTab] = React.useState<AdminTab>("dashboard");
+  const [orderToOpen, setOrderToOpen] = React.useState<number | null>(null);
+
+  const openOrderFromNotification = (orderId: number) => {
+    setOrderToOpen(orderId);
+    setActiveTab("orders");
+  };
 
   return (
     <AdminLayout
       activeTab={activeTab}
       defaultTab="dashboard"
       onTabChange={(tab) => setActiveTab(tab as AdminTab)}
+      onOpenOrder={openOrderFromNotification}
     >
-      {renderActiveTab(activeTab, setActiveTab)}
+      {renderActiveTab(activeTab, setActiveTab, orderToOpen, () => setOrderToOpen(null))}
     </AdminLayout>
   );
 }

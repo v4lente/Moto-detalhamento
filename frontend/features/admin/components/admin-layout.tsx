@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/ui/button";
 import { Tabs } from "@/shared/ui/tabs";
 import { AdminNavbar } from "@/features/admin/components/admin-navbar";
+import { AdminNotifications } from "@/features/admin/components/admin-notifications";
 import { getCurrentUser, logout } from "@/shared/lib/api";
 import { Home, LogOut, Loader2 } from "lucide-react";
 
@@ -12,9 +13,10 @@ interface AdminLayoutProps {
   activeTab?: string;
   defaultTab?: string;
   onTabChange?: (tab: string) => void;
+  onOpenOrder?: (orderId: number) => void;
 }
 
-export function AdminLayout({ children, activeTab, defaultTab = "dashboard", onTabChange }: AdminLayoutProps) {
+export function AdminLayout({ children, activeTab, defaultTab = "dashboard", onTabChange, onOpenOrder }: AdminLayoutProps) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [internalTab, setInternalTab] = React.useState(defaultTab);
@@ -64,6 +66,7 @@ export function AdminLayout({ children, activeTab, defaultTab = "dashboard", onT
           </h1>
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">Olá, {user.username}</span>
+            <AdminNotifications enabled={Boolean(user)} onOpenOrder={onOpenOrder || (() => handleTabChange("orders"))} />
             <Link href="/">
               <Button variant="outline" size="sm" data-testid="link-home" className="px-2 sm:px-4">
                 <Home className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Loja</span>

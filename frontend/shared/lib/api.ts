@@ -1,4 +1,4 @@
-import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, AppointmentWithItems, AppointmentFilters, AppointmentSummary, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress } from "@shared/contracts";
+import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, AppointmentWithItems, AppointmentFilters, AppointmentSummary, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress, AdminNotification } from "@shared/contracts";
 import { API_BASE } from "./api-config";
 import { http } from "./http";
 
@@ -355,6 +355,23 @@ export async function fetchOrderDetails(id: number): Promise<Order & { items: Or
     throw new Error("Failed to fetch order");
   }
   return response.json();
+}
+
+export interface AdminNotificationsResponse {
+  notifications: AdminNotification[];
+  unreadCount: number;
+}
+
+export async function fetchAdminNotifications(): Promise<AdminNotificationsResponse> {
+  return http<AdminNotificationsResponse>("/admin/notifications");
+}
+
+export async function markAdminNotificationRead(id: number): Promise<{ ok: boolean; unreadCount: number }> {
+  return http<{ ok: boolean; unreadCount: number }>(`/admin/notifications/${id}/read`, { method: "PATCH", body: JSON.stringify({}) });
+}
+
+export async function markAllAdminNotificationsRead(): Promise<{ ok: boolean; marked: number; unreadCount: number }> {
+  return http<{ ok: boolean; marked: number; unreadCount: number }>("/admin/notifications/read-all", { method: "POST", body: JSON.stringify({}) });
 }
 
 export async function revealOrderCustomerDocument(reference: string): Promise<{

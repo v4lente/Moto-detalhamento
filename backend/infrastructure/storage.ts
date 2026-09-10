@@ -8,16 +8,17 @@ import {
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
   type OrderEvent, type InsertOrderEvent,
+  type AdminNotification, type InsertAdminNotification,
   type SensitiveDataAccessEvent, type InsertSensitiveDataAccessEvent,
   type Review, type InsertReview,
   type ServicePost, type InsertServicePost, type ServicePostWithMedia,
   type ServicePostMedia, type InsertServicePostMedia,
   type Appointment, type InsertAppointment, type AppointmentItem, type InsertAppointmentItem, type AppointmentWithItems,
   type OfferedService, type InsertOfferedService,
-  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, appointmentItems, offeredServices
+  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, adminNotifications, adminNotificationReads, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, appointmentItems, offeredServices
 } from "@shared/schema";
 import { db, withTransaction } from "./db";
-import { eq, desc, sql, asc, and, or, like, count, gte, lte } from "drizzle-orm";
+import { eq, desc, sql, asc, and, or, like, count, gte, lte, isNull } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 export type ProductWithStats = ProductWithImages & {
@@ -97,6 +98,11 @@ export interface IStorage {
   getOrderByStripePaymentIntent(paymentIntentId: string): Promise<Order | undefined>;
   getOrderByIdempotency(customerId: string, idempotencyKey: string): Promise<Order | undefined>;
   getOrderByReference(reference: string): Promise<Order | undefined>;
+  createAdminOrderNotification(order: Order): Promise<AdminNotification | undefined>;
+  listAdminNotifications(userId: string, options?: { unreadOnly?: boolean; limit?: number }): Promise<Array<AdminNotification & { readAt: Date | null }>>;
+  countUnreadAdminNotifications(userId: string): Promise<number>;
+  markAdminNotificationRead(notificationId: number, userId: string): Promise<boolean>;
+  markAllAdminNotificationsRead(userId: string): Promise<number>;
   resolveCheckoutItems(items: Array<{ productId: number; variationId?: number | null; quantity: number }>): Promise<CheckoutResolvedItem[]>;
   createOrderBundle(input: {
     customerId: string;
@@ -577,6 +583,94 @@ export class DatabaseStorage implements IStorage {
   async getOrderByReference(reference: string): Promise<Order | undefined> {
     const result = await db.select().from(orders).where(eq(orders.publicReference, reference)).limit(1);
     return result[0];
+  }
+
+  async createAdminOrderNotification(order: Order): Promise<AdminNotification | undefined> {
+    const type = "new_order";
+    const existing = await db.select().from(adminNotifications)
+      .where(and(eq(adminNotifications.orderId, order.id), eq(adminNotifications.type, type)))
+      .limit(1);
+    if (existing[0]) return existing[0];
+
+    const reference = order.publicReference || `#${order.id}`;
+    const customerName = order.customerName || "Cliente";
+    const total = order.totalDecimal || Number(order.total || 0).toFixed(2);
+    const notification: InsertAdminNotification = {
+      type,
+      orderId: order.id,
+      title: "Novo pedido recebido",
+      message: `${reference} de ${customerName} — R$ ${total}`,
+    };
+    try {
+      const result = await db.insert(adminNotifications).values(notification);
+      const id = this.extractInsertId(result);
+      const created = await db.select().from(adminNotifications)
+        .where(id ? eq(adminNotifications.id, id) : and(eq(adminNotifications.orderId, order.id), eq(adminNotifications.type, type)))
+        .limit(1);
+      return created[0];
+    } catch (error: any) {
+      if (error?.code !== "ER_DUP_ENTRY") throw error;
+      const duplicate = await db.select().from(adminNotifications)
+        .where(and(eq(adminNotifications.orderId, order.id), eq(adminNotifications.type, type)))
+        .limit(1);
+      return duplicate[0];
+    }
+  }
+
+  async listAdminNotifications(userId: string, options: { unreadOnly?: boolean; limit?: number } = {}): Promise<Array<AdminNotification & { readAt: Date | null }>> {
+    const rows = await db.select({
+      id: adminNotifications.id,
+      type: adminNotifications.type,
+      orderId: adminNotifications.orderId,
+      title: adminNotifications.title,
+      message: adminNotifications.message,
+      createdAt: adminNotifications.createdAt,
+      readAt: adminNotificationReads.readAt,
+    }).from(adminNotifications)
+      .leftJoin(adminNotificationReads, and(
+        eq(adminNotificationReads.notificationId, adminNotifications.id),
+        eq(adminNotificationReads.userId, userId),
+      ))
+      .where(options.unreadOnly ? isNull(adminNotificationReads.id) : undefined)
+      .orderBy(desc(adminNotifications.createdAt))
+      .limit(Math.min(100, Math.max(1, options.limit || 30)));
+    return rows;
+  }
+
+  async countUnreadAdminNotifications(userId: string): Promise<number> {
+    const rows = await db.select({ total: count() }).from(adminNotifications)
+      .leftJoin(adminNotificationReads, and(
+        eq(adminNotificationReads.notificationId, adminNotifications.id),
+        eq(adminNotificationReads.userId, userId),
+      ))
+      .where(isNull(adminNotificationReads.id));
+    return Number(rows[0]?.total || 0);
+  }
+
+  async markAdminNotificationRead(notificationId: number, userId: string): Promise<boolean> {
+    const notification = await db.select({ id: adminNotifications.id }).from(adminNotifications)
+      .where(eq(adminNotifications.id, notificationId)).limit(1);
+    if (!notification[0]) return false;
+    const existing = await db.select({ id: adminNotificationReads.id }).from(adminNotificationReads)
+      .where(and(eq(adminNotificationReads.notificationId, notificationId), eq(adminNotificationReads.userId, userId))).limit(1);
+    if (existing[0]) {
+      await db.update(adminNotificationReads).set({ readAt: new Date() }).where(eq(adminNotificationReads.id, existing[0].id));
+    } else {
+      try {
+        await db.insert(adminNotificationReads).values({ notificationId, userId, readAt: new Date() });
+      } catch (error: any) {
+        if (error?.code !== "ER_DUP_ENTRY") throw error;
+        await db.update(adminNotificationReads).set({ readAt: new Date() })
+          .where(and(eq(adminNotificationReads.notificationId, notificationId), eq(adminNotificationReads.userId, userId)));
+      }
+    }
+    return true;
+  }
+
+  async markAllAdminNotificationsRead(userId: string): Promise<number> {
+    const unread = await this.listAdminNotifications(userId, { unreadOnly: true, limit: 100 });
+    for (const notification of unread) await this.markAdminNotificationRead(notification.id, userId);
+    return unread.length;
   }
 
   async resolveCheckoutItems(items: Array<{ productId: number; variationId?: number | null; quantity: number }>): Promise<CheckoutResolvedItem[]> {

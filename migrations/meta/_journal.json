@@ -50,6 +50,13 @@
       "when": 1788912000000,
       "tag": "0006_admin_operational_appointments",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1788998400000,
+      "tag": "0007_admin_notifications",
+      "breakpoints": true
     }
   ]
 }

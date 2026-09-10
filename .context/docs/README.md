@@ -100,3 +100,7 @@ As rotas `GET`, `POST` e `PATCH /api/appointments`, resumo, arquivamento/restaur
 Orçamentos podem ser gerados como `ORC-<id>` ou enviados em PDF, JPEG, PNG e WebP, até 10 MB. Eles ficam fora da pasta pública, possuem nomes internos aleatórios e download autenticado. Produção exige `PRIVATE_UPLOADS_DIR`; desenvolvimento usa `backend/.runtime/appointment-budgets/`. A substituição do documento vigente requer confirmação explícita.
 
 A migração `0006_admin_operational_appointments.sql` define 60 minutos nos serviços existentes, converte datas e preços legados, mapeia `pre_agendamento` para `agendado_nao_iniciado` e cria um item legado por registro. A planilha de referência não é importada.
+
+## Notificações administrativas de pedidos
+
+Novos pedidos geram uma notificação persistente para a equipe administrativa. O painel assina `GET /api/admin/notifications/stream` via Server-Sent Events e exibe imediatamente o alerta na barra superior, com atalho para abrir o pedido. As notificações também são carregadas por `GET /api/admin/notifications`, permitindo recuperar eventos enquanto o painel estava fechado ou sem conexão. Cada item pode ser marcado como lido individualmente ou em lote; a notificação é deduplicada por pedido e tipo.

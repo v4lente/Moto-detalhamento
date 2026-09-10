@@ -262,6 +262,43 @@ export const insertOrderEventSchema = createInsertSchema(orderEvents).omit({ id:
 export type InsertOrderEvent = z.infer<typeof insertOrderEventSchema>;
 export type OrderEvent = typeof orderEvents.$inferSelect;
 
+export const adminNotifications = mysqlTable("admin_notifications", {
+  id: autoIncrementId(),
+  type: varchar("type", { length: 40 }).notNull(),
+  orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull().references(() => orders.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  orderTypeUnique: uniqueIndex("admin_notifications_order_type_unique").on(table.orderId, table.type),
+  createdIdx: index("admin_notifications_created_idx").on(table.createdAt),
+}));
+
+export const insertAdminNotificationSchema = createInsertSchema(adminNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAdminNotification = z.infer<typeof insertAdminNotificationSchema>;
+export type AdminNotification = typeof adminNotifications.$inferSelect;
+
+export const adminNotificationReads = mysqlTable("admin_notification_reads", {
+  id: autoIncrementId(),
+  notificationId: bigint("notification_id", { mode: "number", unsigned: true }).notNull().references(() => adminNotifications.id, { onDelete: "cascade" }),
+  userId: varchar("user_id", { length: 36 }).notNull().references(() => users.id, { onDelete: "cascade" }),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+}, (table) => ({
+  notificationUserUnique: uniqueIndex("admin_notification_reads_notification_user_unique").on(table.notificationId, table.userId),
+  userReadIdx: index("admin_notification_reads_user_read_idx").on(table.userId, table.readAt),
+}));
+
+export const insertAdminNotificationReadSchema = createInsertSchema(adminNotificationReads).omit({
+  id: true,
+});
+
+export type InsertAdminNotificationRead = z.infer<typeof insertAdminNotificationReadSchema>;
+export type AdminNotificationRead = typeof adminNotificationReads.$inferSelect;
+
 export const sensitiveDataAccessEvents = mysqlTable("sensitive_data_access_events", {
   id: autoIncrementId(),
   userId: varchar("user_id", { length: 36 }).notNull(),

@@ -199,6 +199,16 @@ export interface OrderItem {
   variationLabel?: string | null;
 }
 
+export interface AdminNotification {
+  id: number;
+  type: "new_order" | string;
+  orderId: number;
+  title: string;
+  message: string;
+  createdAt: Date | string;
+  readAt: Date | string | null;
+}
+
 export interface InsertOrderItem {
   orderId: number;
   productId?: number | null;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { TabsContent } from "@/shared/ui/tabs";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
@@ -14,7 +14,12 @@ import {
 import { Input } from "@/shared/ui/input";
 import { formatPhoneBR } from "@/shared/lib/formatters";
 
-export function OrdersManagementPage() {
+interface OrdersManagementPageProps {
+  initialOrderId?: number | null;
+  onInitialOrderHandled?: () => void;
+}
+
+export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHandled }: OrdersManagementPageProps) {
   const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; customer?: CustomerData | null }) | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
@@ -39,6 +44,12 @@ export function OrdersManagementPage() {
       // Error handled by mutation
     }
   };
+
+  useEffect(() => {
+    if (!initialOrderId) return;
+    void handleViewOrder(initialOrderId);
+    onInitialOrderHandled?.();
+  }, [initialOrderId, onInitialOrderHandled]);
 
   const handleRevealDocument = async () => {
     if (!selectedOrder) return;

@@ -5,6 +5,7 @@ import { ApiError } from "../api/lib/api-error";
 import { buildCheckoutPreview } from "./order-pricing.service";
 import { transitionOrder } from "./order-status.service";
 import { constructWebhookEvent, getCheckoutSession, isStripeConfigured } from "../infrastructure/payments/stripe.service";
+import { publishAdminNotification } from "./admin-notification.service";
 
 export async function createPersistedOrder(input: {
   customerId: string;
@@ -34,6 +35,15 @@ export async function createPersistedOrder(input: {
     idempotencyKey: input.idempotencyKey,
     paymentMethod,
   });
+  if (!order.replayed) {
+    try {
+      const notification = await storage.createAdminOrderNotification(order.order);
+      if (notification) publishAdminNotification(notification);
+    } catch (error) {
+      // A falha na central não deve desfazer um pedido já persistido.
+      console.error("Admin order notification failed", error);
+    }
+  }
   return { ...order, preview };
 }
 
