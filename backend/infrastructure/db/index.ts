@@ -47,6 +47,7 @@ const pool = process.env.DATABASE_URL
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
+      timezone: "Z",
       // Enable SSL for cloud MySQL providers
       ...(isCloudMySQL && {
         ssl: {

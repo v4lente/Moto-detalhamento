@@ -18,6 +18,17 @@ function isFormDataBody(body: BodyInit | null | undefined): body is FormData {
   return typeof FormData !== "undefined" && body instanceof FormData;
 }
 
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly payload: unknown,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 export async function http<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
   const usesCsrf = mutating(init.method) && !path.includes("/webhooks/");
@@ -38,7 +49,11 @@ export async function http<T>(path: string, init: RequestInit = {}, retry = true
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     const error = body?.error;
-    throw new Error(typeof error === "string" ? error : error?.message || body?.message || "Falha na requisição");
+    throw new HttpError(
+      typeof error === "string" ? error : error?.message || body?.message || "Falha na requisição",
+      response.status,
+      body,
+    );
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;

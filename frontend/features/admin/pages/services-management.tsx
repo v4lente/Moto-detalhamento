@@ -51,6 +51,7 @@ export function ServicesManagementPage() {
                   name: formData.get("name") as string,
                   details: formData.get("details") as string,
                   approximatePrice: formData.get("approximatePrice") ? parseFloat(formData.get("approximatePrice") as string) : null,
+                  estimatedDurationMinutes: parseInt(formData.get("estimatedDurationMinutes") as string, 10),
                   exampleWorkId: exampleWorkValue && exampleWorkValue !== "none" ? parseInt(exampleWorkValue) : null,
                   isActive: formData.get("isActive") === "on",
                 };
@@ -115,6 +116,22 @@ export function ServicesManagementPage() {
                   data-testid="input-offered-service-price"
                 />
                 <p className="text-xs text-muted-foreground">O valor exato dependerá do estado atual da máquina</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estimatedDurationMinutes">Duração Estimada (minutos) *</Label>
+                <Input
+                  id="estimatedDurationMinutes"
+                  name="estimatedDurationMinutes"
+                  type="number"
+                  step="15"
+                  min="15"
+                  max="1440"
+                  defaultValue={editingOfferedService?.estimatedDurationMinutes || 60}
+                  required
+                  className="bg-background"
+                  data-testid="input-offered-service-duration"
+                />
               </div>
 
               <div className="space-y-2">
@@ -200,6 +217,9 @@ export function ServicesManagementPage() {
                           A partir de R$ {service.approximatePrice.toFixed(2)}
                         </span>
                       )}
+                      <span className="text-muted-foreground">
+                        {service.estimatedDurationMinutes} min
+                      </span>
                       {service.exampleWorkId && (
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <LinkIcon className="h-3 w-3" />

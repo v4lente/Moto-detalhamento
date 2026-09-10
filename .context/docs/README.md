@@ -15,6 +15,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Checkout por WhatsApp](./whatsapp-checkout.md)
 - [Checkout autenticado e pedidos persistentes](./checkout-auth-orders.md)
 - [Dados fiscais no pedido](./customer-fiscal-order-modal.md)
+- [Agenda operacional administrativa](#agenda-operacional-administrativa)
 - [Adendo WFOY — armazenamento atual do documento](../../_reversa_sdd/addenda/bug-BUG-20260901-WFOY-v001.md)
 - [Security & Compliance Notes](./security.md)
 - [Tooling & Productivity Guide](./tooling.md)
@@ -26,14 +27,13 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 ### Frontend (`frontend/`)
 - `frontend/app/` — Bootstrap da aplicação (App.tsx, main.tsx)
 - `frontend/features/` — Features modulares por domínio
-  - `admin/` — Painel administrativo
+  - `admin/` — Painel administrativo, incluindo a Agenda operacional
   - `auth/` — Autenticação
   - `cart/` — Carrinho de compras
   - `checkout/` — Fluxo de checkout
   - `products/` — Catálogo de produtos
   - `account/` — Área do cliente
   - `home/` — Página inicial
-  - `scheduling/` — Agendamento
 - `frontend/shared/` — UI, hooks, lib compartilhados
 - `frontend/pages/` — Páginas genéricas (404)
 
@@ -86,3 +86,17 @@ Filtros, ordenação e paginação rodam no frontend após carregar a lista comp
 | Tooling & Productivity Guide | `tooling.md` | CLI scripts, IDE configs, automation workflows |
 | Boundary Rules | `boundary-rules.md` | Module boundaries, import rules, validation commands |
 | Release Guide | `release-guide.md` | Deploy checklist, rollback plan, breaking changes |
+
+## Agenda operacional administrativa
+
+A agenda de serviços existe somente no painel administrativo, na aba **Agenda**; `/agendar`, o formulário público e a consulta por cliente foram removidos. O Dashboard mantém apenas os contadores operacionais e os próximos cinco agendamentos.
+
+`appointments` armazena contato, moto, início, fim previsto, término real, status, total decimal, arquivamento e os metadados do orçamento vigente. `appointment_items` preserva os snapshots de nome, descrição, duração e valor de cada serviço. O backend soma duração e valores, preenche o término real ao concluir e detecta sobreposição contra todos os registros não cancelados e não arquivados. Um conflito retorna `409/SCHEDULE_CONFLICT` e pode ser confirmado com `allowConflict`.
+
+A interface permite iniciar um agendamento pelo clique em qualquer dia do calendário. Cada agendamento aceita múltiplos serviços por meio de um editor modal: o administrador pode buscar um serviço ativo do catálogo, preservando seu snapshot, ou cadastrar um serviço avulso com nome, descrição, duração e valor válidos somente para aquele agendamento. A tela principal exibe os itens em uma lista compacta, com edição, remoção e bloqueio de duplicidade para serviços do catálogo. O contato avulso usa máscara e validação de telefone brasileiro, validação de e-mail e feedback visual junto aos campos inválidos.
+
+As rotas `GET`, `POST` e `PATCH /api/appointments`, resumo, arquivamento/restauração e orçamento exigem `requireAdmin`. Datas persistem em UTC e são exibidas em `America/Sao_Paulo`. Valores de agenda trafegam como strings decimais.
+
+Orçamentos podem ser gerados como `ORC-<id>` ou enviados em PDF, JPEG, PNG e WebP, até 10 MB. Eles ficam fora da pasta pública, possuem nomes internos aleatórios e download autenticado. Produção exige `PRIVATE_UPLOADS_DIR`; desenvolvimento usa `backend/.runtime/appointment-budgets/`. A substituição do documento vigente requer confirmação explícita.
+
+A migração `0006_admin_operational_appointments.sql` define 60 minutos nos serviços existentes, converte datas e preços legados, mapeia `pre_agendamento` para `agendado_nao_iniciado` e cria um item legado por registro. A planilha de referência não é importada.

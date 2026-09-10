@@ -1,4 +1,4 @@
-import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, Appointment, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress } from "@shared/contracts";
+import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, AppointmentWithItems, AppointmentFilters, AppointmentSummary, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress } from "@shared/contracts";
 import { API_BASE } from "./api-config";
 import { http } from "./http";
 
@@ -609,75 +609,68 @@ export async function deleteServicePost(id: number): Promise<void> {
 }
 
 // Appointments
-export async function fetchAppointments(): Promise<Appointment[]> {
-  const response = await fetch(`${API_BASE}/appointments`, {
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch appointments");
-  }
-  return response.json();
+export async function fetchAppointments(filters: AppointmentFilters = {}): Promise<AppointmentWithItems[]> {
+  const search = new URLSearchParams();
+  if (filters.month) search.set("month", filters.month);
+  if (filters.status && filters.status !== "all") search.set("status", filters.status);
+  if (filters.query) search.set("query", filters.query);
+  if (filters.archived) search.set("archived", filters.archived);
+  const query = search.toString();
+  return http<AppointmentWithItems[]>(`/appointments${query ? `?${query}` : ""}`);
 }
 
-export async function fetchAppointment(id: number): Promise<Appointment> {
-  const response = await fetch(`${API_BASE}/appointments/${id}`, {
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch appointment");
-  }
-  return response.json();
+export async function fetchAppointment(id: number): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>(`/appointments/${id}`);
 }
 
-export async function createAppointment(data: CreateAppointment): Promise<{ appointment: Appointment; whatsappNumber: string; message: string }> {
-  return http("/appointments", { method: "POST", body: JSON.stringify(data) });
-  const response = await fetch(`${API_BASE}/appointments`, {
+export async function fetchAppointmentSummary(): Promise<AppointmentSummary> {
+  return http<AppointmentSummary>("/appointments/summary");
+}
+
+export async function createAppointment(data: CreateAppointment): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>("/appointments", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateAppointment(id: number, data: UpdateAppointment): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>(`/appointments/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export async function archiveAppointment(id: number): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>(`/appointments/${id}/archive`, { method: "POST" });
+}
+
+export async function restoreAppointment(id: number): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>(`/appointments/${id}/restore`, { method: "POST" });
+}
+
+export async function uploadAppointmentBudget(id: number, file: File, replace = false): Promise<AppointmentWithItems> {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("replace", String(replace));
+  return http<AppointmentWithItems>(`/appointments/${id}/budget/upload`, { method: "POST", body });
+}
+
+export async function generateAppointmentBudget(id: number, replace = false): Promise<AppointmentWithItems> {
+  return http<AppointmentWithItems>(`/appointments/${id}/budget/generate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
+    body: JSON.stringify({ replace }),
   });
-  if (!response.ok) {
-    const message = await extractErrorMessage(response, "Falha ao criar agendamento");
-    throw new Error(message);
-  }
-  return response.json();
 }
 
-export async function updateAppointment(id: number, data: UpdateAppointment): Promise<Appointment> {
-  return http<Appointment>(`/appointments/${id}`, { method: "PATCH", body: JSON.stringify(data) });
-  const response = await fetch(`${API_BASE}/appointments/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update appointment");
-  }
-  return response.json();
+export async function removeAppointmentBudget(id: number): Promise<void> {
+  return http<void>(`/appointments/${id}/budget`, { method: "DELETE" });
 }
 
-export async function deleteAppointment(id: number): Promise<void> {
-  await http<void>(`/appointments/${id}`, { method: "DELETE" });
-  return;
-  const response = await fetch(`${API_BASE}/appointments/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete appointment");
-  }
-}
-
-export async function fetchCustomerAppointments(): Promise<Appointment[]> {
-  const response = await fetch(`${API_BASE}/customer/appointments`, {
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch appointments");
-  }
-  return response.json();
+export async function downloadAppointmentBudget(id: number, fileName: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/appointments/${id}/budget`, { credentials: "include" });
+  if (!response.ok) throw new Error(await extractErrorMessage(response, "Falha ao baixar orçamento"));
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 // Offered Services

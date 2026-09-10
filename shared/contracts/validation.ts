@@ -213,28 +213,69 @@ export const orderStatusTransitionSchema = z.object({
 export const idempotencyKeySchema = z.string().trim().min(16).max(200);
 
 // ─── Appointment ────────────────────────────────────────────────────────────
-export const createAppointmentSchema = z.object({
-  vehicleInfo: z.string().min(2, "Informe o veículo"),
-  serviceDescription: z.string().min(5, "Descreva o serviço desejado"),
-  preferredDate: z.string().or(z.date()),
-  customerName: z.string().min(2).optional(),
-  customerPhone: z.string().min(10).optional(),
-  customerEmail: z.string().email().optional().or(z.literal("")),
+export const appointmentStatusSchema = z.enum([
+  "agendado_nao_iniciado",
+  "em_andamento",
+  "concluido",
+  "cancelado",
+]);
+
+export const appointmentItemInputSchema = z.object({
+  serviceId: z.number().int().positive().optional().nullable(),
+  serviceName: z.string().trim().min(2).max(200).optional(),
+  description: z.string().trim().min(2).max(1000),
+  durationMinutes: z.number().int().min(15).max(1440),
+  agreedAmount: z.string().regex(/^\d{1,10}(\.\d{1,2})?$/).optional().nullable(),
+}).superRefine((item, context) => {
+  if (!item.serviceId && !item.serviceName) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["serviceName"], message: "Informe o serviço" });
+  }
 });
 
+const appointmentCustomerFields = {
+  customerId: z.string().uuid().optional().nullable(),
+  customerName: z.string().trim().min(2).max(150).optional(),
+  customerPhone: z.string().trim().max(20).refine((value) => {
+    if (!value) return true;
+    const digits = value.replace(/\D/g, "");
+    return /^[\d\s()+-]+$/.test(value) && (digits.length === 10 || digits.length === 11);
+  }, "Informe um telefone brasileiro válido com DDD").optional(),
+  customerEmail: z.string().trim().email().optional().nullable().or(z.literal("")),
+};
+
+function requireWalkInCustomer(
+  data: { customerId?: string | null; customerName?: string; customerPhone?: string },
+  context: z.RefinementCtx,
+) {
+  if (data.customerId) return;
+  if (!data.customerName) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["customerName"], message: "Informe o proprietário" });
+  }
+  if (!data.customerPhone) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["customerPhone"], message: "Informe o telefone" });
+  }
+}
+
+export const createAppointmentSchema = z.object({
+  ...appointmentCustomerFields,
+  vehicleInfo: z.string().trim().min(2).max(200),
+  startAt: z.string().datetime({ offset: true }),
+  status: appointmentStatusSchema.optional().default("agendado_nao_iniciado"),
+  completedAt: z.string().datetime({ offset: true }).optional().nullable(),
+  adminNotes: z.string().trim().max(5000).optional().nullable(),
+  items: z.array(appointmentItemInputSchema).min(1),
+  allowConflict: z.boolean().optional().default(false),
+}).superRefine(requireWalkInCustomer);
+
 export const updateAppointmentSchema = z.object({
-  status: z
-    .enum([
-      "pre_agendamento",
-      "agendado_nao_iniciado",
-      "em_andamento",
-      "concluido",
-      "cancelado",
-    ])
-    .optional(),
-  confirmedDate: z.string().or(z.date()).optional().nullable(),
-  adminNotes: z.string().optional().nullable(),
-  estimatedPrice: z.number().optional().nullable(),
+  ...appointmentCustomerFields,
+  vehicleInfo: z.string().trim().min(2).max(200).optional(),
+  startAt: z.string().datetime({ offset: true }).optional(),
+  status: appointmentStatusSchema.optional(),
+  completedAt: z.string().datetime({ offset: true }).optional().nullable(),
+  adminNotes: z.string().trim().max(5000).optional().nullable(),
+  items: z.array(appointmentItemInputSchema).min(1).optional(),
+  allowConflict: z.boolean().optional().default(false),
 });
 
 // ─── Review ─────────────────────────────────────────────────────────────────
@@ -249,6 +290,7 @@ export const insertOfferedServiceSchema = z.object({
   name: z.string(),
   details: z.string(),
   approximatePrice: z.number().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(15).max(1440),
   exampleWorkId: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
 });
@@ -257,6 +299,7 @@ export const updateOfferedServiceSchema = z.object({
   name: z.string().min(2).optional(),
   details: z.string().min(5).optional(),
   approximatePrice: z.number().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(15).max(1440).optional(),
   exampleWorkId: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
 });

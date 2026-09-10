@@ -10,7 +10,6 @@ import Admin from "@/features/admin";
 import Conta from "@/features/account/pages/conta";
 import Produtos from "@/features/products/pages/produtos";
 import Produto from "@/features/products/pages/produto";
-import Agendar from "@/features/scheduling/pages/agendar";
 import CheckoutSuccess from "@/features/checkout/pages/checkout-success";
 import CheckoutCancel from "@/features/checkout/pages/checkout-cancel";
 import NotFound from "@/pages/not-found";
@@ -24,7 +23,6 @@ function Router() {
       <Route path="/conta" component={Conta} />
       <Route path="/produtos" component={Produtos} />
       <Route path="/produto/:id" component={Produto} />
-      <Route path="/agendar" component={Agendar} />
       <Route path="/pedido/sucesso" component={CheckoutSuccess} />
       <Route path="/pedido/cancelado" component={CheckoutCancel} />
       <Route component={NotFound} />

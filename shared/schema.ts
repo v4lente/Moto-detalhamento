@@ -2,7 +2,12 @@ import { sql } from "drizzle-orm";
 import { mysqlTable, text, varchar, float, decimal, timestamp, int, boolean, bigint, index, uniqueIndex } from "drizzle-orm/mysql-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { adminCustomerCreateSchema, adminCustomerUpdateSchema } from "./contracts/validation";
+import {
+  adminCustomerCreateSchema,
+  adminCustomerUpdateSchema,
+  createAppointmentSchema as appointmentCreateContractSchema,
+  updateAppointmentSchema as appointmentUpdateContractSchema,
+} from "./contracts/validation";
 
 // Helper para criar ID auto-incremento compatível com MariaDB
 // Usa bigint unsigned com autoincrement em vez de serial (que gera SQL inválido no MariaDB)
@@ -416,6 +421,7 @@ export const offeredServices = mysqlTable("offered_services", {
   name: text("name").notNull(),
   details: text("details").notNull(),
   approximatePrice: float("approximate_price"),
+  estimatedDurationMinutes: int("estimated_duration_minutes").notNull().$default(() => 60),
   exampleWorkId: bigint("example_work_id", { mode: "number", unsigned: true }).references(() => servicePosts.id),
   isActive: boolean("is_active").$default(() => true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -424,12 +430,15 @@ export const offeredServices = mysqlTable("offered_services", {
 export const insertOfferedServiceSchema = createInsertSchema(offeredServices).omit({
   id: true,
   createdAt: true,
+}).extend({
+  estimatedDurationMinutes: z.number().int().min(15).max(1440),
 });
 
 export const updateOfferedServiceSchema = z.object({
   name: z.string().min(2).optional(),
   details: z.string().min(5).optional(),
   approximatePrice: z.number().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(15).max(1440).optional(),
   exampleWorkId: z.number().nullable().optional(),
   isActive: z.boolean().optional(),
 });
@@ -446,15 +455,46 @@ export const appointments = mysqlTable("appointments", {
   customerPhone: text("customer_phone").notNull(),
   customerEmail: text("customer_email"),
   vehicleInfo: text("vehicle_info").notNull(),
-  serviceDescription: text("service_description").notNull(),
-  preferredDate: timestamp("preferred_date").notNull(),
+  serviceDescription: text("service_description"),
+  preferredDate: timestamp("preferred_date"),
   confirmedDate: timestamp("confirmed_date"),
-  status: text("status").notNull().$default(() => "pre_agendamento"),
+  startAt: timestamp("start_at").notNull(),
+  plannedEndAt: timestamp("planned_end_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  status: varchar("status", { length: 32 }).notNull().$default(() => "agendado_nao_iniciado"),
   adminNotes: text("admin_notes"),
   estimatedPrice: float("estimated_price"),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  archivedAt: timestamp("archived_at"),
+  budgetStorageKey: varchar("budget_storage_key", { length: 255 }),
+  budgetOriginalName: varchar("budget_original_name", { length: 255 }),
+  budgetMimeType: varchar("budget_mime_type", { length: 100 }),
+  budgetSource: varchar("budget_source", { length: 16 }),
+  budgetUpdatedAt: timestamp("budget_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  startStatusIdx: index("appointments_start_status_idx").on(table.startAt, table.status),
+  archivedIdx: index("appointments_archived_idx").on(table.archivedAt),
+}));
+
+export const appointmentItems = mysqlTable("appointment_items", {
+  id: autoIncrementId(),
+  appointmentId: bigint("appointment_id", { mode: "number", unsigned: true })
+    .notNull()
+    .references(() => appointments.id, { onDelete: "cascade" }),
+  serviceId: bigint("service_id", { mode: "number", unsigned: true })
+    .references(() => offeredServices.id, { onDelete: "set null" }),
+  serviceName: text("service_name").notNull(),
+  description: text("description").notNull(),
+  durationMinutes: int("duration_minutes").notNull(),
+  agreedAmount: decimal("agreed_amount", { precision: 12, scale: 2 }),
+  sortOrder: int("sort_order").notNull().$default(() => 0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  appointmentIdx: index("appointment_items_appointment_idx").on(table.appointmentId),
+  serviceIdx: index("appointment_items_service_idx").on(table.serviceId),
+}));
 
 export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   id: true,
@@ -462,23 +502,18 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   updatedAt: true,
 });
 
-export const createAppointmentSchema = z.object({
-  vehicleInfo: z.string().min(2, "Informe o veículo"),
-  serviceDescription: z.string().min(5, "Descreva o serviço desejado"),
-  preferredDate: z.string().or(z.date()),
-  customerName: z.string().min(2).optional(),
-  customerPhone: z.string().min(10).optional(),
-  customerEmail: z.string().email().optional().or(z.literal("")),
+export const insertAppointmentItemSchema = createInsertSchema(appointmentItems).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const updateAppointmentSchema = z.object({
-  status: z.enum(["pre_agendamento", "agendado_nao_iniciado", "em_andamento", "concluido", "cancelado"]).optional(),
-  confirmedDate: z.string().or(z.date()).optional().nullable(),
-  adminNotes: z.string().optional().nullable(),
-  estimatedPrice: z.number().optional().nullable(),
-});
+export const createAppointmentSchema = appointmentCreateContractSchema;
+export const updateAppointmentSchema = appointmentUpdateContractSchema;
 
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type Appointment = typeof appointments.$inferSelect;
 export type CreateAppointment = z.infer<typeof createAppointmentSchema>;
 export type UpdateAppointment = z.infer<typeof updateAppointmentSchema>;
+export type AppointmentItem = typeof appointmentItems.$inferSelect;
+export type InsertAppointmentItem = z.infer<typeof insertAppointmentItemSchema>;
+export type AppointmentWithItems = Appointment & { items: AppointmentItem[] };

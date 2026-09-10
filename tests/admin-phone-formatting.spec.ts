@@ -14,13 +14,13 @@ test("reprodução: detalhes de pedidos formatam o telefone", () => {
   expect(orders).toContain("formatPhoneBR(selectedOrder.customerPhone)");
 });
 
-test("reprodução: cards e detalhe de agendamento formatam o telefone", () => {
+test("reprodução: cards e detalhe da Agenda formatam o telefone", () => {
   expect(appointments).toContain("formatPhoneBR(appointment.customerPhone)");
-  expect(dashboard).toContain("formatPhoneBR(editingAppointment.customerPhone)");
+  expect(dashboard).not.toContain("editingAppointment");
 });
 
 test("regressão: máscara visual preserva integração WhatsApp normalizada", () => {
   expect(formatPhoneBR("11988887777")).toBe("(11) 98888-7777");
   expect(formatPhoneBR("(11) 98888-7777")).toBe("(11) 98888-7777");
-  expect(appointments).toContain("replace(/\\D/g, '')");
+  expect(appointments).toContain('replace(/\\D/g, "")');
 });

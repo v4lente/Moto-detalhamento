@@ -7,11 +7,13 @@ import {
   fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer,
   fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   fetchServicePosts, createServicePost, updateServicePost, deleteServicePost,
-  fetchAppointments, updateAppointment, deleteAppointment,
+  fetchAppointments, fetchAppointmentSummary, createAppointment, updateAppointment,
+  archiveAppointment, restoreAppointment, uploadAppointmentBudget,
+  generateAppointmentBudget, removeAppointmentBudget,
   fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService,
   fetchProductVariations, fetchProductVariationCounts, createProductVariation, updateProductVariation, deleteProductVariation
 } from "@/shared/lib/api";
-import type { ProductWithImages, ProductVariation, UpdateSiteSettings, ServicePostWithMedia } from "@shared/contracts";
+import type { AppointmentFilters, ProductWithImages, ProductVariation, UpdateSiteSettings, ServicePostWithMedia } from "@shared/contracts";
 
 // User query
 export function useUser() {
@@ -332,10 +334,17 @@ export function useServicePostMutations() {
 }
 
 // Appointments
-export function useAppointments() {
+export function useAppointments(filters: AppointmentFilters = {}) {
   return useQuery({
-    queryKey: ["appointments"],
-    queryFn: fetchAppointments,
+    queryKey: ["appointments", filters],
+    queryFn: () => fetchAppointments(filters),
+  });
+}
+
+export function useAppointmentSummary() {
+  return useQuery({
+    queryKey: ["appointmentSummary"],
+    queryFn: fetchAppointmentSummary,
   });
 }
 
@@ -343,25 +352,67 @@ export function useAppointmentMutations() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const refreshAppointments = () => {
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["appointmentSummary"] });
+  };
+
+  const createAppointmentMutation = useMutation({
+    mutationFn: createAppointment,
+    onSuccess: () => {
+      refreshAppointments();
+      toast({ title: "Agendamento criado!" });
+    },
+  });
+
   const updateAppointmentMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Parameters<typeof updateAppointment>[1] }) => updateAppointment(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      refreshAppointments();
       toast({ title: "Agendamento atualizado!" });
     },
-    onError: () => toast({ title: "Erro ao atualizar agendamento", variant: "destructive" }),
   });
 
-  const deleteAppointmentMutation = useMutation({
-    mutationFn: deleteAppointment,
+  const archiveAppointmentMutation = useMutation({
+    mutationFn: archiveAppointment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast({ title: "Agendamento removido!" });
+      refreshAppointments();
+      toast({ title: "Agendamento arquivado!" });
     },
-    onError: () => toast({ title: "Erro ao remover agendamento", variant: "destructive" }),
   });
 
-  return { updateAppointmentMutation, deleteAppointmentMutation };
+  const restoreAppointmentMutation = useMutation({
+    mutationFn: restoreAppointment,
+    onSuccess: () => {
+      refreshAppointments();
+      toast({ title: "Agendamento restaurado!" });
+    },
+  });
+
+  const uploadBudgetMutation = useMutation({
+    mutationFn: ({ id, file, replace = false }: { id: number; file: File; replace?: boolean }) => uploadAppointmentBudget(id, file, replace),
+    onSuccess: refreshAppointments,
+  });
+
+  const generateBudgetMutation = useMutation({
+    mutationFn: ({ id, replace = false }: { id: number; replace?: boolean }) => generateAppointmentBudget(id, replace),
+    onSuccess: refreshAppointments,
+  });
+
+  const removeBudgetMutation = useMutation({
+    mutationFn: removeAppointmentBudget,
+    onSuccess: refreshAppointments,
+  });
+
+  return {
+    createAppointmentMutation,
+    updateAppointmentMutation,
+    archiveAppointmentMutation,
+    restoreAppointmentMutation,
+    uploadBudgetMutation,
+    generateBudgetMutation,
+    removeBudgetMutation,
+  };
 }
 
 // Offered Services

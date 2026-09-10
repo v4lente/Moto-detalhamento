@@ -21,7 +21,7 @@ type AdminTab =
   | "appointments"
   | "settings";
 
-function renderActiveTab(tab: AdminTab) {
+function renderActiveTab(tab: AdminTab, onTabChange: (tab: AdminTab) => void) {
   switch (tab) {
     case "products":
       return <ProductsManagementPage />;
@@ -41,7 +41,7 @@ function renderActiveTab(tab: AdminTab) {
       return <SettingsPage />;
     case "dashboard":
     default:
-      return <DashboardPage />;
+      return <DashboardPage onOpenAgenda={() => onTabChange("appointments")} />;
   }
 }
 
@@ -54,7 +54,7 @@ export default function Admin() {
       defaultTab="dashboard"
       onTabChange={(tab) => setActiveTab(tab as AdminTab)}
     >
-      {renderActiveTab(activeTab)}
+      {renderActiveTab(activeTab, setActiveTab)}
     </AdminLayout>
   );
 }

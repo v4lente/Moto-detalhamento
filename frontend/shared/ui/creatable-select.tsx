@@ -13,6 +13,7 @@ import {
 } from "@/shared/ui/popover"
 
 interface CreatableSelectProps {
+  id?: string
   value?: string
   onChange?: (value: string) => void
   options: string[]
@@ -21,9 +22,12 @@ interface CreatableSelectProps {
   className?: string
   disabled?: boolean
   "data-testid"?: string
+  "aria-invalid"?: boolean
+  "aria-describedby"?: string
 }
 
 export function CreatableSelect({
+  id,
   value,
   onChange,
   options,
@@ -32,6 +36,8 @@ export function CreatableSelect({
   className,
   disabled,
   "data-testid": dataTestId,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: CreatableSelectProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
@@ -64,9 +70,12 @@ export function CreatableSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           disabled={disabled}
           className={cn(
             "w-full justify-between font-normal border-input hover:bg-accent/50",

@@ -189,11 +189,6 @@ export default function Home() {
                   Ver Produtos
                 </Button>
               </Link>
-              <Link href="/agendar" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 font-bold uppercase tracking-wider text-sm sm:text-base px-4 sm:px-8" data-testid="button-agendar">
-                  Agendar Serviço
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -338,13 +333,6 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="text-center mt-8">
-              <Link href="/agendar">
-                <Button className="bg-primary text-black hover:bg-primary/90 font-bold uppercase tracking-wider">
-                  Agendar Serviço
-                </Button>
-              </Link>
-            </div>
           </div>
         </section>
       )}

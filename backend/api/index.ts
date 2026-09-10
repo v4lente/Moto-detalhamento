@@ -7,6 +7,7 @@ import fs from "fs";
 import { ensureUploadsWriteDir, resolveUploadsReadDirs } from "./lib/uploads-dir";
 import { validateDocumentKeyConfig } from "../services/customer-document.service";
 import { redactForLog, requestCorrelationId } from "./lib/request-logging";
+import { ensureAppointmentBudgetsDir } from "./lib/private-uploads-dir";
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,6 +62,7 @@ const trackedEnvVars = [
   "DATABASE_URL",
   "BASE_URL",
   "UPLOADS_DIR",
+  "PRIVATE_UPLOADS_DIR",
   "STRIPE_SECRET_KEY",
   "STRIPE_PUBLISHABLE_KEY",
   "STRIPE_WEBHOOK_SECRET",
@@ -73,8 +75,15 @@ function loadEnvironmentFallbackFromDotEnv() {
   const envPath = path.resolve(process.cwd(), ".env");
   const dotEnvExists = fs.existsSync(envPath);
   const missingUploadsDirWithDotEnv = !process.env.UPLOADS_DIR && dotEnvExists;
+  const missingPrivateUploadsDirInProductionWithDotEnv =
+    process.env.NODE_ENV === "production" && !process.env.PRIVATE_UPLOADS_DIR && dotEnvExists;
 
-  if (!missingDatabaseUrl && !missingSessionSecretInProduction && !missingUploadsDirWithDotEnv) {
+  if (
+    !missingDatabaseUrl
+    && !missingSessionSecretInProduction
+    && !missingUploadsDirWithDotEnv
+    && !missingPrivateUploadsDirInProductionWithDotEnv
+  ) {
     return;
   }
 
@@ -207,6 +216,7 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === "production") throw error;
   }
   configureUploadedImagesStatic();
+  ensureAppointmentBudgetsDir();
   logStartupEnvironmentDiagnostics();
 
   // Run migrations with error handling - don't crash the server if migrations fail

@@ -43,6 +43,13 @@
       "when": 1788217200001,
       "tag": "0005_customer_document_plaintext",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1788912000000,
+      "tag": "0006_admin_operational_appointments",
+      "breakpoints": true
     }
   ]
 }

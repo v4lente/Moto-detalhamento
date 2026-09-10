@@ -12,11 +12,11 @@ import {
   type Review, type InsertReview,
   type ServicePost, type InsertServicePost, type ServicePostWithMedia,
   type ServicePostMedia, type InsertServicePostMedia,
-  type Appointment, type InsertAppointment,
+  type Appointment, type InsertAppointment, type AppointmentItem, type InsertAppointmentItem, type AppointmentWithItems,
   type OfferedService, type InsertOfferedService,
-  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, offeredServices
+  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, appointmentItems, offeredServices
 } from "@shared/schema";
-import { db } from "./db";
+import { db, withTransaction } from "./db";
 import { eq, desc, sql, asc, and, or, like, count, gte, lte } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
@@ -134,10 +134,20 @@ export interface IStorage {
 
   getAllAppointments(): Promise<Appointment[]>;
   getAppointment(id: number): Promise<Appointment | undefined>;
-  getAppointmentsByCustomer(customerId: string): Promise<Appointment[]>;
+  getAllAppointmentsWithItems(): Promise<AppointmentWithItems[]>;
+  getAppointmentWithItems(id: number): Promise<AppointmentWithItems | undefined>;
+  getAppointmentItems(appointmentId: number): Promise<AppointmentItem[]>;
   createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  createAppointmentBundle(
+    appointment: InsertAppointment,
+    items: Array<Omit<InsertAppointmentItem, "appointmentId">>,
+  ): Promise<AppointmentWithItems>;
   updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined>;
-  deleteAppointment(id: number): Promise<boolean>;
+  updateAppointmentBundle(
+    id: number,
+    appointment: Partial<InsertAppointment>,
+    items?: Array<Omit<InsertAppointmentItem, "appointmentId">>,
+  ): Promise<AppointmentWithItems | undefined>;
 
   getAllOfferedServices(): Promise<OfferedService[]>;
   getActiveOfferedServices(): Promise<OfferedService[]>;
@@ -875,8 +885,39 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAppointmentsByCustomer(customerId: string): Promise<Appointment[]> {
-    return await db.select().from(appointments).where(eq(appointments.customerId, customerId)).orderBy(desc(appointments.createdAt));
+  async getAppointmentItems(appointmentId: number): Promise<AppointmentItem[]> {
+    return await db
+      .select()
+      .from(appointmentItems)
+      .where(eq(appointmentItems.appointmentId, appointmentId))
+      .orderBy(asc(appointmentItems.sortOrder), asc(appointmentItems.id));
+  }
+
+  async getAllAppointmentsWithItems(): Promise<AppointmentWithItems[]> {
+    const appointmentRows = await db.select().from(appointments).orderBy(desc(appointments.startAt));
+    if (appointmentRows.length === 0) return [];
+
+    const itemRows = await db
+      .select()
+      .from(appointmentItems)
+      .orderBy(asc(appointmentItems.sortOrder), asc(appointmentItems.id));
+    const itemsByAppointment = new Map<number, AppointmentItem[]>();
+    itemRows.forEach((item) => {
+      const current = itemsByAppointment.get(item.appointmentId) || [];
+      current.push(item);
+      itemsByAppointment.set(item.appointmentId, current);
+    });
+
+    return appointmentRows.map((appointment) => ({
+      ...appointment,
+      items: itemsByAppointment.get(appointment.id) || [],
+    }));
+  }
+
+  async getAppointmentWithItems(id: number): Promise<AppointmentWithItems | undefined> {
+    const appointment = await this.getAppointment(id);
+    if (!appointment) return undefined;
+    return { ...appointment, items: await this.getAppointmentItems(id) };
   }
 
   async createAppointment(appointment: InsertAppointment): Promise<Appointment> {
@@ -886,15 +927,66 @@ export class DatabaseStorage implements IStorage {
     return created[0];
   }
 
+  async createAppointmentBundle(
+    appointment: InsertAppointment,
+    items: Array<Omit<InsertAppointmentItem, "appointmentId">>,
+  ): Promise<AppointmentWithItems> {
+    return withTransaction(async (tx) => {
+      const insertResult = await tx.insert(appointments).values(appointment);
+      const appointmentId = this.extractInsertId(insertResult);
+      if (!appointmentId) throw new Error("Failed to resolve created appointment ID");
+
+      await tx.insert(appointmentItems).values(
+        items.map((item) => ({ ...item, appointmentId })),
+      );
+      const [createdAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.id, appointmentId));
+      const createdItems = await tx
+        .select()
+        .from(appointmentItems)
+        .where(eq(appointmentItems.appointmentId, appointmentId))
+        .orderBy(asc(appointmentItems.sortOrder), asc(appointmentItems.id));
+
+      return { ...createdAppointment, items: createdItems };
+    });
+  }
+
   async updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment | undefined> {
     await db.update(appointments).set({ ...appointment, updatedAt: new Date() }).where(eq(appointments.id, id));
     const result = await db.select().from(appointments).where(eq(appointments.id, id));
     return result[0];
   }
 
-  async deleteAppointment(id: number): Promise<boolean> {
-    const result = await db.delete(appointments).where(eq(appointments.id, id));
-    return this.extractAffectedRows(result) > 0;
+  async updateAppointmentBundle(
+    id: number,
+    appointment: Partial<InsertAppointment>,
+    items?: Array<Omit<InsertAppointmentItem, "appointmentId">>,
+  ): Promise<AppointmentWithItems | undefined> {
+    return withTransaction(async (tx) => {
+      await tx
+        .update(appointments)
+        .set({ ...appointment, updatedAt: new Date() })
+        .where(eq(appointments.id, id));
+
+      if (items) {
+        await tx.delete(appointmentItems).where(eq(appointmentItems.appointmentId, id));
+        await tx.insert(appointmentItems).values(items.map((item) => ({ ...item, appointmentId: id })));
+      }
+
+      const [updatedAppointment] = await tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.id, id));
+      if (!updatedAppointment) return undefined;
+      const updatedItems = await tx
+        .select()
+        .from(appointmentItems)
+        .where(eq(appointmentItems.appointmentId, id))
+        .orderBy(asc(appointmentItems.sortOrder), asc(appointmentItems.id));
+      return { ...updatedAppointment, items: updatedItems };
+    });
   }
 
   async getAllOfferedServices(): Promise<OfferedService[]> {

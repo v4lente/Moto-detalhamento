@@ -384,6 +384,7 @@ export interface OfferedService {
   name: string;
   details: string;
   approximatePrice: number | null;
+  estimatedDurationMinutes: number;
   exampleWorkId: number | null;
   isActive: boolean;
   createdAt: Date;
@@ -393,6 +394,7 @@ export interface InsertOfferedService {
   name: string;
   details: string;
   approximatePrice?: number | null;
+  estimatedDurationMinutes: number;
   exampleWorkId?: number | null;
   isActive?: boolean;
 }
@@ -401,6 +403,7 @@ export interface UpdateOfferedService {
   name?: string;
   details?: string;
   approximatePrice?: number | null;
+  estimatedDurationMinutes?: number;
   exampleWorkId?: number | null;
   isActive?: boolean;
 }
@@ -413,14 +416,52 @@ export interface Appointment {
   customerPhone: string;
   customerEmail: string | null;
   vehicleInfo: string;
-  serviceDescription: string;
-  preferredDate: Date;
+  serviceDescription: string | null;
+  preferredDate: Date | null;
   confirmedDate: Date | null;
-  status: string;
+  startAt: Date;
+  plannedEndAt: Date;
+  completedAt: Date | null;
+  status: AppointmentStatus;
   adminNotes: string | null;
   estimatedPrice: number | null;
+  totalAmount: string | null;
+  archivedAt: Date | null;
+  budgetStorageKey: string | null;
+  budgetOriginalName: string | null;
+  budgetMimeType: string | null;
+  budgetSource: "uploaded" | "generated" | null;
+  budgetUpdatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export type AppointmentStatus =
+  | "agendado_nao_iniciado"
+  | "em_andamento"
+  | "concluido"
+  | "cancelado";
+
+export interface AppointmentItem {
+  id: number;
+  appointmentId: number;
+  serviceId: number | null;
+  serviceName: string;
+  description: string;
+  durationMinutes: number;
+  agreedAmount: string | null;
+  sortOrder: number;
+  createdAt: Date;
+}
+
+export type AppointmentWithItems = Appointment & { items: AppointmentItem[] };
+
+export interface AppointmentItemInput {
+  serviceId?: number | null;
+  serviceName?: string;
+  description: string;
+  durationMinutes: number;
+  agreedAmount?: string | null;
 }
 
 export interface InsertAppointment {
@@ -429,31 +470,57 @@ export interface InsertAppointment {
   customerPhone: string;
   customerEmail?: string | null;
   vehicleInfo: string;
-  serviceDescription: string;
-  preferredDate: Date;
+  serviceDescription?: string | null;
+  preferredDate?: Date | null;
   confirmedDate?: Date | null;
-  status?: string;
+  startAt: Date;
+  plannedEndAt: Date;
+  completedAt?: Date | null;
+  status?: AppointmentStatus;
   adminNotes?: string | null;
   estimatedPrice?: number | null;
+  totalAmount?: string | null;
+  archivedAt?: Date | null;
 }
 
 export interface CreateAppointment {
-  vehicleInfo: string;
-  serviceDescription: string;
-  preferredDate: string | Date;
+  customerId?: string | null;
   customerName?: string;
   customerPhone?: string;
-  customerEmail?: string | "";
+  customerEmail?: string | null;
+  vehicleInfo: string;
+  startAt: string;
+  status?: AppointmentStatus;
+  completedAt?: string | null;
+  adminNotes?: string | null;
+  items: AppointmentItemInput[];
+  allowConflict?: boolean;
 }
 
 export interface UpdateAppointment {
-  status?:
-    | "pre_agendamento"
-    | "agendado_nao_iniciado"
-    | "em_andamento"
-    | "concluido"
-    | "cancelado";
-  confirmedDate?: string | Date | null;
+  customerId?: string | null;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string | null;
+  vehicleInfo?: string;
+  startAt?: string;
+  status?: AppointmentStatus;
+  completedAt?: string | null;
   adminNotes?: string | null;
-  estimatedPrice?: number | null;
+  items?: AppointmentItemInput[];
+  allowConflict?: boolean;
+}
+
+export interface AppointmentFilters {
+  month?: string;
+  status?: AppointmentStatus | "all";
+  query?: string;
+  archived?: "active" | "archived" | "all";
+}
+
+export interface AppointmentSummary {
+  today: number;
+  notStarted: number;
+  inProgress: number;
+  upcoming: AppointmentWithItems[];
 }
