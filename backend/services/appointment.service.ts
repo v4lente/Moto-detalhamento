@@ -177,6 +177,7 @@ export async function createAppointment(data: CreateAppointment): Promise<Appoin
       ? new Date(data.completedAt || Date.now())
       : null,
     status: data.status || "agendado_nao_iniciado",
+    paymentStatus: data.paymentStatus || "nao_pago",
     adminNotes: data.adminNotes || null,
     totalAmount: calculateAppointmentTotal(data.items),
   };
@@ -233,6 +234,7 @@ export async function updateAppointment(
     plannedEndAt,
     completedAt,
     status,
+    paymentStatus: data.paymentStatus === undefined ? existing.paymentStatus : data.paymentStatus,
     adminNotes: data.adminNotes === undefined ? existing.adminNotes : data.adminNotes || null,
     totalAmount: data.items ? calculateAppointmentTotal(data.items) : existing.totalAmount,
   }, itemSnapshots);

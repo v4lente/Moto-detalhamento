@@ -220,6 +220,8 @@ export const appointmentStatusSchema = z.enum([
   "cancelado",
 ]);
 
+export const appointmentPaymentStatusSchema = z.enum(["pago", "nao_pago"]);
+
 export const appointmentItemInputSchema = z.object({
   serviceId: z.number().int().positive().optional().nullable(),
   serviceName: z.string().trim().min(2).max(200).optional(),
@@ -261,6 +263,7 @@ export const createAppointmentSchema = z.object({
   vehicleInfo: z.string().trim().min(2).max(200),
   startAt: z.string().datetime({ offset: true }),
   status: appointmentStatusSchema.optional().default("agendado_nao_iniciado"),
+  paymentStatus: appointmentPaymentStatusSchema.optional().default("nao_pago"),
   completedAt: z.string().datetime({ offset: true }).optional().nullable(),
   adminNotes: z.string().trim().max(5000).optional().nullable(),
   items: z.array(appointmentItemInputSchema).min(1),
@@ -272,6 +275,7 @@ export const updateAppointmentSchema = z.object({
   vehicleInfo: z.string().trim().min(2).max(200).optional(),
   startAt: z.string().datetime({ offset: true }).optional(),
   status: appointmentStatusSchema.optional(),
+  paymentStatus: appointmentPaymentStatusSchema.optional(),
   completedAt: z.string().datetime({ offset: true }).optional().nullable(),
   adminNotes: z.string().trim().max(5000).optional().nullable(),
   items: z.array(appointmentItemInputSchema).min(1).optional(),

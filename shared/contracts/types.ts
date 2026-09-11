@@ -419,6 +419,8 @@ export interface UpdateOfferedService {
 }
 
 // ─── Appointment ────────────────────────────────────────────────────────────
+export type AppointmentPaymentStatus = "pago" | "nao_pago";
+
 export interface Appointment {
   id: number;
   customerId: string | null;
@@ -433,6 +435,7 @@ export interface Appointment {
   plannedEndAt: Date;
   completedAt: Date | null;
   status: AppointmentStatus;
+  paymentStatus: AppointmentPaymentStatus;
   adminNotes: string | null;
   estimatedPrice: number | null;
   totalAmount: string | null;
@@ -487,6 +490,7 @@ export interface InsertAppointment {
   plannedEndAt: Date;
   completedAt?: Date | null;
   status?: AppointmentStatus;
+  paymentStatus?: AppointmentPaymentStatus;
   adminNotes?: string | null;
   estimatedPrice?: number | null;
   totalAmount?: string | null;
@@ -501,6 +505,7 @@ export interface CreateAppointment {
   vehicleInfo: string;
   startAt: string;
   status?: AppointmentStatus;
+  paymentStatus?: AppointmentPaymentStatus;
   completedAt?: string | null;
   adminNotes?: string | null;
   items: AppointmentItemInput[];
@@ -515,6 +520,7 @@ export interface UpdateAppointment {
   vehicleInfo?: string;
   startAt?: string;
   status?: AppointmentStatus;
+  paymentStatus?: AppointmentPaymentStatus;
   completedAt?: string | null;
   adminNotes?: string | null;
   items?: AppointmentItemInput[];

@@ -16,6 +16,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Checkout autenticado e pedidos persistentes](./checkout-auth-orders.md)
 - [Dados fiscais no pedido](./customer-fiscal-order-modal.md)
 - [Agenda operacional administrativa](#agenda-operacional-administrativa)
+- [Controle informativo de pagamento na agenda](./appointment-payment.md)
 - [Adendo WFOY — armazenamento atual do documento](../../_reversa_sdd/addenda/bug-BUG-20260901-WFOY-v001.md)
 - [Security & Compliance Notes](./security.md)
 - [Tooling & Productivity Guide](./tooling.md)

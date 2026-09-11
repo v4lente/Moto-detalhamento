@@ -20,6 +20,7 @@ import { HttpError } from "@/shared/lib/http";
 import { formatCurrencyBRL, formatPhoneBR, normalizePhone } from "@/shared/lib/formatters";
 import type {
   AppointmentItemInput,
+  AppointmentPaymentStatus,
   AppointmentStatus,
   AppointmentWithItems,
   CreateAppointment,
@@ -69,6 +70,11 @@ const STATUS: Record<AppointmentStatus, { label: string; badge: string; dot: str
     badge: "bg-red-500/15 text-red-400 border-red-500/30",
     dot: "bg-red-500",
   },
+};
+
+const PAYMENT_STATUS: Record<AppointmentPaymentStatus, { label: string; badge: string }> = {
+  pago: { label: "PAGO", badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500" },
+  nao_pago: { label: "NÃO PAGO", badge: "border-amber-500/50 bg-amber-500/10 text-amber-500" },
 };
 
 type DraftItem = AppointmentItemInput & { key: string };
@@ -202,6 +208,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
   const [vehicleInfo, setVehicleInfo] = useState("");
   const [startAt, setStartAt] = useState("");
   const [status, setStatus] = useState<AppointmentStatus>("agendado_nao_iniciado");
+  const [paymentStatus, setPaymentStatus] = useState<AppointmentPaymentStatus>("nao_pago");
   const [completedAt, setCompletedAt] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
@@ -210,6 +217,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
   const [fieldErrors, setFieldErrors] = useState<AppointmentFieldErrors>({});
   const [serviceFieldErrors, setServiceFieldErrors] = useState<ServiceFieldErrors>({});
   const [budgetState, setBudgetState] = useState<AppointmentWithItems | null>(appointment);
+  const [paymentPromptOpen, setPaymentPromptOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -222,6 +230,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
       ? toLocalInput(appointment.startAt)
       : initialDate ? `${initialDate}T09:00` : toLocalInput(new Date(Date.now() + 60 * 60_000)));
     setStatus(appointment?.status || "agendado_nao_iniciado");
+    setPaymentStatus(appointment?.paymentStatus || "nao_pago");
     setCompletedAt(toLocalInput(appointment?.completedAt));
     setAdminNotes(appointment?.adminNotes || "");
     setItems(appointment?.items.length
@@ -239,6 +248,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
     setServiceEditorOpen(false);
     setServiceDraft(null);
     setBudgetState(appointment);
+    setPaymentPromptOpen(false);
   }, [open, appointment, initialDate, activeServices]);
 
   const totalCents = items.reduce((total, item) => {
@@ -344,6 +354,24 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
     return true;
   };
 
+  const handleStatusChange = (nextStatus: AppointmentStatus) => {
+    if (nextStatus === "concluido" && status !== "concluido") {
+      setPaymentPromptOpen(true);
+      return;
+    }
+    setStatus(nextStatus);
+  };
+
+  const confirmCompletionPayment = (nextPaymentStatus: AppointmentPaymentStatus) => {
+    setPaymentStatus(nextPaymentStatus);
+    setStatus("concluido");
+    setPaymentPromptOpen(false);
+  };
+
+  const cancelCompletion = () => {
+    setPaymentPromptOpen(false);
+  };
+
   const save = async (allowConflict = false) => {
     if (!validateAppointmentForm()) return;
 
@@ -355,6 +383,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
       vehicleInfo,
       startAt: localInputToIso(startAt),
       status,
+      paymentStatus,
       completedAt: status === "concluido" && completedAt ? localInputToIso(completedAt) : null,
       adminNotes: adminNotes || null,
       items: items.map(({ key: _key, ...item }) => ({
@@ -432,6 +461,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
   const pending = mutations.createAppointmentMutation.isPending || mutations.updateAppointmentMutation.isPending;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className={`max-h-[92vh] w-[96vw] overflow-y-auto border-primary/20 bg-card ${serviceEditorOpen ? "max-w-lg" : "max-w-4xl"}`} aria-describedby={undefined}>
         {serviceEditorOpen && serviceDraft ? (
@@ -563,7 +593,7 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
               </div>
               <div className="space-y-2">
                 <Label htmlFor="appointment-status">Status</Label>
-                <select id="appointment-status" value={status} onChange={(event) => setStatus(event.target.value as AppointmentStatus)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-appointment-status">
+                <select id="appointment-status" value={status} onChange={(event) => handleStatusChange(event.target.value as AppointmentStatus)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-appointment-status">
                   {Object.entries(STATUS).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
                 </select>
               </div>
@@ -574,6 +604,22 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
                 <Label htmlFor="appointment-completed">Término real</Label>
                 <Input id="appointment-completed" type="datetime-local" value={completedAt} onChange={(event) => setCompletedAt(event.target.value)} />
                 <p className="text-xs text-muted-foreground">Se ficar vazio, o horário será preenchido ao salvar.</p>
+              </div>
+            )}
+
+            {status === "concluido" && (
+              <div className="space-y-2">
+                <Label htmlFor="appointment-payment-status">Pagamento do serviço</Label>
+                <select
+                  id="appointment-payment-status"
+                  value={paymentStatus}
+                  onChange={(event) => setPaymentStatus(event.target.value as AppointmentPaymentStatus)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  data-testid="select-appointment-payment-status"
+                >
+                  {Object.entries(PAYMENT_STATUS).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
+                </select>
+                <p className="text-xs text-muted-foreground">Controle informativo; não processa cobranças.</p>
               </div>
             )}
 
@@ -675,6 +721,21 @@ function AppointmentFormDialog({ open, appointment, initialDate, customers, serv
         )}
       </DialogContent>
     </Dialog>
+
+    <Dialog open={paymentPromptOpen} onOpenChange={(next) => !next && cancelCompletion()}>
+      <DialogContent className="max-w-md border-primary/20 bg-card" aria-describedby="appointment-payment-prompt-description">
+        <DialogHeader>
+          <DialogTitle className="font-display">Como ficou o pagamento?</DialogTitle>
+        </DialogHeader>
+        <p id="appointment-payment-prompt-description" className="text-sm text-muted-foreground">Escolha uma opção para concluir o agendamento. Essa informação é apenas administrativa e não processa cobranças.</p>
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={cancelCompletion} data-testid="button-cancel-completion-payment">Cancelar</Button>
+          <Button type="button" variant="outline" onClick={() => confirmCompletionPayment("nao_pago")} data-testid="button-completion-not-paid">NÃO PAGO</Button>
+          <Button type="button" className="bg-primary text-black hover:bg-primary/90" onClick={() => confirmCompletionPayment("pago")} data-testid="button-completion-paid">PAGO</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
@@ -861,12 +922,19 @@ export function AppointmentsManagementPage() {
                 <table className="w-full min-w-[1120px] text-sm">
                   <thead><tr className="border-b border-border text-left text-xs uppercase text-muted-foreground"><th className="p-3">Início</th><th className="p-3">Moto</th><th className="p-3">Proprietário</th><th className="p-3">Telefone</th><th className="p-3">Status</th><th className="p-3">Término</th><th className="p-3">Orçamento</th><th className="p-3">Observações</th><th className="p-3 text-right">Valor</th><th className="p-3">Ações</th></tr></thead>
                   <tbody>{visibleAppointments.map((appointment) => (
-                    <tr key={appointment.id} className="border-b border-border/60 hover:bg-muted/20" data-testid={`appointment-row-${appointment.id}`}>
+                    <tr key={appointment.id} className={`border-b border-border/60 hover:bg-muted/20 ${appointment.status === "concluido" && appointment.paymentStatus === "nao_pago" ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500/30" : ""}`} data-testid={`appointment-row-${appointment.id}`} data-payment-status={appointment.paymentStatus}>
                       <td className="whitespace-nowrap p-3">{formatDateTime(appointment.startAt)}</td>
                       <td className="p-3 font-medium">{appointment.vehicleInfo}</td>
                       <td className="p-3">{appointment.customerName}</td>
                       <td className="whitespace-nowrap p-3">{formatPhoneBR(appointment.customerPhone)}</td>
-                      <td className="p-3">{statusBadge(appointment.status)}</td>
+                      <td className="p-3">
+                        <div>{statusBadge(appointment.status)}</div>
+                        {appointment.status === "concluido" && appointment.paymentStatus === "nao_pago" && (
+                          <span className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${PAYMENT_STATUS.nao_pago.badge}`} data-testid={`appointment-payment-pending-${appointment.id}`}>
+                            {PAYMENT_STATUS.nao_pago.label}
+                          </span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap p-3">
                         {formatDateTime(appointment.completedAt || appointment.plannedEndAt)}
                         <span className="block text-[10px] text-muted-foreground">

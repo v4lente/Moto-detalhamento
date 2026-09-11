@@ -499,6 +499,7 @@ export const appointments = mysqlTable("appointments", {
   plannedEndAt: timestamp("planned_end_at").notNull(),
   completedAt: timestamp("completed_at"),
   status: varchar("status", { length: 32 }).notNull().$default(() => "agendado_nao_iniciado"),
+  paymentStatus: varchar("payment_status", { length: 16 }).notNull().default("nao_pago"),
   adminNotes: text("admin_notes"),
   estimatedPrice: float("estimated_price"),
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
