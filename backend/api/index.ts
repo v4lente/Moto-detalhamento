@@ -216,7 +216,12 @@ app.use((req, res, next) => {
     if (process.env.NODE_ENV === "production") throw error;
   }
   configureUploadedImagesStatic();
-  ensureAppointmentBudgetsDir();
+  try {
+    ensureAppointmentBudgetsDir();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[uploads] Appointment budget storage unavailable; application will continue: ${message}`);
+  }
   logStartupEnvironmentDiagnostics();
 
   // Run migrations with error handling - don't crash the server if migrations fail
