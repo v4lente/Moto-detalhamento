@@ -830,7 +830,14 @@ export function AppointmentsManagementPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newAppointmentDate, setNewAppointmentDate] = useState<string | null>(null);
   const filters = { month: monthKey(currentMonth), status: "all" as const, query, archived: archiveFilter };
-  const { data: appointments = [], isLoading } = useAppointments(filters);
+  const { data: appointments = [], isLoading, isError, error } = useAppointments(filters);
+  const appointmentListError = (
+    <div className="py-12 text-center text-muted-foreground" data-testid="appointment-list-error" role="alert">
+      <CalendarDays className="mx-auto mb-3 h-10 w-10 text-destructive" />
+      <p>Não foi possível carregar os agendamentos.</p>
+      <p className="mt-1 text-xs">{error instanceof Error ? error.message : "Tente novamente mais tarde."}</p>
+    </div>
+  );
   const { data: customers = [] } = useCustomers();
   const { data: services = [] } = useOfferedServices();
   const mutations = useAppointmentMutations();
@@ -892,7 +899,7 @@ export function AppointmentsManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : <MonthCalendar month={currentMonth} appointments={visibleAppointments} onOpen={openAppointment} onCreate={openNewAppointment} />}
+          {isLoading ? <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : isError ? appointmentListError : <MonthCalendar month={currentMonth} appointments={visibleAppointments} onOpen={openAppointment} onCreate={openNewAppointment} />}
         </CardContent>
       </Card>
 
@@ -914,7 +921,7 @@ export function AppointmentsManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {visibleAppointments.length === 0 ? (
+          {isError ? appointmentListError : visibleAppointments.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground"><CalendarDays className="mx-auto mb-3 h-10 w-10" /><p>Nenhum agendamento encontrado.</p></div>
           ) : (
             <>

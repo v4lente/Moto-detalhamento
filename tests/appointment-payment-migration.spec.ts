@@ -29,4 +29,15 @@ test.describe("migration do pagamento informativo da agenda", () => {
     expect(appointmentsSchema).toContain('.notNull().default("nao_pago")');
     expect(appointmentsSchema).not.toMatch(/orders|stripe|webhook/i);
   });
+
+  test("mantém o diário alinhado a todos os arquivos SQL", () => {
+    const journal = JSON.parse(fs.readFileSync("migrations/meta/_journal.json", "utf8"));
+    const tags = new Set(journal.entries.map((entry: { tag: string }) => entry.tag));
+    const orphanMigrations = fs.readdirSync("migrations")
+      .filter((file) => file.endsWith(".sql"))
+      .map((file) => file.replace(/\.sql$/, ""))
+      .filter((tag) => !tags.has(tag));
+
+    expect(orphanMigrations).toEqual([]);
+  });
 });
