@@ -15,6 +15,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Checkout por WhatsApp](./whatsapp-checkout.md)
 - [Checkout autenticado e pedidos persistentes](./checkout-auth-orders.md)
 - [Identificação dos itens de pedido](#identificação-dos-itens-de-pedido)
+- [Consulta administrativa de pedidos](#consulta-administrativa-de-pedidos)
 - [Dados fiscais no pedido](./customer-fiscal-order-modal.md)
 - [Agenda operacional administrativa](#agenda-operacional-administrativa)
 - [Controle informativo de pagamento na agenda](./appointment-payment.md)
@@ -112,3 +113,9 @@ Novos pedidos geram uma notificação persistente para a equipe administrativa. 
 A revisão do checkout, a confirmação do pagamento, o histórico do cliente, Pedidos e Dashboard administrativos exibem o nome do produto com iniciais maiúsculas e espaços normalizados. O rótulo da variação escolhida aparece entre parênteses com a grafia cadastrada, por exemplo `Interiores 1 Lt Cadillac (500 ML)`.
 
 O formatador `frontend/shared/lib/formatters.ts` altera somente a apresentação. Os snapshots `product_name`, `variation_id` e `variation_label` do pedido permanecem intactos. Pedidos antigos sem `variation_label` continuam mostrando o nome salvo, sem consultar o catálogo para inferir a variação.
+
+## Consulta administrativa de pedidos
+
+A aba **Pedidos** começa com o filtro **Pendente**. O operador pode escolher **Todos** ou qualquer status do contrato, combinar o filtro com a busca por referência, cliente ou email e navegar por páginas de 10 pedidos usando o mesmo controle visual de Produtos. Alterações da busca e do filtro voltam à primeira página.
+
+A listagem usa `GET /api/orders` com `page`, `pageSize`, `q` e `status`; o total retornado pela API determina a paginação. O Dashboard continua usando a consulta de pedidos recentes.

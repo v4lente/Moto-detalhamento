@@ -1,18 +1,34 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { TabsContent } from "@/shared/ui/tabs";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { useOrders, useOrderMutations, useUser } from "../hooks/use-admin";
-import type { Order, OrderItem } from "@shared/contracts";
+import { useOrdersPage, useOrderMutations, useUser } from "../hooks/use-admin";
+import type { Order, OrderItem, OrderStatus } from "@shared/contracts";
 import type { CustomerData } from "@/shared/lib/api";
 import { revealOrderCustomerDocument } from "@/shared/lib/api";
 import { 
-  ShoppingBag, Eye, Loader2, Clock, Check, X, Package, CheckCircle 
+  ShoppingBag, Eye, Loader2, Clock, Check, X, Package, CheckCircle, Search
 } from "lucide-react";
 import { Input } from "@/shared/ui/input";
 import { formatOrderItemName, formatPhoneBR } from "@/shared/lib/formatters";
+import { PaginationControls } from "@/shared/components/PaginationControls";
+
+const ITEMS_PER_PAGE = 10;
+type OrderStatusFilter = "all" | OrderStatus;
+const ORDER_STATUS_FILTERS: Array<{ value: OrderStatusFilter; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "pending", label: "Pendente" },
+  { value: "awaiting_payment", label: "Aguardando pagamento" },
+  { value: "paid", label: "Pago" },
+  { value: "confirmed", label: "Confirmado" },
+  { value: "shipped", label: "Enviado" },
+  { value: "delivered", label: "Entregue" },
+  { value: "cancelled", label: "Cancelado" },
+  { value: "payment_failed", label: "Falha no pagamento" },
+  { value: "refunded", label: "Reembolsado" },
+];
 
 interface OrdersManagementPageProps {
   initialOrderId?: number | null;
@@ -28,12 +44,25 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
   const [isRevealingDocument, setIsRevealingDocument] = useState(false);
   const [fiscalError, setFiscalError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("pending");
+  const [orderPage, setOrderPage] = useState(1);
 
-  const { data: orders, isLoading: ordersLoading } = useOrders();
+  const { data: ordersPage, isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useOrdersPage({
+    page: orderPage,
+    pageSize: ITEMS_PER_PAGE,
+    q: search.trim() || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+  });
   const { data: currentUser } = useUser();
   const { updateOrderStatusMutation, fetchOrderDetails } = useOrderMutations();
   const canRevealDocument = currentUser?.role === "admin";
-  const visibleOrders = useMemo(() => (orders || []).filter((order) => `${order.publicReference || ""} ${order.customerName} ${order.customerEmail || ""}`.toLowerCase().includes(search.toLowerCase())), [orders, search]);
+  const orders = ordersPage?.items ?? [];
+
+  useEffect(() => {
+    if (ordersPage && orderPage > Math.max(1, ordersPage.totalPages)) {
+      setOrderPage(Math.max(1, ordersPage.totalPages));
+    }
+  }, [ordersPage, orderPage]);
 
   const handleViewOrder = async (orderId: number) => {
     try {
@@ -70,15 +99,38 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
     <>
       <TabsContent value="orders" className="space-y-6">
         <h2 className="text-2xl font-display font-bold">Gerenciar Pedidos</h2>
-        <Input aria-label="Buscar pedidos" placeholder="Buscar por referência, cliente ou email" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label="Buscar pedidos" placeholder="Buscar por referência, cliente ou email" value={search} maxLength={120} onChange={(event) => {
+              setSearch(event.target.value);
+              setOrderPage(1);
+            }} className="pl-9" data-testid="input-admin-order-search" />
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => {
+            setStatusFilter(value as OrderStatusFilter);
+            setOrderPage(1);
+          }}>
+            <SelectTrigger className="w-full sm:w-52" aria-label="Filtrar pedidos por status" data-testid="select-order-status-filter">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {ORDER_STATUS_FILTERS.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
         
         {ordersLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : visibleOrders.length > 0 ? (
+        ) : ordersError ? (
+          <div className="py-10 text-center text-sm text-destructive">
+            Não foi possível carregar os pedidos. <Button variant="link" onClick={() => void refetchOrders()}>Tentar novamente</Button>
+          </div>
+        ) : orders.length > 0 ? (
           <div className="space-y-4">
-            {visibleOrders.map((order) => (
+            {orders.map((order) => (
               <Card key={order.id} className="bg-card border-border" data-testid={`admin-order-${order.id}`}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -191,6 +243,16 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
                               <X className="h-4 w-4 text-red-500" /> Cancelado
                             </div>
                           </SelectItem>
+                          <SelectItem value="payment_failed">
+                            <div className="flex items-center gap-2">
+                              <X className="h-4 w-4 text-red-500" /> Falha no pagamento
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="refunded">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-purple-500" /> Reembolsado
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <Button
@@ -206,12 +268,19 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
                 </CardContent>
               </Card>
             ))}
+            <PaginationControls
+              currentPage={orderPage}
+              totalItems={ordersPage?.total ?? 0}
+              pageSize={ITEMS_PER_PAGE}
+              onPageChange={setOrderPage}
+              testIdPrefix="admin-orders"
+            />
           </div>
         ) : (
           <Card className="bg-card border-border">
             <CardContent className="p-8 text-center text-muted-foreground">
               <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>Nenhum pedido recebido ainda.</p>
+              <p>{statusFilter === "all" && !search.trim() ? "Nenhum pedido recebido ainda." : "Nenhum pedido corresponde aos filtros aplicados."}</p>
             </CardContent>
           </Card>
         )}

@@ -336,6 +336,13 @@ export async function fetchCustomerOrder(id: number): Promise<Order & { items: O
 }
 
 // Admin Orders
+export async function fetchAdminOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string }): Promise<{ items: Order[]; total: number; page: number; pageSize: number; totalPages: number }> {
+  const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  return http(`/orders?${query.toString()}`);
+}
+
 export async function fetchAllOrders(): Promise<Order[]> {
   const response = await fetch(`${API_BASE}/orders`, {
     credentials: "include",

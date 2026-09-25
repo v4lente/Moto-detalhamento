@@ -3,7 +3,7 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   fetchProducts, createProduct, updateProduct, deleteProduct,
   fetchSettings, updateSettings, getCurrentUser,
-  fetchAllOrders, fetchOrderDetails, updateOrderStatus,
+  fetchAllOrders, fetchAdminOrdersPage, fetchOrderDetails, updateOrderStatus,
   fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer,
   fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   fetchServicePosts, createServicePost, updateServicePost, deleteServicePost,
@@ -184,6 +184,13 @@ export function useOrders() {
   return useQuery({
     queryKey: ["adminOrders"],
     queryFn: fetchAllOrders,
+  });
+}
+
+export function useOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string }) {
+  return useQuery({
+    queryKey: ["adminOrders", params],
+    queryFn: () => fetchAdminOrdersPage(params),
   });
 }
 
