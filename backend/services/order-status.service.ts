@@ -23,16 +23,21 @@ export async function transitionOrder(orderId: number, toStatus: OrderStatus, ac
   if (!order) throw new ApiError(404, "NOT_FOUND", "Pedido não encontrado");
   if (!canTransition(order.status, toStatus)) throw new ApiError(409, "INVALID_TRANSITION", `Não é possível alterar ${order.status} para ${toStatus}`);
   if (order.status === toStatus) return order;
-  const updated = await storage.updateOrderStatus(orderId, toStatus);
-  await storage.createOrderEvent({
-    orderId,
-    fromStatus: order.status,
-    toStatus,
-    actorType: actor.type,
-    actorId: actor.id || null,
-    reason: reason || null,
-  });
-  return updated;
+  try {
+    return await storage.transitionOrderWithEvent({
+      orderId,
+      expectedStatus: order.status,
+      toStatus,
+      actorType: actor.type,
+      actorId: actor.id || null,
+      reason: reason || null,
+    });
+  } catch (error: any) {
+    if (error?.code === "ORDER_STATUS_CONFLICT") {
+      throw new ApiError(409, "INVALID_TRANSITION", "O pedido mudou enquanto a alteração era processada");
+    }
+    throw error;
+  }
 }
 
 export { transitions };

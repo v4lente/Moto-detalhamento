@@ -4,6 +4,7 @@ import {
   fetchProducts, createProduct, updateProduct, deleteProduct,
   fetchSettings, updateSettings, getCurrentUser,
   fetchAllOrders, fetchAdminOrdersPage, fetchOrderDetails, updateOrderStatus,
+  updateManualOrderPayment, fetchDashboardAnalytics,
   fetchAllCustomers, createAdminCustomer, updateAdminCustomer, deleteAdminCustomer,
   fetchAllUsers, createAdminUser, updateAdminUser, deleteAdminUser,
   fetchServicePosts, createServicePost, updateServicePost, deleteServicePost,
@@ -13,7 +14,7 @@ import {
   fetchAllOfferedServices, createOfferedService, updateOfferedService, deleteOfferedService,
   fetchProductVariations, fetchProductVariationCounts, createProductVariation, updateProductVariation, deleteProductVariation
 } from "@/shared/lib/api";
-import type { AppointmentFilters, ProductWithImages, ProductVariation, UpdateSiteSettings, ServicePostWithMedia } from "@shared/contracts";
+import type { AppointmentFilters, ManualPaymentAction, ProductWithImages, ProductVariation, UpdateSiteSettings, ServicePostWithMedia } from "@shared/contracts";
 
 // User query
 export function useUser() {
@@ -187,7 +188,7 @@ export function useOrders() {
   });
 }
 
-export function useOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string }) {
+export function useOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string; from?: string; to?: string }) {
   return useQuery({
     queryKey: ["adminOrders", params],
     queryFn: () => fetchAdminOrdersPage(params),
@@ -207,7 +208,26 @@ export function useOrderMutations() {
     onError: () => toast({ title: "Erro ao atualizar status", variant: "destructive" }),
   });
 
-  return { updateOrderStatusMutation, fetchOrderDetails };
+  const updateManualPaymentMutation = useMutation({
+    mutationFn: ({ reference, action, reason, idempotencyKey }: { reference: string; action: ManualPaymentAction; reason?: string; idempotencyKey: string }) =>
+      updateManualOrderPayment(reference, action, reason, idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardAnalytics"] });
+      toast({ title: "Pagamento do pedido atualizado!" });
+    },
+    onError: (error: Error) => toast({ title: "Erro ao atualizar pagamento", description: error.message, variant: "destructive" }),
+  });
+
+  return { updateOrderStatusMutation, updateManualPaymentMutation, fetchOrderDetails };
+}
+
+export function useDashboardAnalytics(params: { from?: string; to?: string }) {
+  return useQuery({
+    queryKey: ["dashboardAnalytics", params],
+    queryFn: () => fetchDashboardAnalytics(params),
+    staleTime: 30_000,
+  });
 }
 
 // Customers

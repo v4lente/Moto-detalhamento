@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { storage } from "../../infrastructure/storage";
-import { checkoutPreviewSchema, createOrderSchema, orderSearchSchema, orderStatusTransitionSchema } from "@shared/contracts/validation";
+import { checkoutPreviewSchema, createOrderSchema, idempotencyKeySchema, manualOrderPaymentSchema, orderSearchSchema, orderStatusTransitionSchema } from "@shared/contracts/validation";
 import { requireAuth, requireAdmin, requireCustomerAuth } from "../middleware/auth";
 import { sendApiError, ApiError } from "../lib/api-error";
 import { buildCheckoutPreview } from "../../services/order-pricing.service";
@@ -11,6 +11,7 @@ import { transitionOrder } from "../../services/order-status.service";
 import { isStripeConfigured, createCheckoutSession } from "../../infrastructure/payments/stripe.service";
 import { revealCustomerDocumentForOrder } from "../../services/customer-fiscal.service";
 import { toSafeCustomerProfile } from "../../services/customer-identity.service";
+import { changeManualOrderPayment } from "../../services/order-payment.service";
 
 function zodError(res: any, error: unknown) {
   if (error instanceof z.ZodError) return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Dados inválidos", details: error.flatten() } });
@@ -133,12 +134,13 @@ export function registerOrdersRoutes(app: Express) {
       const value = String(req.params.reference);
       const order = await findOrderByPublicOrLegacyId(value);
       if (!order) throw new ApiError(404, "NOT_FOUND", "Pedido não encontrado");
-      const [items, events, customer] = await Promise.all([
+      const [items, events, paymentEvents, customer] = await Promise.all([
         storage.getOrderItems(order.id),
         storage.getOrderEvents(order.id),
+        storage.getOrderPaymentEvents(order.id),
         order.customerId ? storage.getCustomer(order.customerId) : Promise.resolve(undefined),
       ]);
-      res.json({ ...order, items, events, customer: customer ? toSafeCustomerProfile(customer) : null });
+      res.json({ ...order, items, events, paymentEvents, customer: customer ? toSafeCustomerProfile(customer) : null });
     }
     catch (error) { sendApiError(res, error, "Falha ao buscar pedido"); }
   });
@@ -164,5 +166,24 @@ export function registerOrdersRoutes(app: Express) {
       const updated = await transitionOrder(order.id, body.status, { type: "admin", id: req.session.userId }, body.reason);
       res.json(updated);
     } catch (error) { if (zodError(res, error)) return; sendApiError(res, error, "Falha ao alterar status"); }
+  });
+
+  app.post("/api/orders/:reference/payment", requireAdmin, async (req, res) => {
+    try {
+      const body = manualOrderPaymentSchema.parse(req.body);
+      const requestKey = idempotencyKeySchema.parse(req.get("idempotency-key"));
+      const result = await changeManualOrderPayment({
+        reference: String(req.params.reference),
+        action: body.action,
+        reason: body.reason,
+        requestKey,
+        actorId: req.session.userId!,
+      });
+      res.set("Cache-Control", "no-store");
+      res.json(result);
+    } catch (error) {
+      if (zodError(res, error)) return;
+      sendApiError(res, error, "Falha ao alterar pagamento");
+    }
   });
 }

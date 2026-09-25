@@ -212,6 +212,25 @@ export const orderStatusTransitionSchema = z.object({
 
 export const idempotencyKeySchema = z.string().trim().min(16).max(200);
 
+export const manualOrderPaymentSchema = z.object({
+  action: z.enum(["mark_paid", "revert_to_pending"]),
+  reason: z.string().trim().min(5).max(500).optional(),
+}).superRefine((value, ctx) => {
+  if (value.action === "revert_to_pending" && !value.reason) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reason"], message: "Informe o motivo da reversão" });
+  }
+});
+
+const analyticsDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+  const date = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}, "Data inválida");
+
+export const dashboardAnalyticsQuerySchema = z.object({
+  from: analyticsDateSchema.optional(),
+  to: analyticsDateSchema.optional(),
+});
+
 // ─── Appointment ────────────────────────────────────────────────────────────
 export const appointmentStatusSchema = z.enum([
   "agendado_nao_iniciado",

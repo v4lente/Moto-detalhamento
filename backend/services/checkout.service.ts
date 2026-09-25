@@ -3,7 +3,6 @@ import type { CheckoutItemInput } from "@shared/contracts/types";
 import { storage } from "../infrastructure/storage";
 import { ApiError } from "../api/lib/api-error";
 import { buildCheckoutPreview } from "./order-pricing.service";
-import { transitionOrder } from "./order-status.service";
 import { constructWebhookEvent, getCheckoutSession, isStripeConfigured } from "../infrastructure/payments/stripe.service";
 import { publishAdminNotification } from "./admin-notification.service";
 
@@ -62,9 +61,16 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       const orderId = Number(session.metadata?.orderId || 0);
       if (orderId) {
         const order = await storage.getOrder(orderId);
-        if (order && order.status !== "paid") {
-          await transitionOrder(orderId, "paid", { type: "system" }, "Stripe checkout.session.completed");
-          await storage.updateOrderPayment(orderId, { paymentStatus: "paid", stripePaymentIntentId: session.payment_intent as string, paidAt: new Date() });
+        if (order) {
+          await storage.applyStripeOrderOutcome({
+            orderId,
+            toStatus: "paid",
+            toPaymentStatus: "paid",
+            paidAt: new Date(),
+            reason: "Stripe checkout.session.completed",
+            requestKey: event.id,
+            stripePaymentIntentId: session.payment_intent as string,
+          });
         }
       }
       break;
@@ -75,8 +81,7 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       if (orderId) {
         const order = await storage.getOrder(orderId);
         if (order && order.status === "awaiting_payment") {
-          await transitionOrder(orderId, "payment_failed", { type: "system" }, "Stripe sessão expirada");
-          await storage.updateOrderPayment(orderId, { paymentStatus: "failed" });
+          await storage.applyStripeOrderOutcome({ orderId, toStatus: "payment_failed", toPaymentStatus: "failed", paidAt: null, reason: "Stripe sessão expirada", requestKey: event.id });
         }
       }
       break;
@@ -84,8 +89,7 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
     case "payment_intent.payment_failed": {
       const order = await storage.getOrderByStripePaymentIntent((event.data.object as Stripe.PaymentIntent).id);
       if (order && order.status === "awaiting_payment") {
-        await transitionOrder(order.id, "payment_failed", { type: "system" }, "Stripe pagamento falhou");
-        await storage.updateOrderPayment(order.id, { paymentStatus: "failed" });
+        await storage.applyStripeOrderOutcome({ orderId: order.id, toStatus: "payment_failed", toPaymentStatus: "failed", paidAt: null, reason: "Stripe pagamento falhou", requestKey: event.id });
       }
       break;
     }
@@ -93,8 +97,7 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       const paymentIntentId = (event.data.object as Stripe.Charge).payment_intent as string;
       const order = paymentIntentId ? await storage.getOrderByStripePaymentIntent(paymentIntentId) : undefined;
       if (order && order.status !== "refunded") {
-        await transitionOrder(order.id, "refunded", { type: "system" }, "Stripe charge.refunded");
-        await storage.updateOrderPayment(order.id, { paymentStatus: "refunded" });
+        await storage.applyStripeOrderOutcome({ orderId: order.id, toStatus: "refunded", toPaymentStatus: "refunded", paidAt: order.paidAt, reason: "Stripe charge.refunded", requestKey: event.id });
       }
       break;
     }

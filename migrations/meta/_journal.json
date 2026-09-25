@@ -64,6 +64,13 @@
       "when": 1789095949120,
       "tag": "0008_appointment_payment_status",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1790352000000,
+      "tag": "0009_order_payment_analytics",
+      "breakpoints": true
     }
   ]
 }

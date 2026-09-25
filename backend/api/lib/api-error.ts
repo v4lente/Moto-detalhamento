@@ -1,7 +1,7 @@
 export type ApiErrorCode =
   | "VALIDATION_ERROR" | "UNAUTHENTICATED" | "FORBIDDEN" | "NOT_FOUND"
   | "CONFLICT" | "PROFILE_INCOMPLETE" | "PRICE_CHANGED" | "OUT_OF_STOCK"
-  | "PAYMENT_DISABLED" | "IDEMPOTENCY_CONFLICT" | "INVALID_TRANSITION" | "DOCUMENT_UNAVAILABLE" | "INTERNAL_ERROR";
+  | "PAYMENT_DISABLED" | "IDEMPOTENCY_CONFLICT" | "INVALID_TRANSITION" | "INVALID_PAYMENT_TRANSITION" | "DOCUMENT_UNAVAILABLE" | "DATABASE_UNAVAILABLE" | "INTERNAL_ERROR";
 
 export class ApiError extends Error {
   constructor(public readonly status: number, public readonly code: ApiErrorCode, message: string, public readonly details?: unknown) {

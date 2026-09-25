@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { useOrdersPage, useOrderMutations, useUser } from "../hooks/use-admin";
-import type { Order, OrderItem, OrderStatus } from "@shared/contracts";
+import type { Order, OrderItem, OrderPaymentEvent, OrderStatus } from "@shared/contracts";
 import type { CustomerData } from "@/shared/lib/api";
 import { revealOrderCustomerDocument } from "@/shared/lib/api";
 import { 
@@ -36,7 +36,7 @@ interface OrdersManagementPageProps {
 }
 
 export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHandled }: OrdersManagementPageProps) {
-  const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; customer?: CustomerData | null }) | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; paymentEvents?: OrderPaymentEvent[]; customer?: CustomerData | null }) | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [revealedDocument, setRevealedDocument] = useState<string | null>(null);
@@ -46,6 +46,7 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("pending");
   const [orderPage, setOrderPage] = useState(1);
+  const [paymentReason, setPaymentReason] = useState("");
 
   const { data: ordersPage, isLoading: ordersLoading, isError: ordersError, refetch: refetchOrders } = useOrdersPage({
     page: orderPage,
@@ -54,7 +55,7 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
     status: statusFilter === "all" ? undefined : statusFilter,
   });
   const { data: currentUser } = useUser();
-  const { updateOrderStatusMutation, fetchOrderDetails } = useOrderMutations();
+  const { updateOrderStatusMutation, updateManualPaymentMutation, fetchOrderDetails } = useOrderMutations();
   const canRevealDocument = currentUser?.role === "admin";
   const orders = ordersPage?.items ?? [];
 
@@ -93,6 +94,19 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
     } finally {
       setIsRevealingDocument(false);
     }
+  };
+
+  const handleManualPayment = async (action: "mark_paid" | "revert_to_pending") => {
+    if (!selectedOrder) return;
+    const idempotencyKey = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}-manual-payment`;
+    await updateManualPaymentMutation.mutateAsync({
+      reference: selectedOrder.publicReference || String(selectedOrder.id),
+      action,
+      reason: action === "revert_to_pending" ? paymentReason : undefined,
+      idempotencyKey,
+    });
+    setSelectedOrder(await fetchOrderDetails(selectedOrder.id));
+    setPaymentReason("");
   };
 
   return (
@@ -328,6 +342,22 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
                   Dados fiscais do cliente
                 </Button>
               )}
+              {canRevealDocument && selectedOrder.paymentMethod === "whatsapp" && (
+                <div className="space-y-3 border-t border-border pt-4" data-testid="manual-payment-controls">
+                  <div>
+                    <p className="font-medium">Pagamento WhatsApp</p>
+                    <p className="text-xs text-muted-foreground">Esta ação não altera o andamento do pedido.</p>
+                  </div>
+                  {selectedOrder.paymentStatus === "paid" ? (
+                    <>
+                      <Input value={paymentReason} onChange={(event) => setPaymentReason(event.target.value)} minLength={5} maxLength={500} placeholder="Motivo da correção (obrigatório)" data-testid="input-payment-reason" />
+                      <Button variant="outline" className="w-full" disabled={paymentReason.trim().length < 5 || updateManualPaymentMutation.isPending} onClick={() => void handleManualPayment("revert_to_pending")} data-testid="button-revert-payment">Reverter para pendente</Button>
+                    </>
+                  ) : (
+                    <Button className="w-full" disabled={updateManualPaymentMutation.isPending} onClick={() => void handleManualPayment("mark_paid")} data-testid="button-mark-order-paid">Marcar pagamento como recebido</Button>
+                  )}
+                </div>
+              )}
               <div className="border-t border-border pt-4">
                 <p className="font-medium mb-2">Itens do Pedido</p>
                 <div className="space-y-2">
@@ -343,7 +373,8 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
                   <span className="text-primary">R$ {selectedOrder.total.toFixed(2)}</span>
                 </div>
               </div>
-              {selectedOrder.events && selectedOrder.events.length > 0 && <div className="border-t border-border pt-4"><p className="font-medium mb-2">Linha do tempo</p><div className="space-y-2 text-sm">{selectedOrder.events.map((event, index) => <div key={index} className="flex justify-between"><span>{event.fromStatus ? `${event.fromStatus} → ` : ""}{event.toStatus}</span><span className="text-muted-foreground">{new Date(event.createdAt).toLocaleString("pt-BR")}</span></div>)}</div></div>}
+              {selectedOrder.events && selectedOrder.events.length > 0 && <div className="border-t border-border pt-4"><p className="font-medium mb-2">Movimentação do pedido</p><div className="space-y-2 text-sm">{selectedOrder.events.map((event, index) => <div key={index} className="flex justify-between gap-3"><span>{event.fromStatus ? `${event.fromStatus} → ` : ""}{event.toStatus}</span><span className="shrink-0 text-muted-foreground">{new Date(event.createdAt).toLocaleString("pt-BR")}</span></div>)}</div></div>}
+              {selectedOrder.paymentEvents && selectedOrder.paymentEvents.length > 0 && <div className="border-t border-border pt-4"><p className="font-medium mb-2">Histórico de pagamento</p><div className="space-y-2 text-sm">{selectedOrder.paymentEvents.map((event) => <div key={event.id} className="flex justify-between gap-3"><span>{event.fromPaymentStatus ? `${event.fromPaymentStatus} → ` : ""}{event.toPaymentStatus} <span className="text-xs text-muted-foreground">({event.source === "manual_whatsapp" ? "manual" : "Stripe"})</span></span><span className="shrink-0 text-muted-foreground">{new Date(event.createdAt).toLocaleString("pt-BR")}</span></div>)}</div></div>}
             </div>
           )}
         </DialogContent>

@@ -19,6 +19,7 @@ import { registerSettingsRoutes } from "./settings.routes";
 import { registerSecurityRoutes } from "./security.routes";
 import { registerPaymentsRoutes } from "./payments.routes";
 import { registerNotificationsRoutes } from "./notifications.routes";
+import { registerAnalyticsRoutes } from "./analytics.routes";
 import { csrfProtection } from "../middleware/csrf";
 
 /**
@@ -95,6 +96,7 @@ export async function registerAllRoutes(
   registerSettingsRoutes(app);
   registerPaymentsRoutes(app);
   registerNotificationsRoutes(app);
+  registerAnalyticsRoutes(app);
 
   return httpServer;
 }

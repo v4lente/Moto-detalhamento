@@ -203,6 +203,7 @@ export const orders = mysqlTable("orders", {
   // Payment fields for Stripe integration
   paymentMethod: text("payment_method"), // "card", "pix", "boleto", "whatsapp"
   paymentStatus: text("payment_status").$default(() => "pending"), // "pending", "awaiting_payment", "paid", "failed", "refunded"
+  paymentTrackingMode: varchar("payment_tracking_mode", { length: 16 }).notNull().default("explicit"),
   stripeSessionId: text("stripe_session_id"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   paidAt: timestamp("paid_at"),
@@ -250,7 +251,7 @@ export const orderEvents = mysqlTable("order_events", {
   orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull().references(() => orders.id, { onDelete: "cascade" }),
   fromStatus: text("from_status"),
   toStatus: text("to_status").notNull(),
-  actorType: varchar("actor_type", { length: 16 }).notNull(),
+  actorType: varchar("actor_type", { length: 16 }).$type<"customer" | "admin" | "system">().notNull(),
   actorId: varchar("actor_id", { length: 36 }),
   reason: text("reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -261,6 +262,26 @@ export const orderEvents = mysqlTable("order_events", {
 export const insertOrderEventSchema = createInsertSchema(orderEvents).omit({ id: true, createdAt: true });
 export type InsertOrderEvent = z.infer<typeof insertOrderEventSchema>;
 export type OrderEvent = typeof orderEvents.$inferSelect;
+
+export const orderPaymentEvents = mysqlTable("order_payment_events", {
+  id: autoIncrementId(),
+  orderId: bigint("order_id", { mode: "number", unsigned: true }).notNull().references(() => orders.id, { onDelete: "cascade" }),
+  fromPaymentStatus: varchar("from_payment_status", { length: 32 }),
+  toPaymentStatus: varchar("to_payment_status", { length: 32 }).notNull(),
+  actorType: varchar("actor_type", { length: 16 }).$type<"admin" | "system">().notNull(),
+  actorId: varchar("actor_id", { length: 36 }),
+  source: varchar("source", { length: 24 }).$type<"manual_whatsapp" | "stripe_webhook">().notNull(),
+  reason: text("reason"),
+  requestKey: varchar("request_key", { length: 200 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  orderCreatedIdx: index("order_payment_events_order_created_idx").on(table.orderId, table.createdAt),
+  orderRequestUnique: uniqueIndex("order_payment_events_order_request_unique").on(table.orderId, table.requestKey),
+}));
+
+export const insertOrderPaymentEventSchema = createInsertSchema(orderPaymentEvents).omit({ id: true, createdAt: true });
+export type InsertOrderPaymentEvent = z.infer<typeof insertOrderPaymentEventSchema>;
+export type OrderPaymentEvent = typeof orderPaymentEvents.$inferSelect;
 
 export const adminNotifications = mysqlTable("admin_notifications", {
   id: autoIncrementId(),

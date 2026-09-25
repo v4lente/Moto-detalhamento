@@ -1,16 +1,28 @@
 import { useState } from "react";
-import { Calendar, ChevronLeft, ChevronRight, Eye, Loader2, Search, ShoppingBag } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, Search, ShoppingBag } from "lucide-react";
 import { TabsContent } from "@/shared/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { DatePicker } from "@/shared/ui/date-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
-import { useAppointmentSummary, useOrders, useOrderMutations } from "../hooks/use-admin";
+import { useAppointmentSummary, useDashboardAnalytics, useOrdersPage, useOrderMutations } from "../hooks/use-admin";
 import type { Order, OrderItem } from "@shared/contracts";
 import { formatCurrencyBRL, formatOrderItemName, formatPhoneBR } from "@/shared/lib/formatters";
+import { SalesAnalytics } from "../components/sales-analytics";
+import { ServiceAnalytics } from "../components/service-analytics";
 
 const ITEMS_PER_PAGE = 5;
+
+function formatCivilDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function defaultAnalyticsFrom() {
+  const date = new Date();
+  date.setDate(date.getDate() - 29);
+  return formatCivilDate(date);
+}
 
 function formatAppointmentDate(value: string | Date) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -30,9 +42,18 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
   const [orderPage, setOrderPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<(Order & { items: OrderItem[] }) | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [analyticsFrom, setAnalyticsFrom] = useState(defaultAnalyticsFrom);
+  const [analyticsTo, setAnalyticsTo] = useState(() => formatCivilDate(new Date()));
 
-  const { data: orders, isLoading: ordersLoading } = useOrders();
+  const { data: ordersPage, isLoading: ordersLoading } = useOrdersPage({
+    page: orderPage,
+    pageSize: ITEMS_PER_PAGE,
+    q: orderSearch.trim() || undefined,
+    from: orderDateFilter ? `${orderDateFilter}T00:00:00-03:00` : undefined,
+    to: orderDateFilter ? `${orderDateFilter}T23:59:59-03:00` : undefined,
+  });
   const { data: agendaSummary, isLoading: agendaLoading } = useAppointmentSummary();
+  const { data: analytics, isLoading: analyticsLoading, isError: analyticsError, refetch: refetchAnalytics } = useDashboardAnalytics({ from: analyticsFrom, to: analyticsTo });
   const { fetchOrderDetails } = useOrderMutations();
 
   const handleViewOrder = async (orderId: number) => {
@@ -44,18 +65,8 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
     }
   };
 
-  const filteredOrders = (orders || []).filter((order) => {
-    const matchesSearch = !orderSearch
-      || order.customerName.toLowerCase().includes(orderSearch.toLowerCase());
-    const matchesDate = !orderDateFilter
-      || new Date(order.createdAt).toISOString().slice(0, 10) === orderDateFilter;
-    return matchesSearch && matchesDate;
-  });
-  const totalOrderPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = filteredOrders.slice(
-    (orderPage - 1) * ITEMS_PER_PAGE,
-    orderPage * ITEMS_PER_PAGE,
-  );
+  const orders = ordersPage?.items || [];
+  const totalOrderPages = ordersPage?.totalPages || 0;
 
   return (
     <>
@@ -69,7 +80,7 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
                 <ShoppingBag className="h-5 w-5 text-primary" />
                 Pedidos Recentes
               </CardTitle>
-              <CardDescription>{orders?.length || 0} pedidos no total</CardDescription>
+              <CardDescription>{ordersPage?.total || 0} pedidos no total</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -104,9 +115,9 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : paginatedOrders.length > 0 ? (
+              ) : orders.length > 0 ? (
                 <div className="space-y-2">
-                  {paginatedOrders.map((order) => (
+                  {orders.map((order) => (
                     <button
                       type="button"
                       key={order.id}
@@ -236,6 +247,31 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
             </CardContent>
           </Card>
         </div>
+
+        <section className="space-y-4" aria-labelledby="analytics-heading">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <h3 id="analytics-heading" className="text-xl font-display font-bold">Análises de vendas e serviços</h3>
+              <p className="text-sm text-muted-foreground">Datas civis no fuso de São Paulo; valores de produtos não representam fluxo de caixa por data de recebimento.</p>
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs text-muted-foreground">De<Input type="date" value={analyticsFrom} onChange={(event) => setAnalyticsFrom(event.target.value)} className="mt-1" /></label>
+              <label className="text-xs text-muted-foreground">Até<Input type="date" value={analyticsTo} onChange={(event) => setAnalyticsTo(event.target.value)} className="mt-1" /></label>
+            </div>
+          </div>
+
+          {analyticsLoading ? <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+            : analyticsError ? <div className="rounded-lg border border-destructive/40 p-6 text-center text-sm text-destructive">Não foi possível carregar as análises. <Button variant="link" onClick={() => void refetchAnalytics()}><RefreshCw className="mr-1 h-4 w-4" />Tentar novamente</Button></div>
+              : analytics ? <>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Pedidos vendidos</p><p className="text-2xl font-bold">{analytics.products.soldOrders}</p></CardContent></Card>
+                  <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Valor vendido</p><p className="text-2xl font-bold">{formatCurrencyBRL(analytics.products.soldOrderValueCents / 100)}</p></CardContent></Card>
+                  <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Serviços concluídos pagos</p><p className="text-2xl font-bold">{analytics.services.completedPaid}</p></CardContent></Card>
+                  <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Serviços concluídos não pagos</p><p className="text-2xl font-bold">{analytics.services.completedUnpaid}</p></CardContent></Card>
+                </div>
+                <div className="grid gap-6 xl:grid-cols-2"><SalesAnalytics data={analytics.products} /><ServiceAnalytics data={analytics.services} /></div>
+              </> : null}
+        </section>
       </TabsContent>
 
       <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>

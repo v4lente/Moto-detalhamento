@@ -161,6 +161,7 @@ export interface Order {
   whatsappMessage: string | null;
   paymentMethod: string | null;
   paymentStatus: string | null;
+  paymentTrackingMode?: "legacy" | "explicit";
   stripeSessionId: string | null;
   stripePaymentIntentId: string | null;
   paidAt: Date | null;
@@ -194,6 +195,7 @@ export interface OrderItem {
   productId: number | null;
   productName: string;
   productPrice: number;
+  unitPriceDecimal?: string | null;
   quantity: number;
   variationId?: number | null;
   variationLabel?: string | null;
@@ -279,6 +281,65 @@ export interface OrderEvent {
   actorId: string | null;
   reason: string | null;
   createdAt: Date;
+}
+
+export type ManualPaymentAction = "mark_paid" | "revert_to_pending";
+
+export interface OrderPaymentEvent {
+  id: number;
+  orderId: number;
+  fromPaymentStatus: string | null;
+  toPaymentStatus: string;
+  actorType: "admin" | "system";
+  actorId: string | null;
+  source: "manual_whatsapp" | "stripe_webhook";
+  reason: string | null;
+  requestKey?: string | null;
+  createdAt: Date | string;
+}
+
+export interface ManualPaymentResult {
+  reference: string;
+  status: string;
+  paymentStatus: string;
+  paidAt: Date | string | null;
+  paymentEvent: OrderPaymentEvent;
+  replayed: boolean;
+}
+
+export interface DashboardAnalytics {
+  period: {
+    from: string;
+    to: string;
+    timeZone: "America/Sao_Paulo";
+    productDateBasis: "order_created_at";
+    serviceDateBasis: "appointment_completed_at";
+    serviceDemandDateBasis: "appointment_start_at";
+  };
+  products: {
+    soldOrders: number;
+    explicitlyPaidOrders: number;
+    inferredLegacyOrders: number;
+    unitsSold: number;
+    soldOrderValueCents: number;
+    confirmedPaidOrderValueCents: number;
+    paidCancelledOrders: number;
+    inferredLegacyValueCents: number;
+    averageTicketCents: number;
+    series: Array<{ date: string; orders: number; units: number; soldValueCents: number }>;
+    topProducts: Array<{ productId: number | null; productName: string; variationId: number | null; variationLabel: string | null; units: number; valueCents: number }>;
+    weekdayHours: Array<{ weekday: number; hour: number; orders: number }>;
+  };
+  services: {
+    completedPaid: number;
+    completedUnpaid: number;
+    paidCompletedValueCents: number;
+    unpaidCompletedValueCents: number;
+    missingValueCount: number;
+    series: Array<{ date: string; completedPaid: number; valueCents: number }>;
+    topServices: Array<{ serviceId: number | null; serviceName: string; completedCount: number }>;
+    weekdayHours: Array<{ weekday: number; hour: number; appointments: number }>;
+  };
 }
 
 export interface PaginatedOrders {

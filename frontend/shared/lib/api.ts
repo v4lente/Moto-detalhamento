@@ -1,4 +1,4 @@
-import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, User, Review, AppointmentWithItems, AppointmentFilters, AppointmentSummary, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress, AdminNotification } from "@shared/contracts";
+import type { Product, ProductWithImages, ProductVariation, SiteSettings, UpdateSiteSettings, CheckoutData, Order, OrderItem, OrderPaymentEvent, ManualPaymentAction, ManualPaymentResult, DashboardAnalytics, User, Review, AppointmentWithItems, AppointmentFilters, AppointmentSummary, CreateAppointment, UpdateAppointment, OfferedService, InsertOfferedService, UpdateOfferedService, ServicePost, ServicePostWithMedia, InsertProduct, CustomerAddress, AdminNotification } from "@shared/contracts";
 import { API_BASE } from "./api-config";
 import { http } from "./http";
 
@@ -336,10 +336,12 @@ export async function fetchCustomerOrder(id: number): Promise<Order & { items: O
 }
 
 // Admin Orders
-export async function fetchAdminOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string }): Promise<{ items: Order[]; total: number; page: number; pageSize: number; totalPages: number }> {
+export async function fetchAdminOrdersPage(params: { page: number; pageSize: number; q?: string; status?: string; from?: string; to?: string }): Promise<{ items: Order[]; total: number; page: number; pageSize: number; totalPages: number }> {
   const query = new URLSearchParams({ page: String(params.page), pageSize: String(params.pageSize) });
   if (params.q) query.set("q", params.q);
   if (params.status) query.set("status", params.status);
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
   return http(`/orders?${query.toString()}`);
 }
 
@@ -354,7 +356,7 @@ export async function fetchAllOrders(): Promise<Order[]> {
   return Array.isArray(data) ? data : data.items || [];
 }
 
-export async function fetchOrderDetails(id: number): Promise<Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; customer?: CustomerData | null }> {
+export async function fetchOrderDetails(id: number): Promise<Order & { items: OrderItem[]; events?: Array<{ fromStatus: string | null; toStatus: string; actorType: string; createdAt: string }>; paymentEvents?: OrderPaymentEvent[]; customer?: CustomerData | null }> {
   const response = await fetch(`${API_BASE}/orders/${id}`, {
     credentials: "include",
   });
@@ -394,6 +396,21 @@ export async function revealOrderCustomerDocument(reference: string): Promise<{
 
 export async function updateOrderStatus(id: number, status: string): Promise<Order> {
   return http<Order>(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
+
+export async function updateManualOrderPayment(reference: string, action: ManualPaymentAction, reason: string | undefined, idempotencyKey: string): Promise<ManualPaymentResult> {
+  return http<ManualPaymentResult>(`/orders/${encodeURIComponent(reference)}/payment`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ action, ...(reason ? { reason } : {}) }),
+  });
+}
+
+export async function fetchDashboardAnalytics(params: { from?: string; to?: string } = {}): Promise<DashboardAnalytics> {
+  const query = new URLSearchParams();
+  if (params.from) query.set("from", params.from);
+  if (params.to) query.set("to", params.to);
+  return http<DashboardAnalytics>(`/admin/analytics${query.size ? `?${query}` : ""}`);
 }
 
 // Admin Customer Management

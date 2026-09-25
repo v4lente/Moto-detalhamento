@@ -8,6 +8,7 @@ import {
   type Order, type InsertOrder,
   type OrderItem, type InsertOrderItem,
   type OrderEvent, type InsertOrderEvent,
+  type OrderPaymentEvent, type InsertOrderPaymentEvent,
   type AdminNotification, type InsertAdminNotification,
   type SensitiveDataAccessEvent, type InsertSensitiveDataAccessEvent,
   type Review, type InsertReview,
@@ -15,7 +16,7 @@ import {
   type ServicePostMedia, type InsertServicePostMedia,
   type Appointment, type InsertAppointment, type AppointmentItem, type InsertAppointmentItem, type AppointmentWithItems,
   type OfferedService, type InsertOfferedService,
-  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, adminNotifications, adminNotificationReads, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, appointmentItems, offeredServices
+  users, products, productVariations, productImages, siteSettings, customers, orders, orderItems, orderEvents, orderPaymentEvents, adminNotifications, adminNotificationReads, sensitiveDataAccessEvents, reviews, servicePosts, servicePostMedia, appointments, appointmentItems, offeredServices
 } from "@shared/schema";
 import { db, withTransaction } from "./db";
 import { eq, desc, sql, asc, and, or, like, count, gte, lte, isNull } from "drizzle-orm";
@@ -92,8 +93,11 @@ export interface IStorage {
     stripeSessionId?: string;
     stripePaymentIntentId?: string;
     paymentStatus?: string;
-    paidAt?: Date;
+    paidAt?: Date | null;
   }): Promise<Order | undefined>;
+  transitionOrderWithEvent(input: { orderId: number; expectedStatus: string; toStatus: string; actorType: string; actorId?: string | null; reason?: string | null }): Promise<Order | undefined>;
+  applyOrderPaymentChange(input: { orderId: number; expectedPaymentStatus: string; toPaymentStatus: string; paidAt: Date | null; actorType: "admin" | "system"; actorId?: string | null; source: "manual_whatsapp" | "stripe_webhook"; reason?: string | null; requestKey: string }): Promise<{ order: Order; event: OrderPaymentEvent; replayed: boolean }>;
+  applyStripeOrderOutcome(input: { orderId: number; toStatus: string; toPaymentStatus: string; paidAt: Date | null; reason: string; requestKey: string; stripePaymentIntentId?: string | null }): Promise<{ order: Order; paymentEvent: OrderPaymentEvent; replayed: boolean }>;
   getOrderByStripeSessionId(sessionId: string): Promise<Order | undefined>;
   getOrderByStripePaymentIntent(paymentIntentId: string): Promise<Order | undefined>;
   getOrderByIdempotency(customerId: string, idempotencyKey: string): Promise<Order | undefined>;
@@ -120,6 +124,7 @@ export interface IStorage {
   searchOrders(options: OrderSearchOptions): Promise<{ items: Order[]; total: number; page: number; pageSize: number }>;
   getOrderEvents(orderId: number): Promise<OrderEvent[]>;
   createOrderEvent(event: InsertOrderEvent, executor?: any): Promise<OrderEvent>;
+  getOrderPaymentEvents(orderId: number): Promise<OrderPaymentEvent[]>;
   createSensitiveDataAccessEvent(event: InsertSensitiveDataAccessEvent): Promise<SensitiveDataAccessEvent>;
 
   createOrderItem(item: InsertOrderItem): Promise<OrderItem>;
@@ -558,7 +563,7 @@ export class DatabaseStorage implements IStorage {
     stripeSessionId?: string;
     stripePaymentIntentId?: string;
     paymentStatus?: string;
-    paidAt?: Date;
+    paidAt?: Date | null;
   }): Promise<Order | undefined> {
     await db.update(orders).set(payment).where(eq(orders.id, id));
     const result = await db.select().from(orders).where(eq(orders.id, id));
@@ -573,6 +578,123 @@ export class DatabaseStorage implements IStorage {
   async getOrderByStripePaymentIntent(paymentIntentId: string): Promise<Order | undefined> {
     const result = await db.select().from(orders).where(eq(orders.stripePaymentIntentId, paymentIntentId));
     return result[0];
+  }
+
+  async transitionOrderWithEvent(input: { orderId: number; expectedStatus: string; toStatus: string; actorType: string; actorId?: string | null; reason?: string | null }): Promise<Order | undefined> {
+    return withTransaction(async (tx: any) => {
+      await tx.execute(sql`SELECT id FROM ${orders} WHERE ${orders.id} = ${input.orderId} FOR UPDATE`);
+      const currentRows = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+      const current = currentRows[0] as Order | undefined;
+      if (!current) return undefined;
+      if (current.status !== input.expectedStatus) {
+        const conflict = new Error("ORDER_STATUS_CONFLICT") as Error & { code?: string };
+        conflict.code = "ORDER_STATUS_CONFLICT";
+        throw conflict;
+      }
+      if (current.status === input.toStatus) return current;
+      await tx.update(orders).set({ status: input.toStatus }).where(eq(orders.id, input.orderId));
+      await tx.insert(orderEvents).values({
+        orderId: input.orderId,
+        fromStatus: current.status,
+        toStatus: input.toStatus,
+        actorType: input.actorType,
+        actorId: input.actorId || null,
+        reason: input.reason || null,
+      });
+      const updated = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+      return updated[0] as Order | undefined;
+    });
+  }
+
+  async applyOrderPaymentChange(input: { orderId: number; expectedPaymentStatus: string; toPaymentStatus: string; paidAt: Date | null; actorType: "admin" | "system"; actorId?: string | null; source: "manual_whatsapp" | "stripe_webhook"; reason?: string | null; requestKey: string }): Promise<{ order: Order; event: OrderPaymentEvent; replayed: boolean }> {
+    try {
+      return await withTransaction(async (tx: any) => {
+        await tx.execute(sql`SELECT id FROM ${orders} WHERE ${orders.id} = ${input.orderId} FOR UPDATE`);
+        const existingEvents = await tx.select().from(orderPaymentEvents).where(and(
+          eq(orderPaymentEvents.orderId, input.orderId),
+          eq(orderPaymentEvents.requestKey, input.requestKey),
+        )).limit(1);
+        const currentRows = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+        const current = currentRows[0] as Order | undefined;
+        if (!current) throw Object.assign(new Error("ORDER_NOT_FOUND"), { code: "ORDER_NOT_FOUND" });
+        const existing = existingEvents[0] as OrderPaymentEvent | undefined;
+        if (existing) {
+          if (existing.toPaymentStatus !== input.toPaymentStatus || (existing.reason || null) !== (input.reason || null)) {
+            throw Object.assign(new Error("IDEMPOTENCY_CONFLICT"), { code: "IDEMPOTENCY_CONFLICT" });
+          }
+          return { order: current, event: existing, replayed: true };
+        }
+        const fromPaymentStatus = current.paymentStatus || "pending";
+        if (fromPaymentStatus !== input.expectedPaymentStatus) {
+          throw Object.assign(new Error("PAYMENT_STATUS_CONFLICT"), { code: "PAYMENT_STATUS_CONFLICT" });
+        }
+        await tx.update(orders).set({
+          paymentStatus: input.toPaymentStatus,
+          paidAt: input.paidAt,
+          paymentTrackingMode: "explicit",
+        }).where(eq(orders.id, input.orderId));
+        const inserted = await tx.insert(orderPaymentEvents).values({
+          orderId: input.orderId,
+          fromPaymentStatus,
+          toPaymentStatus: input.toPaymentStatus,
+          actorType: input.actorType,
+          actorId: input.actorId || null,
+          source: input.source,
+          reason: input.reason || null,
+          requestKey: input.requestKey,
+        } satisfies InsertOrderPaymentEvent);
+        const eventId = this.extractInsertId(inserted);
+        const [updatedRows, eventRows] = await Promise.all([
+          tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1),
+          tx.select().from(orderPaymentEvents).where(eventId ? eq(orderPaymentEvents.id, eventId) : and(eq(orderPaymentEvents.orderId, input.orderId), eq(orderPaymentEvents.requestKey, input.requestKey))).limit(1),
+        ]);
+        return { order: updatedRows[0] as Order, event: eventRows[0] as OrderPaymentEvent, replayed: false };
+      });
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const eventRows = await db.select().from(orderPaymentEvents).where(and(eq(orderPaymentEvents.orderId, input.orderId), eq(orderPaymentEvents.requestKey, input.requestKey))).limit(1);
+        const order = await this.getOrder(input.orderId);
+        if (eventRows[0] && order) return { order, event: eventRows[0], replayed: true };
+      }
+      throw error;
+    }
+  }
+
+  async applyStripeOrderOutcome(input: { orderId: number; toStatus: string; toPaymentStatus: string; paidAt: Date | null; reason: string; requestKey: string; stripePaymentIntentId?: string | null }): Promise<{ order: Order; paymentEvent: OrderPaymentEvent; replayed: boolean }> {
+    return withTransaction(async (tx: any) => {
+      await tx.execute(sql`SELECT id FROM ${orders} WHERE ${orders.id} = ${input.orderId} FOR UPDATE`);
+      const currentRows = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+      const current = currentRows[0] as Order | undefined;
+      if (!current) throw Object.assign(new Error("ORDER_NOT_FOUND"), { code: "ORDER_NOT_FOUND" });
+      const existingRows = await tx.select().from(orderPaymentEvents).where(and(eq(orderPaymentEvents.orderId, input.orderId), eq(orderPaymentEvents.requestKey, input.requestKey))).limit(1);
+      if (existingRows[0]) return { order: current, paymentEvent: existingRows[0] as OrderPaymentEvent, replayed: true };
+      if (current.status !== input.toStatus) {
+        await tx.insert(orderEvents).values({ orderId: input.orderId, fromStatus: current.status, toStatus: input.toStatus, actorType: "system", actorId: null, reason: input.reason });
+      }
+      await tx.update(orders).set({
+        status: input.toStatus,
+        paymentStatus: input.toPaymentStatus,
+        paidAt: input.paidAt,
+        paymentTrackingMode: "explicit",
+        ...(input.stripePaymentIntentId ? { stripePaymentIntentId: input.stripePaymentIntentId } : {}),
+      }).where(eq(orders.id, input.orderId));
+      const inserted = await tx.insert(orderPaymentEvents).values({
+        orderId: input.orderId,
+        fromPaymentStatus: current.paymentStatus || null,
+        toPaymentStatus: input.toPaymentStatus,
+        actorType: "system",
+        actorId: null,
+        source: "stripe_webhook",
+        reason: input.reason,
+        requestKey: input.requestKey,
+      } satisfies InsertOrderPaymentEvent);
+      const eventId = this.extractInsertId(inserted);
+      const [updatedRows, eventRows] = await Promise.all([
+        tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1),
+        tx.select().from(orderPaymentEvents).where(eventId ? eq(orderPaymentEvents.id, eventId) : and(eq(orderPaymentEvents.orderId, input.orderId), eq(orderPaymentEvents.requestKey, input.requestKey))).limit(1),
+      ]);
+      return { order: updatedRows[0] as Order, paymentEvent: eventRows[0] as OrderPaymentEvent, replayed: false };
+    });
   }
 
   async getOrderByIdempotency(customerId: string, idempotencyKey: string): Promise<Order | undefined> {
@@ -796,6 +918,10 @@ export class DatabaseStorage implements IStorage {
     const id = this.extractInsertId(result);
     const rows = await db.select().from(orderEvents).where(id ? eq(orderEvents.id, id) : eq(orderEvents.orderId, event.orderId)).orderBy(desc(orderEvents.id)).limit(1);
     return rows[0];
+  }
+
+  async getOrderPaymentEvents(orderId: number): Promise<OrderPaymentEvent[]> {
+    return await db.select().from(orderPaymentEvents).where(eq(orderPaymentEvents.orderId, orderId)).orderBy(asc(orderPaymentEvents.createdAt), asc(orderPaymentEvents.id));
   }
 
   async createSensitiveDataAccessEvent(event: InsertSensitiveDataAccessEvent): Promise<SensitiveDataAccessEvent> {
