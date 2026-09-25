@@ -12,7 +12,7 @@ import {
   ShoppingBag, Eye, Loader2, Clock, Check, X, Package, CheckCircle 
 } from "lucide-react";
 import { Input } from "@/shared/ui/input";
-import { formatPhoneBR } from "@/shared/lib/formatters";
+import { formatOrderItemName, formatPhoneBR } from "@/shared/lib/formatters";
 
 interface OrdersManagementPageProps {
   initialOrderId?: number | null;
@@ -264,8 +264,8 @@ export function OrdersManagementPage({ initialOrderId = null, onInitialOrderHand
                 <div className="space-y-2">
                   {selectedOrder.items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
-                      <span>{item.quantity}x {item.productName}</span>
-                      <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
+                      <span className="min-w-0 break-words pr-3">{item.quantity}x {formatOrderItemName(item.productName, item.variationLabel)}</span>
+                      <span className="shrink-0 text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>

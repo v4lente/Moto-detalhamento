@@ -8,6 +8,13 @@ export function formatCurrencyBRL(value: number | string | null | undefined): st
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+export function formatOrderItemName(productName: string, variationLabel?: string | null): string {
+  const name = productName.trim().replace(/\s+/g, " ").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").toLocaleLowerCase("pt-BR")
+    .replace(/(^|[^a-z0-9à-öø-ÿ])([a-zà-öø-ÿ])/gi, (_, separator: string, letter: string) => separator + letter.toLocaleUpperCase("pt-BR"));
+  const variation = variationLabel?.trim().replace(/\s+/g, " ");
+  return variation ? `${name} (${variation})` : name;
+}
+
 export function normalizePhone(value: string | null | undefined): string {
   return String(value || "").replace(/\D/g, "");
 }

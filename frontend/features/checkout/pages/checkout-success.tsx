@@ -5,6 +5,7 @@ import { getOrderPaymentStatusByReference, fetchCustomerOrderByReference } from 
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
 import { CheckCircle, Loader2, Package, Home, ShoppingBag, AlertCircle } from "lucide-react";
+import { formatOrderItemName } from "@/shared/lib/formatters";
 
 export default function CheckoutSuccess() {
   const [, setLocation] = useLocation();
@@ -106,8 +107,8 @@ export default function CheckoutSuccess() {
                 <ul className="space-y-2">
                   {orderDetails.items.map((item, index) => (
                     <li key={index} className="flex justify-between text-sm">
-                      <span>{item.quantity}x {item.productName}</span>
-                      <span className="text-muted-foreground">
+                      <span className="min-w-0 break-words pr-3">{item.quantity}x {formatOrderItemName(item.productName, item.variationLabel)}</span>
+                      <span className="shrink-0 text-muted-foreground">
                         R$ {(item.productPrice * item.quantity).toFixed(2)}
                       </span>
                     </li>

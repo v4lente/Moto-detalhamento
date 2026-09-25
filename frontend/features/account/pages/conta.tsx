@@ -19,7 +19,7 @@ import type { Order, OrderItem } from "@shared/contracts";
 import { CustomerRegistrationForm } from "@/features/auth/components/CustomerRegistrationForm";
 import { CustomerLoginForm } from "@/features/auth/components/CustomerLoginForm";
 import { CustomerDocumentFields, CustomerPhoneInput } from "@/shared/components/customer-fields";
-import { formatPhoneBR } from "@/shared/lib/formatters";
+import { formatOrderItemName, formatPhoneBR } from "@/shared/lib/formatters";
 
 export default function Conta() {
   const [, setLocation] = useLocation();
@@ -233,8 +233,8 @@ export default function Conta() {
                                 <div className="space-y-2">
                                   {expandedOrders[order.id].map((item) => (
                                     <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
-                                      <span>{item.quantity}x {item.productName}</span>
-                                      <span className="text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
+                                      <span className="min-w-0 break-words pr-3">{item.quantity}x {formatOrderItemName(item.productName, item.variationLabel)}</span>
+                                      <span className="shrink-0 text-primary">R$ {(item.productPrice * item.quantity).toFixed(2)}</span>
                                     </div>
                                   ))}
                                 </div>

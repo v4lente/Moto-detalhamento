@@ -8,7 +8,7 @@ import { DatePicker } from "@/shared/ui/date-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { useAppointmentSummary, useOrders, useOrderMutations } from "../hooks/use-admin";
 import type { Order, OrderItem } from "@shared/contracts";
-import { formatCurrencyBRL, formatPhoneBR } from "@/shared/lib/formatters";
+import { formatCurrencyBRL, formatOrderItemName, formatPhoneBR } from "@/shared/lib/formatters";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -272,8 +272,8 @@ export function DashboardPage({ onOpenAgenda }: DashboardPageProps) {
                 <div className="space-y-2">
                   {selectedOrder.items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm" data-testid={`order-item-${item.id}`}>
-                      <span>{item.quantity}x {item.productName}</span>
-                      <span className="text-primary">{formatCurrencyBRL(item.productPrice * item.quantity)}</span>
+                      <span className="min-w-0 break-words pr-3">{item.quantity}x {formatOrderItemName(item.productName, item.variationLabel)}</span>
+                      <span className="shrink-0 text-primary">{formatCurrencyBRL(item.productPrice * item.quantity)}</span>
                     </div>
                   ))}
                 </div>

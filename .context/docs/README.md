@@ -14,6 +14,7 @@ Welcome to the repository knowledge base. Start with the project overview, then 
 - [Data Flow & Integrations](./data-flow.md)
 - [Checkout por WhatsApp](./whatsapp-checkout.md)
 - [Checkout autenticado e pedidos persistentes](./checkout-auth-orders.md)
+- [Identificação dos itens de pedido](#identificação-dos-itens-de-pedido)
 - [Dados fiscais no pedido](./customer-fiscal-order-modal.md)
 - [Agenda operacional administrativa](#agenda-operacional-administrativa)
 - [Controle informativo de pagamento na agenda](./appointment-payment.md)
@@ -105,3 +106,9 @@ A migração `0006_admin_operational_appointments.sql` define 60 minutos nos ser
 ## Notificações administrativas de pedidos
 
 Novos pedidos geram uma notificação persistente para a equipe administrativa. O painel assina `GET /api/admin/notifications/stream` via Server-Sent Events e exibe imediatamente o alerta na barra superior, com atalho para abrir o pedido. As notificações também são carregadas por `GET /api/admin/notifications`, permitindo recuperar eventos enquanto o painel estava fechado ou sem conexão. Cada item pode ser marcado como lido individualmente ou em lote; a notificação é deduplicada por pedido e tipo.
+
+## Identificação dos itens de pedido
+
+A revisão do checkout, a confirmação do pagamento, o histórico do cliente, Pedidos e Dashboard administrativos exibem o nome do produto com iniciais maiúsculas e espaços normalizados. O rótulo da variação escolhida aparece entre parênteses com a grafia cadastrada, por exemplo `Interiores 1 Lt Cadillac (500 ML)`.
+
+O formatador `frontend/shared/lib/formatters.ts` altera somente a apresentação. Os snapshots `product_name`, `variation_id` e `variation_label` do pedido permanecem intactos. Pedidos antigos sem `variation_label` continuam mostrando o nome salvo, sem consultar o catálogo para inferir a variação.
